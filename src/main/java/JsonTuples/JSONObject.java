@@ -1,7 +1,8 @@
 package JsonTuples;
 
 import io.github.cruisoring.tuple.Set;
-import io.github.cruisoring.tuple.Tuple2;
+
+import java.util.regex.Pattern;
 
 /**
  * http://www.json.org
@@ -10,6 +11,13 @@ import io.github.cruisoring.tuple.Tuple2;
 public class JSONObject extends Set<NamedValue> implements JSONValue {
     public static Character LeftBrace = '{';
     public static Character RightBrace = '}';
+
+    public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
+
+    public static JSONObject fromJSONRaw(String valueString) {
+        return null;
+    }
+
 
     protected JSONObject(NamedValue... namedValues) {
         super(namedValues);
@@ -36,5 +44,10 @@ public class JSONObject extends Set<NamedValue> implements JSONValue {
         sb.append(JSONable.getIndent(indentFactor) + RightBrace);
         return sb.toString();
 
+    }
+
+    @Override
+    public Object getObject() {
+        return asArray();
     }
 }

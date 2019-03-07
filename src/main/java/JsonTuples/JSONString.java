@@ -1,7 +1,9 @@
 package JsonTuples;
 
-import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
+import org.apache.commons.text.StringEscapeUtils;
+
+import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -13,6 +15,22 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class JSONString extends Tuple1<String> implements JSONValue {
     public static final Character Quote = '"';
     public static final Character BackSlash = '\\';
+
+    public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
+
+
+    public static JSONString fromJSONRaw(String valueString) {
+        valueString = valueString.trim();
+        int length = valueString.length();
+
+        if(!Quote.equals(valueString.charAt(0)) || !Quote.equals(valueString.charAt(valueString.length()-1))) {
+            throw new IllegalArgumentException("The given valueString must be enclosed by quotes.");
+        }
+
+        String jsonString = valueString.substring(1, length-1);
+        String unescaped = StringEscapeUtils.unescapeJson(jsonString);
+        return new JSONString(unescaped);
+    }
 
     public JSONString(String s) {
         super(s);
@@ -80,5 +98,10 @@ public class JSONString extends Tuple1<String> implements JSONValue {
         }
         w.append('"');
         return w.toString();
+    }
+
+    @Override
+    public Object getObject() {
+        return getFirst();
     }
 }

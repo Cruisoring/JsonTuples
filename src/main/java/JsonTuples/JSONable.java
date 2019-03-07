@@ -24,7 +24,7 @@ public interface JSONable {
      * @return A strictly syntactically correct JSON text.
      */
     default String toJSONString() {
-        return toJSONString();
+        return toJSONString(0);
     }
 
     static String getIndent(int indentFactor){
