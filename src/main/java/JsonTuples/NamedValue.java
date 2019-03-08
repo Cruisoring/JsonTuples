@@ -8,25 +8,27 @@ import java.util.regex.Pattern;
 /**
  * Name value pair contained by JSONObject. Each name is followed by : (colon) and the name/value pairs are separated by , (comma)
  */
-public class NamedValue extends Tuple2<String, JSONValue> implements JSONable {
+public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable {
     public static final Character Colon = ':';
     public static final Character Comma = ',';
 
-    public static final Pattern NAME_PATTERN = Pattern.compile("\\\"([^\"]+)\\\":(.*)", Pattern.MULTILINE);
+    public static final Pattern NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":(.*)", Pattern.MULTILINE);
+    public static final Pattern SIMPLE_VALUE_PATTERN = Pattern.compile("\\\"(.*?)\\\":\\s*?(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)");
 
-    public static NamedValue fromJSONRaw(String nameValueString) {
+    public static NamedValue parse(String nameValueString) {
         Matcher matcher = NAME_PATTERN.matcher(nameValueString);
 
-        if(!matcher.matches()) {
+        if (!matcher.matches()) {
             throw new IllegalArgumentException("No name matched");
         }
 
         String name = matcher.group(1);
-        JSONValue value = JSONValue.parseValue(matcher.group(2));
+        IJSONValue value = JSONValue.parse(matcher.group(2));
         return new NamedValue(name, value);
     }
 
-    protected NamedValue(String name, JSONValue value) {
+
+    protected NamedValue(String name, IJSONValue value) {
         super(name, value);
     }
 
@@ -41,8 +43,9 @@ public class NamedValue extends Tuple2<String, JSONValue> implements JSONable {
     @Override
     public String toJSONString(int indentFactor) {
         return String.format("%s\"%s\": %s",
-                JSONable.getIndent(indentFactor),
+                IJSONable.getIndent(indentFactor),
                 getFirst(),
-                getSecond().toJSONString(indentFactor+1));
+                getSecond().toJSONString(indentFactor + 1));
     }
 }
+

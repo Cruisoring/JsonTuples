@@ -8,13 +8,13 @@ import java.util.regex.Pattern;
  * http://www.json.org
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
  */
-public class JSONObject extends Set<NamedValue> implements JSONValue {
+public class JSONObject extends Set<NamedValue> implements IJSONValue {
     public static Character LeftBrace = '{';
     public static Character RightBrace = '}';
 
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
 
-    public static JSONObject fromJSONRaw(String valueString) {
+    public static JSONObject parseObject(String valueString) {
         return null;
     }
 
@@ -41,7 +41,7 @@ public class JSONObject extends Set<NamedValue> implements JSONValue {
         }
 
         //JSON String ends with ']'
-        sb.append(JSONable.getIndent(indentFactor) + RightBrace);
+        sb.append(IJSONable.getIndent(indentFactor) + RightBrace);
         return sb.toString();
 
     }

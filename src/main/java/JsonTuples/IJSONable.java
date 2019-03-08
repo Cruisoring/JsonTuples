@@ -2,7 +2,7 @@ package JsonTuples;
 
 import com.google.common.base.Strings;
 
-public interface JSONable {
+public interface IJSONable {
 
     static final String Indent = "  ";
     static final String NewLine = "\r\n";

@@ -1,6 +1,6 @@
 package JsonTuples;
 
-import io.github.cruisoring.tuple.Tuple1;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,7 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * http://www.json.org
  * A number is very much like a C or Java number, except that the octal and hexadecimal formats are not used.
  */
-public class JSONNumber extends Tuple1<Number> implements JSONValue {
+public class JSONNumber extends JSONValue<Number> {
 
     /**
      *  Regular Expression Pattern that matches JSON Numbers. This is primarily used for
@@ -20,21 +20,16 @@ public class JSONNumber extends Tuple1<Number> implements JSONValue {
      */
     static final Pattern JSON_NUMBER_PATTERN = Pattern.compile("^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$");
 
-    public static JSONNumber fromJSONRaw(String valueString) {
+    public static JSONNumber parseNumber(String valueString) {
         valueString = valueString.trim();
         if(!JSON_NUMBER_PATTERN.matcher(valueString).matches()) {
             throw new IllegalArgumentException("Not of number pattern: " + valueString);
         }
 
-        if(valueString.contains(".")) {
-            //Treat the valueString as float if it contains '.'
-            try {
-                Double d = Double.valueOf(valueString);
-                return new JSONNumber(d);
-            } catch (NumberFormatException ne) {
-                BigDecimal bigDecimal = new BigDecimal(valueString);
-                return new JSONNumber(bigDecimal);
-            }
+        if(valueString.contains(".") || StringUtils.containsIgnoreCase(valueString, "e")) {
+            //Treat the valueString as bigDecimal if it contains '.'
+            BigDecimal bigDecimal = new BigDecimal(valueString);
+            return new JSONNumber(bigDecimal);
         } else {
             //Otherwise as integer
             try {
@@ -49,18 +44,6 @@ public class JSONNumber extends Tuple1<Number> implements JSONValue {
 
 
     public JSONNumber(Number number) {
-        super(number);
-
-        checkNotNull(number, "null shall not be used to create JSONNumber instance.");
-    }
-
-    @Override
-    public String toJSONString(int indentFactor) {
-        return getFirst().toString();
-    }
-
-    @Override
-    public Object getObject() {
-        return getFirst();
+        super(checkNotNull(number));
     }
 }
