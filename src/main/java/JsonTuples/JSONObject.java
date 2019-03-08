@@ -1,8 +1,11 @@
 package JsonTuples;
 
+import com.google.common.collect.Range;
 import io.github.cruisoring.tuple.Set;
 
 import java.util.regex.Pattern;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * http://www.json.org
@@ -14,7 +17,16 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue {
 
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
 
-    public static JSONObject parseObject(String valueString) {
+    public static IJSONValue parse(String jsonContext, Range<Integer> range) {
+        checkNotNull(jsonContext);
+        checkNotNull(range);
+
+        String valueString = jsonContext.substring(range.lowerEndpoint(), range.upperEndpoint()).trim();
+        return parse(valueString);
+    }
+
+
+    public static JSONObject parse(String valueString) {
         return null;
     }
 

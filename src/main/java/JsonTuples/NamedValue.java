@@ -12,11 +12,20 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
     public static final Character Colon = ':';
     public static final Character Comma = ',';
 
-    public static final Pattern NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":(.*)", Pattern.MULTILINE);
-    public static final Pattern SIMPLE_VALUE_PATTERN = Pattern.compile("\\\"(.*?)\\\":\\s*?(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)");
+    //TODO: check if name can contain escaped quotes?
+    public static final Pattern SIMPLIFIED_NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":(.*)", Pattern.MULTILINE);
 
+    //Regex to match simple JSON name-value pair in form of "NAME": VALUE
+    //Where VALUE could be: true, false, null, "STRING", number
+    public static final Pattern NAME_VALUE_PATTERN = Pattern.compile("\\\"(.*?)\\\":\\s*?(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)");
+
+    /**
+     * TODO: parse NameValue pair with more efficient means
+     * @param nameValueString   JSON name-value pair in form of "NAME": VALUE
+     * @return  Parsed NamedValue instance with 2 elements, the first is
+     */
     public static NamedValue parse(String nameValueString) {
-        Matcher matcher = NAME_PATTERN.matcher(nameValueString);
+        Matcher matcher = SIMPLIFIED_NAME_PATTERN.matcher(nameValueString);
 
         if (!matcher.matches()) {
             throw new IllegalArgumentException("No name matched");
