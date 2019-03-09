@@ -29,6 +29,132 @@ public final class Parser {
     final static Character MIN_MARKER = Collections.min(MARKERS);
     final static Character MAX_MARKER = Collections.max(MARKERS);
 
+    /**
+     * Find the subList of the given index list within a specific range.
+     * @param allIndexes    Indexes which would not contain the lower and upper end point of the range.
+     * @param range         Range under concern.
+     * @return              Sublist of the given sorted index list within a specific range.
+     */
+    public static List<Integer> getIndexesInRange(List<Integer> allIndexes, Range<Integer> range) {
+        checkNotNull(allIndexes);
+        checkNotNull(range);
+
+        if(allIndexes.isEmpty()) {
+            return new ArrayList<Integer>();
+        }
+
+        //Sort the indexes with nature order
+        Collections.sort(allIndexes, Comparator.naturalOrder());
+
+        return _getIndexesInRange(allIndexes, range);
+    }
+
+    private static List<Integer> _getIndexesInRange(List<Integer> allIndexes, Range<Integer> range) {
+        List<Integer> result = new ArrayList<>();
+
+        int count = allIndexes.size();
+        Integer lower = range.lowerEndpoint();
+        Integer upper = range.upperEndpoint();
+        if(count == 0 || lower > allIndexes.get(count-1) || upper < allIndexes.get(0)) {
+            return result;
+        }
+
+        boolean belowRange = true;
+        for (int i = 0; i < count; i++) {
+            Integer index = allIndexes.get(i);
+
+            if(belowRange) {
+                if (index < lower)
+                    continue;
+                if (range.contains(index)) {
+                    result.add(index);
+                } else if (index > upper) {
+                    return result;
+                }
+                belowRange = false;
+            } else {
+                if (range.contains(index)) {
+                    result.add(index);
+                } else if (index > upper) {
+                    return result;
+                }
+            }
+        }
+        return result;
+    }
+
+
+    public static List<Range<Integer>> asRanges(List<Integer> indexes) {
+        checkNotNull(indexes);
+        checkState(indexes.size() % 2 == 0);
+
+        Collections.sort(indexes);
+        return _asRanges(indexes);
+    }
+
+    private static List<Range<Integer>> _asRanges(List<Integer> indexes) {
+        int size = indexes.size();
+
+        List<Range<Integer>> ranges = new ArrayList<>();
+        for (int i = 0; i < size; i+=2) {
+            Integer startIndex = indexes.get(i);
+            Integer endIndex = indexes.get(i+1);
+            Range range = Range.closed(startIndex, endIndex);
+            ranges.add(range);
+        }
+
+        return ranges;
+    }
+
+    public static List<Range<Integer>> asRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
+        checkNotNull(startIndexes);
+        checkNotNull(endIndexes);
+
+        int size = startIndexes.size();
+        checkState(size == endIndexes.size());
+
+        Collections.sort(startIndexes);
+        Collections.sort(endIndexes);
+        return _asRanges(startIndexes, endIndexes);
+    }
+
+    private static List<Range<Integer>> _asRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
+        int size = startIndexes.size();
+        if(size == 0) {
+            return new ArrayList<>();
+        } else if (size == 1) {
+            return Arrays.asList(Range.closed(startIndexes.get(0), endIndexes.get(0)));
+        }
+
+        checkState(startIndexes.get(0) < endIndexes.get(0),
+                String.format("First startIndex of %d is greater or equal to first endIndex of %d.",
+                        startIndexes.get(0), endIndexes.get(0)));
+
+        List<Range<Integer>> ranges = new ArrayList<>();
+        List<Integer> availableStarts = new ArrayList<>(startIndexes);
+
+        Integer end, start;
+        boolean getMatched;
+        for (int j = 0; j < size; j++) {
+            end = endIndexes.get(j);
+            getMatched = false;
+            for (int i = availableStarts.size()-1; i>=0; i--) {
+                start = availableStarts.get(i);
+                if(start < end) {
+                    ranges.add(Range.closed(start, end));
+                    availableStarts.remove(start);
+                    getMatched = true;
+                    break;
+                }
+            }
+
+            checkState(getMatched,
+                    String.format("Not start index matching end index of %d!", end));
+        }
+
+        return ranges;
+    }
+
     //Keep the indexes of all characters with special meaning in JSON
     final Map<Character, List<Integer>> markersIndexes = new HashMap<Character, List<Integer>>();
 
@@ -40,6 +166,8 @@ public final class Parser {
     private Map<Range, IJSONValue> rangedValues = new HashMap<>();
 
     private List<Range> stringRanges = null;
+
+    private Map<Class<? extends IJSONable>, List<Range<Integer>>> pairedScopes = new HashMap<>();
 
     public Parser(String jsonText) {
         checkState(StringUtils.isNoneBlank(jsonText));
@@ -86,43 +214,6 @@ public final class Parser {
         }
     }
 
-    /**
-     * Find the subList of the given index list within a specific range, the given list must be sorted to get better performance.
-     * @param allIndexes    Sorted indexes which would not contain the lower and upper end point of the range.
-     * @param range         Range under concern.
-     * @return              Sublist of the given sorted index list within a specific range.
-     */
-    private List<Integer> getIndexesInRange(List<Integer> allIndexes, Range<Integer> range) {
-        List<Integer> result = new ArrayList<>();
-
-        int count = allIndexes.size();
-        Integer lower = range.lowerEndpoint();
-        Integer upper = range.upperEndpoint();
-        if(count == 0 || lower > allIndexes.get(count-1) || upper < allIndexes.get(0)) {
-            return result;
-        }
-
-        boolean inRange = false;
-        for (int i = 0; i < count; i++) {
-            Integer index = allIndexes.get(i);
-            if(!inRange && index >= lower) {
-                if (index > upper) {
-                    return result;
-                } else {
-                    result.add(index);
-                    inRange = true;
-                }
-            } else if(inRange) {
-                if(index < upper) {
-                    result.add(index);
-                } else {
-                    return result;
-                }
-            }
-        }
-        return result;
-    }
-
     private boolean inAnyStringRange(Integer index) {
         checkNotNull(index);
         checkNotNull(stringRanges);
@@ -138,7 +229,10 @@ public final class Parser {
         return false;
     }
 
-    private void getRangeSets() {
+    /**
+     * Get scope of JSON Object wrapped by '{' and '}', JSON Array wrapped by '[' and ']', JSON Strings, JSON Name-Value Pairs.
+     */
+    private void getScopes() {
         if(parsedResult != null)
             return;
 
@@ -153,6 +247,10 @@ public final class Parser {
                         )
                 ));
 
+        int backSlashCount = solidMarkers.get(BACK_SLASH).size();
+        checkState(backSlashCount == 0,
+                String.format("There are %d '\\' out of any JSON String object.", backSlashCount));
+
         int leftBraceCount = solidMarkers.get(LEFT_BRACE).size();
         int rightBraceCount = solidMarkers.get(RIGHT_BRACE).size();
         checkState( leftBraceCount == rightBraceCount,
@@ -162,12 +260,32 @@ public final class Parser {
         int rightBracketCount = solidMarkers.get(RIGHT_BRACKET).size();
         checkState( leftBracketCount == rightBracketCount,
                 String.format("Unbalanced JSON Arrays with %d '[', but %d ']'", leftBracketCount, rightBracketCount ));
+
+        List<Range<Integer>> stringScopes = _asRanges(markersIndexes.get(QUOTE));
+        List<Range<Integer>> objectScopes = _asRanges(markersIndexes.get(LEFT_BRACE), markersIndexes.get(RIGHT_BRACE));
+        List<Range<Integer>> arrayScopes = _asRanges(markersIndexes.get(LEFT_BRACKET), markersIndexes.get(RIGHT_BRACKET));
+
+        pairedScopes.put(JSONString.class, stringScopes);
+        pairedScopes.put(JSONObject.class, objectScopes);
+        pairedScopes.put(JSONArray.class, arrayScopes);
+    }
+
+    private void validateScopes() {
+        if(parsedResult != null)
+            return;
+
+        List<Range<Integer>> stringScopes = pairedScopes.get(JSONString.class);
+        List<Range<Integer>> objectScopes = pairedScopes.get(JSONObject.class);
+        List<Range<Integer>> arrayScopes = pairedScopes.get(JSONArray.class);
+
+
+
     }
 
     public IJSONValue parse() {
         scan();
 
-        getRangeSets();
+        getScopes();
 
         return null;
     }
