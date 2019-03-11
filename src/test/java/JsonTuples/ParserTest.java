@@ -16,42 +16,42 @@ public class ParserTest {
         List<Integer> list = Arrays.asList(1, 3, 4, 5, 9, 10, 12, 15, 21, 23, 25);
 
         //No overlapped:
-        subList = Parser.getIndexesInRange(list, IntRange.open(3, 4));
+        subList = Parser.getIndexesInRange(list, Range.open(3, 4));
         assertTrue(subList.size() == 0);
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(17, 19));
+        subList = Parser.getIndexesInRange(list, Range.closed(17, 19));
         assertTrue(subList.size() == 0);
 
-        subList = Parser.getIndexesInRange(list, IntRange.openClosed(-1, 0));
+        subList = Parser.getIndexesInRange(list, Range.openClosed(-1, 0));
         assertTrue(subList.size() == 0);
 
-        subList = Parser.getIndexesInRange(list, IntRange.open(25, 27));
+        subList = Parser.getIndexesInRange(list, Range.open(25, 27));
         assertTrue(subList.size() == 0);
 
         //With 1 element in range:
-        subList = Parser.getIndexesInRange(list, IntRange.closed(4, 4));
+        subList = Parser.getIndexesInRange(list, Range.closed(4, 4));
         assertTrue(subList.size() == 1 && subList.get(0).equals(4));
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(5, 8));
+        subList = Parser.getIndexesInRange(list, Range.closed(5, 8));
         assertTrue(subList.size() == 1 && subList.get(0).equals(5));
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(0, 1));
+        subList = Parser.getIndexesInRange(list, Range.closed(0, 1));
         assertTrue(subList.size() == 1 && subList.get(0).equals(1));
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(24, 29));
+        subList = Parser.getIndexesInRange(list, Range.closed(24, 29));
         assertTrue(subList.size() == 1 && subList.get(0).equals(25));
 
         //With multiple element in range:
-        subList = Parser.getIndexesInRange(list, IntRange.closed(4, 5));
+        subList = Parser.getIndexesInRange(list, Range.closed(4, 5));
         assertEquals(Arrays.asList(4, 5), subList);
 
-        subList = Parser.getIndexesInRange(list, IntRange.open(4, 10));
+        subList = Parser.getIndexesInRange(list, Range.open(4, 10));
         assertEquals(Arrays.asList(5, 9), subList);
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(0, 25));
+        subList = Parser.getIndexesInRange(list, Range.closed(0, 25));
         assertEquals(Arrays.asList(1, 3, 4, 5, 9, 10, 12, 15, 21, 23, 25), subList);
 
-        subList = Parser.getIndexesInRange(list, IntRange.closed(22, 30));
+        subList = Parser.getIndexesInRange(list, Range.closed(22, 30));
         assertEquals(Arrays.asList(23, 25), subList);
 
 
@@ -60,19 +60,19 @@ public class ParserTest {
 
     @Test
     public void testAsRange_WithPairedIndexes_getAllRanges() {
-        List<IntRange> ranges;
+        List<Range> ranges;
 
-        ranges = Parser.asRanges(new ArrayList<Integer>(), new ArrayList<Integer>());
+        ranges = Parser.pairsAsRanges(new ArrayList<Integer>(), new ArrayList<Integer>());
         assertTrue(ranges.size() == 0);
 
-        ranges = Parser.asRanges(Arrays.asList(1), Arrays.asList(5));
-        assertEquals(IntRange.closed(1,5), ranges.get(0));
+        ranges = Parser.pairsAsRanges(Arrays.asList(1), Arrays.asList(5));
+        assertEquals(Range.closed(1,5), ranges.get(0));
 
-        ranges = Parser.asRanges(Arrays.asList(1, 3, 5), Arrays.asList(7, 9, 11));
-        assertEquals(Arrays.asList(IntRange.closed(5, 7), IntRange.closed(3, 9), IntRange.closed(1, 11)), ranges);
+        ranges = Parser.pairsAsRanges(Arrays.asList(1, 3, 5), Arrays.asList(7, 9, 11));
+        assertEquals(Arrays.asList(Range.closed(5, 7), Range.closed(3, 9), Range.closed(1, 11)), ranges);
 
-        ranges = Parser.asRanges(Arrays.asList(1, 3, 5, 10), Arrays.asList(7, 9, 11, 13));
-        assertEquals(Arrays.asList(IntRange.closed(5, 7), IntRange.closed(3, 9), IntRange.closed(10, 11), IntRange.closed(1, 13)), ranges);
+        ranges = Parser.pairsAsRanges(Arrays.asList(1, 3, 5, 10), Arrays.asList(7, 9, 11, 13));
+        assertEquals(Arrays.asList(Range.closed(5, 7), Range.closed(3, 9), Range.closed(10, 11), Range.closed(1, 13)), ranges);
     }
 
     @Test

@@ -2,6 +2,8 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Set;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -16,7 +18,7 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue {
 
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
 
-    public static IJSONValue parse(String jsonContext, IntRange range) {
+    public static IJSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
@@ -29,9 +31,15 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue {
         return null;
     }
 
+    private final Map<String, IJSONValue> map = new HashMap<>();
 
     protected JSONObject(NamedValue... namedValues) {
-        super(namedValues);
+        super(checkNotNull(namedValues));
+
+        for (NamedValue namedValue :
+                namedValues) {
+            map.put(namedValue.getName(), namedValue.getValue());
+        }
     }
 
     @Override
@@ -60,5 +68,10 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue {
     @Override
     public Object getObject() {
         return asArray();
+    }
+
+    @Override
+    public String toString() {
+        return toJSONString(0);
     }
 }

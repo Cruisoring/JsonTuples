@@ -45,7 +45,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
 
-    public static IJSONValue parse(String jsonContext, IntRange range) {
+    public static IJSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 

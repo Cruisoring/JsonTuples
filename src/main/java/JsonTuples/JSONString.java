@@ -37,4 +37,8 @@ public class JSONString extends JSONValue<String> {
         return "\"" + StringEscapeUtils.escapeJson(string) + "\"";
     }
 
+    @Override
+    public String toString() {
+        return String.format("\"%s\"", getFirst());
+    }
 }

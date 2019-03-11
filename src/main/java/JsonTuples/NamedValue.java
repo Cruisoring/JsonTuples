@@ -45,8 +45,8 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
         return getFirst();
     }
 
-    public Object getValue() {
-        return getSecond().getObject();
+    public IJSONValue getValue() {
+        return getSecond();
     }
 
     @Override
