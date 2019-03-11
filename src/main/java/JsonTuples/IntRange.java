@@ -1,11 +1,15 @@
 package JsonTuples;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -21,6 +25,8 @@ public class IntRange extends Tuple2<Integer, Integer> {
     public static final Integer POSITIVE_INFINITY;
 
     public static final long POSITIVE_INFINITE_LONG;
+
+    private static final int _RUN_PARALLEL = 100;
 
     static {
         //Set both infinities by default, or load from config file in future.
@@ -133,6 +139,34 @@ public class IntRange extends Tuple2<Integer, Integer> {
                 new IntRange(NEGATIVE_INFINITY, endExclusive) : ALL_INT;
     }
 
+    public static List<Tuple2<IntRange, IntRange>> getRangePairs(Collection<IntRange> ranges1, Collection<IntRange> ranges2, Predicate<Tuple2<IntRange, IntRange>> predicate) {
+        checkNotNull(ranges1);
+        checkNotNull(ranges2);
+        checkNotNull(predicate);
+
+        int size1 = ranges1.size();
+        int size2 = ranges2.size();
+        int combinations = size1*size2;
+        if(combinations == 0)
+            return new ArrayList<>();
+
+        Stream<Tuple2<IntRange, IntRange>> options = ranges1.stream()
+                .flatMap(x -> ranges2.stream().map(y -> Tuple.create(x, y)));
+
+        List<Tuple2<IntRange, IntRange>> result;
+        if(combinations < _RUN_PARALLEL) {
+            result = options.filter(predicate).collect(Collectors.toList());
+        } else {
+            result = options.parallel().filter(predicate).collect(Collectors.toList());
+        }
+        return result;
+    }
+
+    private final static Predicate<Tuple2<IntRange, IntRange>> overlapPredicate = tuple -> tuple.getFirst().overlaps(tuple.getSecond());
+    public static List<Tuple2<IntRange, IntRange>> getOverlappedRangePairs(Collection<IntRange> ranges1, Collection<IntRange> ranges2) {
+        return getRangePairs(ranges1, ranges2, overlapPredicate);
+    }
+
     //Represent the size of the range in long, -1 when size is infinite
     private final long _size;
     private final int _start, _end;
@@ -225,6 +259,13 @@ public class IntRange extends Tuple2<Integer, Integer> {
         return this._start <= other._end && other._start <= this._end;
     }
 
+    public boolean overlaps(IntRange other) {
+        checkNotNull(other);
+
+        return (_start<other._start &&_end >other._start && _end<other._end)
+                || (_start>other._start && _start < other._end && _end>other._end);
+    }
+
     public IntRange intersection(IntRange other) {
         checkNotNull(other);
 
@@ -239,6 +280,18 @@ public class IntRange extends Tuple2<Integer, Integer> {
             return other;
         } else {
             return new IntRange(minStart, maxEnd);
+        }
+    }
+
+    public IntRange gapWith(IntRange other) {
+        checkNotNull(other);
+
+        if(_start == other._start || _end == other._end || _start==other._end || _end==other._start) {
+            return NONE;
+        } else if (_start < other._start) {
+            return _end >= other._start ? NONE : closedOpen(_end, other._start);
+        } else {
+            return other._end >= _start ? NONE : closedOpen(other._end, _start);
         }
     }
 

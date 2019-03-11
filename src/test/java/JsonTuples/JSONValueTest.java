@@ -1,6 +1,5 @@
 package JsonTuples;
 
-import com.google.common.collect.Range;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -109,7 +108,7 @@ public class JSONValueTest {
             "    \"taglib-uri\": \"cofax.tld\",\n" +
             "    \"taglib-location\": \"/WEB-INF/tlds/cofax.tld\"}}}";
 
-    static final Map<String, Range<Integer>> namedRanges = new HashMap<>();
+    static final Map<String, IntRange> namedRanges = new HashMap<>();
 
     static {
         Matcher matcher = NamedValue.NAME_VALUE_PATTERN.matcher(jsonContext);
@@ -118,7 +117,7 @@ public class JSONValueTest {
             String value = matcher.group(2);
             int valueStart = matcher.start(2);
             int valueEnd = matcher.end(2);
-            Range range = Range.closedOpen(valueStart, valueEnd);
+            IntRange range = IntRange.closedOpen(valueStart, valueEnd);
             namedRanges.putIfAbsent(name, range);
         }
     }
@@ -127,7 +126,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_withNull_getNull() {
         String name = "null";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue nullValue = JSONValue.parse(jsonContext, range);
         Assert.assertNull(nullValue.getObject());
 
@@ -136,7 +135,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_withTrue_getTrue() {
         String name = "true";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue booleanValue = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(Boolean.TRUE, booleanValue.getObject());
     }
@@ -144,7 +143,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_withFalse_getFalse() {
         String name = "false";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue booleanValue = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(Boolean.FALSE, booleanValue.getObject());
     }
@@ -153,7 +152,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw() {
         String name = "servlet-name";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue value = JSONValue.parse(jsonContext, range);
         Assert.assertEquals("cofaxCDS", value.getObject());
 
@@ -165,7 +164,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_ofInteger_objectMatched() {
         String name = "integer";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(Integer.valueOf(-100), number.getObject());
     }
@@ -173,7 +172,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_ofBigInteger_objectMatched() {
         String name = "bigInteger";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(new BigInteger("12345678901234567890"), number.getObject());
     }
@@ -183,7 +182,7 @@ public class JSONValueTest {
     //Ignored since only big Decimal is used to keep float point numbers.
     public void fromJSONRaw_ofDouble_objectMatched() {
         String name = "double";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(Double.valueOf(-77.23), number.getObject());
     }
@@ -191,7 +190,7 @@ public class JSONValueTest {
     @Test
     public void fromJSONRaw_ofBigDecimal_objectMatched() {
         String name = "bigDecimal";
-        Range range = namedRanges.get(name);
+        IntRange range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
         Assert.assertEquals(new BigDecimal("12345678901234567890.12345678909"), number.getObject());
     }

@@ -1,6 +1,5 @@
 package JsonTuples;
 
-import com.google.common.collect.Range;
 import io.github.cruisoring.tuple.Tuple1;
 import org.apache.commons.lang3.StringUtils;
 
@@ -46,11 +45,11 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
 
-    public static IJSONValue parse(String jsonContext, Range<Integer> range) {
+    public static IJSONValue parse(String jsonContext, IntRange range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
-        String valueString = jsonContext.substring(range.lowerEndpoint(), range.upperEndpoint()).trim();
+        String valueString = jsonContext.substring(range.getStartInclusive(), range.getEndExclusive()).trim();
         return parse(valueString);
     }
 

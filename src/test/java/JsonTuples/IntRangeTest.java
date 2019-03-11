@@ -332,6 +332,49 @@ public class IntRangeTest {
     }
 
     @Test
+    public void overlaps(){
+        IntRange range1_4 = new IntRange(1, 4);
+
+        assertFalse(range1_4.overlaps(new IntRange(-1, 0)));
+        assertFalse(range1_4.overlaps(new IntRange(0, 1)));
+        assertFalse(range1_4.overlaps(new IntRange(4, 7)));
+        assertFalse(range1_4.overlaps(new IntRange(1, 2)));
+        assertFalse(range1_4.overlaps(new IntRange(1, 4)));
+        assertFalse(range1_4.overlaps(new IntRange(2, 4)));
+        assertFalse(range1_4.overlaps(IntRange.aboveOpen(0)));
+        assertFalse(range1_4.overlaps(IntRange.aboveClosed(0)));
+        assertFalse(range1_4.overlaps(IntRange.aboveOpen(3)));
+        assertFalse(range1_4.overlaps(IntRange.aboveOpen(-3)));
+        assertFalse(range1_4.overlaps(IntRange.belowOpen(1)));
+        assertFalse(range1_4.overlaps(IntRange.belowOpen(-1)));
+        assertFalse(range1_4.overlaps(IntRange.belowOpen(4)));
+
+        assertTrue(range1_4.overlaps(new IntRange(-1, 2)));
+        assertTrue(range1_4.overlaps(new IntRange(0, 3)));
+        assertTrue(range1_4.overlaps(new IntRange(3, 7)));
+        assertTrue(range1_4.overlaps(new IntRange(2, 9)));
+        assertTrue(range1_4.overlaps(IntRange.aboveOpen(1)));
+        assertTrue(range1_4.overlaps(IntRange.aboveOpen(2)));
+        assertTrue(range1_4.overlaps(IntRange.aboveClosed(2)));
+        assertTrue(range1_4.overlaps(IntRange.aboveClosed(3)));
+        assertTrue(range1_4.overlaps(IntRange.belowOpen(3)));
+        assertTrue(range1_4.overlaps(IntRange.belowOpen(2)));
+        assertTrue(range1_4.overlaps(IntRange.belowClosed(1)));
+
+        IntRange range2_2 = new IntRange(2, 2);
+        assertFalse(range2_2.overlaps(new IntRange(-1, 0)));
+        assertFalse(range2_2.overlaps(new IntRange(0, 1)));
+        assertFalse(range2_2.overlaps(new IntRange(4, 7)));
+        assertFalse(range2_2.overlaps(new IntRange(1, 2)));
+        assertFalse(range2_2.overlaps(new IntRange(1, 4)));
+        assertFalse(range2_2.overlaps(new IntRange(2, 4)));
+        assertFalse(range2_2.overlaps(IntRange.aboveOpen(3)));
+        assertFalse(range2_2.overlaps(IntRange.aboveOpen(-3)));
+        assertFalse(range2_2.overlaps(IntRange.belowOpen(1)));
+        assertFalse(range2_2.overlaps(IntRange.belowOpen(-1)));
+    }
+
+    @Test
     public void compareTo() {
         IntRange range3_4 = new IntRange(3, 4);
         IntRange range3_5 = new IntRange(3, 5);
@@ -347,6 +390,35 @@ public class IntRangeTest {
         List<IntRange> rangeList = Arrays.asList(range3_4, range3_5, range7_8, range0_1, range0_10, range1_2, range0_3, range1_1, range2_4, range1_9);
         Collections.sort(rangeList);
         assertEquals(Arrays.asList(range0_1, range0_3, range0_10, range1_1, range1_2, range1_9, range2_4, range3_4, range3_5,  range7_8), rangeList);
+    }
+
+    @Test
+    public void gapWith() {
+        IntRange range1_4 = new IntRange(1, 4);
+
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(1, 2)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(1, 1)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(1, 3)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(1, 4)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(1, 5)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(4, 5)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.aboveClosed(0)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.aboveClosed(1)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.aboveClosed(3)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.aboveClosed(4)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(new IntRange(-1, 1)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.belowOpen(5)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.belowOpen(4)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.belowOpen(3)));
+        assertEquals(IntRange.NONE, range1_4.gapWith(IntRange.belowOpen(1)));
+
+        assertEquals(new IntRange(4, 5), range1_4.gapWith(new IntRange(5, 5)));
+        assertEquals(new IntRange(4, 6), range1_4.gapWith(new IntRange(6, 6)));
+        assertEquals(new IntRange(4, 6), range1_4.gapWith(new IntRange(6, 9)));
+        assertEquals(new IntRange(4, 8), range1_4.gapWith(IntRange.aboveClosed(8)));
+        assertEquals(new IntRange(0, 1), range1_4.gapWith(new IntRange(-9, 0)));
+        assertEquals(new IntRange(-1, 1), range1_4.gapWith(new IntRange(-9, -1)));
+        assertEquals(new IntRange(-7, 1), range1_4.gapWith(IntRange.belowClosed(-8)));
     }
 
     @Test
