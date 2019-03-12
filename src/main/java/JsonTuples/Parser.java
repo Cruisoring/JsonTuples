@@ -1,12 +1,11 @@
 package JsonTuples;
 
-import io.github.cruisoring.tuple.Tuple2;
+import io.github.cruisoring.Lazy;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -32,6 +31,7 @@ public final class Parser {
 
     final static Set<Character> MARKERS = new HashSet<Character>(
             Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, QUOTE, BACK_SLASH));
+    final static List<Character> VALUE_END_INDICATORS = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, COMMA);
     final static Character MIN_MARKER = Collections.min(MARKERS);
     final static Character MAX_MARKER = Collections.max(MARKERS);
 
@@ -163,7 +163,7 @@ public final class Parser {
     }
 
     /**
-     * Converting the indexes of wrapping characters in pairs as Ranges.
+     * Converting the indexes of wrapping characters in pairs as unmodifiable Range list.
      * @param indexes   List of the indexes that must be even.
      * @return      List of the ranges with even indexes as startInclusive, and odd indexes as endInclusive.
      */
@@ -186,14 +186,14 @@ public final class Parser {
             ranges.add(range);
         }
 
-        return ranges;
+        return Collections.unmodifiableList(ranges);
     }
 
     /**
-     * Converting the indexes of starts and indexes of ends in pairs as Ranges.
+     * Converting the indexes of starts and indexes of ends in pairs as unmodifiable Range list.
      * @param startIndexes  Index list of the starting characters.
      * @param endIndexes    Index list of the ending characters.
-     * @return      List of the ranges with one of the index of starting character, and one of the index of the ending character.
+     * @return      Unmodifiable list of the ranges with one of the index of starting character, and one of the index of the ending character.
      */
     public static List<Range> pairsAsRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
         checkNotNull(startIndexes);
@@ -241,7 +241,7 @@ public final class Parser {
                     String.format("Not start index matching end index of %d!", end));
         }
 
-        return ranges;
+        return Collections.unmodifiableList(ranges);
     }
 
     private static List<Range> getPairsWithValueRanges(Set<Range> nameRangeSet, Collection<Range> valueRanges, Set<Integer> indicatorIndexes) {
@@ -292,21 +292,19 @@ public final class Parser {
     public final int length;
 
     //Keep the indexes of all characters with special meaning in JSON
-    final Map<Character, List<Integer>> markersIndexes = new HashMap<Character, List<Integer>>();
+    private Map<Character, Set<Integer>> specialCharIndexes;
 
     private IJSONValue parsedResult = null;
 
     private List<Range> stringRanges = null;
 
-    private List<Range> namedObjectRanges = null;
+//    private List<Range> namedObjectRanges = null;
+//
+//    private List<Range> namedArrayRanges = null;
+//
+//    private Map<Class<? extends IJSONable>, List<Range>> pairedScopes = new HashMap<>();
 
-    private List<Range> namedArrayRanges = null;
-
-    private Map<Character, Set<Integer>>  solidMarkers;
-
-    private Map<Class<? extends IJSONable>, List<Range>> pairedScopes = new HashMap<>();
-
-    private final Map<Range, IJSONable> rangedValues = new HashMap<>();
+    private final Map<Range, Lazy<IJSONable>> rangedElements = new HashMap<>();
 
     public Parser(String jsonText) {
         checkState(StringUtils.isNoneBlank(jsonText));
@@ -314,11 +312,16 @@ public final class Parser {
         this.jsonContext = jsonText;
         length = jsonContext.length();
 
-        for (Character marker : MARKERS) {
-            markersIndexes.put(marker, new ArrayList<>());
-        }
+//        for (Character marker : MARKERS) {
+//            specialCharIndexes.put(marker, new ArrayList<>());
+//        }
     }
 
+    /**
+     * Extract the content of the specified Range as a String.
+     * @param range Range to be extracted.
+     * @return      SubString of the content relative to the saved jsonContext.
+     */
     public String subString(Range range) {
         checkNotNull(range);
 
@@ -326,41 +329,48 @@ public final class Parser {
         return jsonContext.substring(range.getStartInclusive(), end>length?length:end);
     }
 
-    private void scan() {
-        if(parsedResult != null)
-            return;
-
-        //Get all indexes of all concerned markers
-        for (int i = 0; i < length; i++) {
-            char current = jsonContext.charAt(i);
-            if(current < MIN_MARKER || current > MAX_MARKER || !MARKERS.contains(current)){
-                continue;
-            }
-
-            markersIndexes.get(current).add(i);
-        }
-
-        //Screen out escaped quotation marks
-        List<Integer> backSlashIndexes = markersIndexes.get(BACK_SLASH);
-        List<Integer> validStringBoundaries = new ArrayList<>(markersIndexes.get(QUOTE));
-        for (Integer backSlashIndex : backSlashIndexes) {
-            Integer toBeEscaped = backSlashIndex+1;
-            if(validStringBoundaries.contains(toBeEscaped)){
-                validStringBoundaries.remove(toBeEscaped);
-            }
-        }
-
-        //Fail fast if valid quotation marks not appear in pairs which means JSON Strings are not enclosed properly
-        checkState(validStringBoundaries.size()%2==0, "JSON strings are not wrapped in double quotes!");
-
-        List<Range> list = new ArrayList<>();
-        for (int i = 0; i < validStringBoundaries.size(); i+=2) {
-            list.add(Range.closed(validStringBoundaries.get(i), validStringBoundaries.get(i+1)));
-        }
-
-        stringRanges = Collections.unmodifiableList(list);
+    /**
+     * Parse the given Range of the {@code jsonContext} as a JSONString.
+     * @param range Range to specify the content enclosed by '"'s.
+     * @return      JSONString instance from the given range of the {@code jsonContext}
+     */
+    protected JSONString asJSONString(Range range) {
+        return JSONString.parseString(subString(range));
     }
 
+    /**
+     * Parse the given Range of the {@code jsonContext} as a JSONObject.
+     * @param range Range to specify the content enclosed by '{' and '}'
+     * @return      Parsed JSONObject instance from the given range of the {@code jsonContext}
+     */
+    protected JSONObject asJSONObject(Range range) {
+        return null;
+    }
+
+    /**
+     * Parse the given Range of the {@code jsonContext} as a JSONArray.
+     * @param range Range to specify the content enclosed by '[' and ']'
+     * @return      Parsed JSONArray instance from the given range of the {@code jsonContext}
+     */
+    protected JSONArray asJSONOArray(Range range) {
+        return null;
+    }
+
+    protected IJSONValue asValue(Range range) {
+        return parseValuePortion(jsonContext, range);
+    }
+
+    protected NamedValue asNamedValue(Range range, Range nameRange, Range valueRange) {
+        JSONString name = asJSONString(nameRange);
+        IJSONValue value = asValue(valueRange);
+        return new NamedValue(name.getFirst(), value);
+    }
+
+    /**
+     * Check if the index is within any Range of stringRanges.
+     * @param index Index to be checked.
+     * @return  True if any Range contains it that make special char invalid for JSON parsing, otherwise False.
+     */
     private boolean inAnyStringRange(Integer index) {
         checkNotNull(index);
         checkNotNull(stringRanges);
@@ -376,13 +386,52 @@ public final class Parser {
     }
 
     /**
-     * Get scope of JSON Object wrapped by '{' and '}', JSON Array wrapped by '[' and ']', JSON Strings, JSON Name-Value Pairs.
+     * Scan all the characters of the jsonContext to keep indexes of special characters as defined in {@code MARKERS}
+     *
+     * @return Indexes of all special characters as a Map.
      */
-    private void getScopes() {
-        if(parsedResult != null)
-            return;
+    private Map<Character, List<Integer>> scanSpecialIndexes() {
+        final Map<Character, List<Integer>> markersIndexes = new HashMap<Character, List<Integer>>();
+        MARKERS.stream().forEach(c -> markersIndexes.put(c, new ArrayList<>()));
 
-        solidMarkers = markersIndexes.entrySet().stream()
+        //Get all indexes of all concerned markers
+        for (int i = 0; i < length; i++) {
+            char current = jsonContext.charAt(i);
+            if(current < MIN_MARKER || current > MAX_MARKER || !MARKERS.contains(current)){
+                continue;
+            }
+            markersIndexes.get(current).add(i);
+        }
+
+        return markersIndexes;
+    }
+
+    /**
+     * Get ranges of JSON String instances, and return indexes of special chars out of these JSONString instances.
+     * @param markersIndexes    Known special char indexes organised as a Map.
+     *
+     * @return Indexes of special chars out of these JSONString instances, not including '"' since all shall be consumed.
+     */
+    private Map<Character, List<Integer>> demarcateStrings(Map<Character, List<Integer>> markersIndexes) {
+
+        //Screen out escaped quotation marks, assume no BACK_SLASH presented out of JSONString elements.
+        List<Integer> validStringBoundaries = new ArrayList<>(markersIndexes.get(QUOTE));
+        List<Integer> backSlashIndexes = markersIndexes.get(BACK_SLASH);
+        for (Integer backSlashIndex : backSlashIndexes) {
+            Integer toBeEscaped = backSlashIndex+1;
+            if(validStringBoundaries.contains(toBeEscaped)){
+                validStringBoundaries.remove(toBeEscaped);
+            }
+        }
+
+        //Fail fast if valid quotation marks not appear in pairs which means JSON Strings are not enclosed properly
+        checkState(validStringBoundaries.size()%2==0, "JSON strings are not wrapped in double quotes!");
+
+        //Notice the Ranges within stringRanges are sorted by nature
+        stringRanges = _asRanges(validStringBoundaries);
+        //Clear any index of special chars if they are contained by any of the stringRanges
+        //TODO: not define it as class variable
+        specialCharIndexes = markersIndexes.entrySet().stream()
                 .filter(entry -> !entry.getKey().equals(QUOTE))
                 .collect(Collectors.toMap(
                         entry -> entry.getKey(),
@@ -394,153 +443,282 @@ public final class Parser {
                 ));
 
         //Validate there is no BACK_SLASH out of JSON String enclosed by '"' pairs.
-        int backSlashCount = solidMarkers.get(BACK_SLASH).size();
+        int backSlashCount = specialCharIndexes.get(BACK_SLASH).size();
         checkState(backSlashCount == 0,
                 String.format("There are %d '\\' out of any JSON String object.", backSlashCount));
 
-        int leftBraceCount = solidMarkers.get(LEFT_BRACE).size();
-        int rightBraceCount = solidMarkers.get(RIGHT_BRACE).size();
+        int leftBraceCount = specialCharIndexes.get(LEFT_BRACE).size();
+        int rightBraceCount = specialCharIndexes.get(RIGHT_BRACE).size();
         checkState( leftBraceCount == rightBraceCount,
                 String.format("Unbalanced JSON Objects with %d '{', but %d '}'", leftBraceCount, rightBraceCount ));
 
-        int leftBracketCount = solidMarkers.get(LEFT_BRACKET).size();
-        int rightBracketCount = solidMarkers.get(RIGHT_BRACKET).size();
+        int leftBracketCount = specialCharIndexes.get(LEFT_BRACKET).size();
+        int rightBracketCount = specialCharIndexes.get(RIGHT_BRACKET).size();
         checkState( leftBracketCount == rightBracketCount,
                 String.format("Unbalanced JSON Arrays with %d '[', but %d ']'", leftBracketCount, rightBracketCount ));
 
-        List<Range> stringRanges = _asRanges(markersIndexes.get(QUOTE));
-        pairedScopes.put(JSONString.class, stringRanges);
-        pairedScopes.put(JSONObject.class, _asRanges(markersIndexes.get(LEFT_BRACE), markersIndexes.get(RIGHT_BRACE)));
-        pairedScopes.put(JSONArray.class, _asRanges(markersIndexes.get(LEFT_BRACKET), markersIndexes.get(RIGHT_BRACKET)));
+        //Keeps clues of how to process ranges as JSONString instances
+        stringRanges.forEach(range -> rangedElements.put(range, new Lazy(() -> asJSONString(range))));
 
-        keepNameValueRanges(solidMarkers.get(COLON));
+        //Return active char lists that make JSON parsing differences
+        Map<Character, List<Integer>> activeCharIndexes = specialCharIndexes.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey(),
+                        entry -> new ArrayList<>(entry.getValue())
+                ));
+        return activeCharIndexes;
     }
 
-    private void keepNameValueRanges(Set<Integer> colonIndexes) {
-        Set<Range> stringRangeSet = new HashSet<Range>(pairedScopes.get(JSONString.class));
+    /**
+     * Get scope of JSON Object wrapped by '{' and '}', JSON Array wrapped by '[' and ']'
+     * @param activeCharIndexes Indexes of special chars out of these JSONString instances, not including '"' since all shall be consumed.
+     * @return  List of the Ranges of the detected JSONObject and JSONArray for later processing.
+     */
+    protected List<Range> demarcateObjectAndArrays(Map<Character, List<Integer>> activeCharIndexes) {
+        //Get ranges of JSONObjects and keeps clues of how to process ranges as JSONObject instances
+        List<Range> objectRanges = _asRanges(activeCharIndexes.get(LEFT_BRACE), activeCharIndexes.get(RIGHT_BRACE));
+        objectRanges.forEach(range -> rangedElements.put(range, new Lazy(() -> asJSONObject(range))));
 
-        namedObjectRanges = getPairsWithValueRanges(stringRangeSet,
-                pairedScopes.get(JSONObject.class), colonIndexes);
-        System.out.println("++++++++namedObjectRanges:");
-        namedObjectRanges.stream().forEach(range -> System.out.println(subString(range)));
+        //Get ranges of JSONArrays and keeps clues of how to process ranges as JSONArray instances
+        List<Range> arrayRanges = _asRanges(activeCharIndexes.get(LEFT_BRACKET), activeCharIndexes.get(RIGHT_BRACKET));
+        arrayRanges.forEach(range -> rangedElements.put(range, new Lazy(() -> asJSONOArray(range))));
 
-        namedArrayRanges = getPairsWithValueRanges(stringRangeSet,
-                pairedScopes.get(JSONArray.class), colonIndexes);
-        System.out.println("++++++++namedArrayRanges:");
-        namedArrayRanges.stream().forEach(range -> System.out.println(subString(range)));
-
-        List<Integer> valueEnderIndexes = new ArrayList<>(solidMarkers.get(COMMA));
-        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACE));
-        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACKET));
-
-        List<Range> nameValueRanges = _getNamedValueRanges(stringRangeSet, colonIndexes, valueEnderIndexes);
-        System.out.println("++++++++nameValueRanges:");
-        nameValueRanges.stream().forEach(range -> System.out.println(subString(range)));
-
-        pairedScopes.put(NamedValue.class, nameValueRanges);
+        List<Range> bothRanges = new ArrayList<>(objectRanges);
+        bothRanges.addAll(arrayRanges);
+        return bothRanges;
     }
 
-    private void validateScopes() {
-        if(parsedResult != null)
-            return;
+    /**
+     * Mark the Ranges of all NamedValues by starting with JSONObject and JSONArray.
+     * @param objectOrArrayRanges   Ranges of either JSONObject or JSONArray.
+     * @param activeCharIndexes     Indexes of special chars out of these JSONString instances, not including '"' since all shall be consumed.
+     * @return      Ranges of either JSONObject or JSONArray that have no names.
+     */
+    protected List<Range> demarcateNamedValues(List<Range> objectOrArrayRanges, Map<Character, List<Integer>> activeCharIndexes) {
+        List<Range> unpairedStringRanges = new ArrayList<>(stringRanges);
+        unpairedStringRanges.sort(Comparator.reverseOrder());
+        Set<Range> consumedStringRange = new HashSet<>();
+        List<Range> remainedObjectOrArrayRanges = new ArrayList<>();
+        List<Integer> colonIndexes = activeCharIndexes.get(COLON);
+        colonIndexes.sort(Comparator.naturalOrder());
+        List<Integer> valueEndIndexes = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, COMMA, COLON).stream().map(c -> activeCharIndexes.get(c))
+                .flatMap(list -> list.stream())
+                .sorted()
+                .collect(Collectors.toList());
+        List<Integer> specialIndexes = activeCharIndexes.values().stream()
+                .flatMap(list -> list.stream())
+                .sorted()
+                .collect(Collectors.toList());
 
-        List<List<Range>> categoredScopes = new ArrayList(pairedScopes.values());
-        int size = categoredScopes.size();
-        for (int i = 0; i < size - 1; i++) {
-            for (int j = i+1; j < size; j++) {
-                List<Tuple2<Range, Range>> overlapped = Range.getOverlappedRangePairs(categoredScopes.get(i), categoredScopes.get(j));
+        //Ensure the pairing happens from the big ones to small ones
+        objectOrArrayRanges.sort(Comparator.comparing(Range::size).reversed());
+        for (Range objectArrayRange : objectOrArrayRanges) {
+            Range lastStringBefore = unpairedStringRanges.stream()
+                    .filter(range -> range.getStartInclusive() < objectArrayRange.getStartInclusive())
+                    .findFirst().orElse(null);
+            if(lastStringBefore == null || consumedStringRange.contains(lastStringBefore)) {
+                remainedObjectOrArrayRanges.add(objectArrayRange);
+                continue;
+            }
 
-                if(!overlapped.isEmpty()) {
-                    for (Tuple2<Range, Range> tuple : overlapped) {
-                        System.out.println(String.format("--------------%s overlaps %s", tuple.getFirst(), tuple.getSecond()));
-                        String text1 = subString(tuple.getFirst());
-                        String text2 = subString(tuple.getSecond());
-                        System.out.println(String.format("'%s' is overlapped with '%s'", text1, text2));
-                    }
+            checkState(lastStringBefore.getEndInclusive() < objectArrayRange.getStartInclusive(), "Name String is overlapped with Object/Array?");
+
+            Range gap = objectArrayRange.gapWith(lastStringBefore);
+            checkState(gap.size() > 0);
+
+            List<Integer> specialChars = specialIndexes.stream().filter(i -> gap.contains(i)).collect(Collectors.toList());
+            checkState(specialChars.size()==1 && colonIndexes.contains(specialChars.get(0)),
+                    String.format("Unexpected NameValue connector: '%s' between '%s' and '%s...'",
+                            subString(gap), subString(lastStringBefore),
+                            objectArrayRange.size()>30 ? subString(objectArrayRange).substring(0, 30) : subString(objectArrayRange)));
+            //Remove the consume COLON by this NamedValue
+            colonIndexes.remove(specialChars.get(0));
+
+            consumedStringRange.add(lastStringBefore);
+            Range nameValueRange = lastStringBefore.intersection(objectArrayRange);
+            System.out.println(subString(nameValueRange));
+            rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameValueRange, lastStringBefore, objectArrayRange)));
+        }
+
+        unpairedStringRanges.removeAll(consumedStringRange);
+        unpairedStringRanges.sort(Comparator.naturalOrder());
+
+        int size = unpairedStringRanges.size();
+        for (int i = 0; i < size; i++) {
+            Range nameRange = unpairedStringRanges.get(i);
+            if(consumedStringRange.contains(nameRange)) {
+                continue;
+            }
+
+            Range nextStringRange = i == size-1 ? null : unpairedStringRanges.get(i+1);
+            if(nextStringRange != null) {
+                //Assume the JSONString is the value portion
+                Range gap = nextStringRange.gapWith(nameRange);
+                List<Integer> specialChars = specialIndexes.stream().filter(index -> gap.contains(index)).collect(Collectors.toList());
+                if(specialChars.size()==1 && colonIndexes.contains(specialChars.get(0))) {
+                    //Remove the consume COLON by this NamedValue
+                    colonIndexes.remove(specialChars.get(0));
+
+                    consumedStringRange.add(nextStringRange);
+                    Range nameValueRange = nextStringRange.intersection(nameRange);
+                    rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameValueRange, nameRange, nextStringRange)));
+                    System.out.println(subString(nameValueRange));
+                    continue;
                 }
-                checkState(overlapped.isEmpty());
             }
-        }
-    }
 
-    private void parseNameValues() {
-        if(parsedResult != null)
-            return;
+            Integer nextEnd = valueEndIndexes.stream().filter(index -> index > nameRange.getEndInclusive()).findFirst().orElse(null);
+            checkNotNull(nextEnd);
 
-        //Parse all Ranges of strings, either as names or JSONStrings.
-        List<Range> stringRanges = pairedScopes.get(JSONString.class);
-        for (Range stringRange : stringRanges) {
-            String content = getStringContent(jsonContext, stringRange);
-            rangedValues.put(stringRange, new JSONString(content));
-        }
-
-        //Then parse all simple Name Value pairs where Values are not JSONObjects or JSONArrays
-        List<Range> nvpRanges = pairedScopes.get(NamedValue.class);
-        for (Range nvpRange : nvpRanges) {
-//            String nvpString = subString(nvpRange);
-            List<Range> stringRangesContained = stringRanges.stream().filter(r -> nvpRange.contains(r)).collect(Collectors.toList());
-            int count = stringRangesContained.size();
-            checkState(count != 0, "Failed to find the name of the NameValuePair.");
-            checkState(count <= 2, "There shall never be 3rd String in a NameValuePair.");
-
-            Range nameRange = stringRangesContained.get(0);
-            JSONString nameJson = (JSONString)(rangedValues.get(nameRange));
-            String name = nameJson.getFirst();
-            IJSONValue value = count == 2 ?
-                    (JSONString)rangedValues.get(stringRangesContained.get(1))
-                    : parseValuePortion(jsonContext, Range.closedOpen(nameRange.getEndExclusive(), nvpRange.getEndExclusive()));
-            NamedValue nvp = new NamedValue(name, value);
-            rangedValues.put(nvpRange, nvp);
-        }
-    }
-
-    private void parseObjectOrArrays() {
-        List<Range> arrayRanges = pairedScopes.get(JSONArray.class);
-        List<Range> objectRanges = pairedScopes.get(JSONObject.class);
-        List<Range> objectOrArrayRanges = new ArrayList<Range>(arrayRanges);
-        objectOrArrayRanges.addAll(objectRanges);
-        objectOrArrayRanges.sort(Comparator.comparing(Range::size));
-        Set<Integer> commaIndexes = solidMarkers.get(COMMA);
-
-        for (Range range : objectOrArrayRanges) {
-            if(arrayRanges.contains(range)) {
-                List<Integer> commasInRange = commaIndexes.stream().filter(i -> range.contains(i)).collect(Collectors.toList());
-                commasInRange.add(0, range.getStartInclusive());
-                commasInRange.add(range.getEndInclusive());
-                List<Range> elementRanges = IntStream.range(1, commasInRange.size())
-                        .mapToObj(i -> Range.open(commasInRange.get(i-1), commasInRange.get(i)))
-                        .collect(Collectors.toList());
-                IJSONValue[] values = elementRanges.stream()
-                        .map(r -> parseValue(subString(jsonContext, r))).toArray(i -> new IJSONValue[i]);
-                JSONArray array = new JSONArray(values);
-
-                Range namedArrayRange = namedArrayRanges.stream().filter(r -> r.contains(range)).findFirst().orElse(null);
-                Range nameRange = stringRanges.stream().filter(r -> namedArrayRange.contains(r)).findFirst().orElse(null);
-                NamedValue nvp = new NamedValue(rangedValues.get(nameRange).toString(), array);
-                rangedValues.put(namedArrayRange, nvp);
-            } else {
-                List<NamedValue> namedValues = rangedValues.entrySet().stream()
-                        .filter(entry -> range.contains(entry.getKey()) && (entry.getValue() instanceof NamedValue))
-                        .map(entry -> (NamedValue)(entry.getValue())).collect(Collectors.toList());
-                
+            if(!colonIndexes.contains(nextEnd)) {
+                rangedElements.put(nameRange, new Lazy<>(() -> asValue(nameRange)));
+                System.out.println(subString(nameRange));
+                continue;
             }
+
+            Range gap = nameRange.gapWith(Range.closed(nextEnd, nextEnd));
+            List<Integer> specialChars = specialIndexes.stream().filter(index -> gap.contains(index)).collect(Collectors.toList());
+            checkState(specialChars.isEmpty());
+
+            Integer nextSpecialIndex = specialIndexes.stream().filter(index -> index > nextEnd).findFirst().orElse(null);
+            checkState(VALUE_END_INDICATORS.contains(jsonContext.charAt(nextSpecialIndex)));
+
+            Range nameValueRange = Range.closedOpen(nameRange.getStartInclusive(), nextSpecialIndex);
+            Range valueRange = Range.open(nextEnd, nextSpecialIndex);
+            System.out.println(subString(nameValueRange));
+            rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameValueRange, nameRange, valueRange)));
         }
+
+        return remainedObjectOrArrayRanges;
     }
+
+//    private void denote(Map<Character, List<Integer>> activeCharIndexes) {
+//
+//        denote(specialCharIndexes.get(COLON));
+//
+//
+//        Set<Range> stringRangeSet = new HashSet<Range>(pairedScopes.get(JSONString.class));
+//
+//        namedObjectRanges = getPairsWithValueRanges(stringRangeSet,
+//                pairedScopes.get(JSONObject.class), colonIndexes);
+//        System.out.println("++++++++namedObjectRanges:");
+//        namedObjectRanges.stream().forEach(range -> System.out.println(subString(range)));
+//
+//        namedArrayRanges = getPairsWithValueRanges(stringRangeSet,
+//                pairedScopes.get(JSONArray.class), colonIndexes);
+//        System.out.println("++++++++namedArrayRanges:");
+//        namedArrayRanges.stream().forEach(range -> System.out.println(subString(range)));
+//
+//        List<Integer> valueEnderIndexes = new ArrayList<>(specialCharIndexes.get(COMMA));
+//        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACE));
+//        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACKET));
+//
+//        List<Range> nameValueRanges = _getNamedValueRanges(stringRangeSet, colonIndexes, valueEnderIndexes);
+//        System.out.println("++++++++nameValueRanges:");
+//        nameValueRanges.stream().forEach(range -> System.out.println(subString(range)));
+//
+//        pairedScopes.put(NamedValue.class, nameValueRanges);
+//    }
+
+//    private void validateScopes() {
+//        if(parsedResult != null)
+//            return;
+//
+//        List<List<Range>> categoredScopes = new ArrayList(pairedScopes.values());
+//        int size = categoredScopes.size();
+//        for (int i = 0; i < size - 1; i++) {
+//            for (int j = i+1; j < size; j++) {
+//                List<Tuple2<Range, Range>> overlapped = Range.getOverlappedRangePairs(categoredScopes.get(i), categoredScopes.get(j));
+//
+//                if(!overlapped.isEmpty()) {
+//                    for (Tuple2<Range, Range> tuple : overlapped) {
+//                        System.out.println(String.format("--------------%s overlaps %s", tuple.getFirst(), tuple.getSecond()));
+//                        String text1 = subString(tuple.getFirst());
+//                        String text2 = subString(tuple.getSecond());
+//                        System.out.println(String.format("'%s' is overlapped with '%s'", text1, text2));
+//                    }
+//                }
+//                checkState(overlapped.isEmpty());
+//            }
+//        }
+//    }
+
+//    private void parseNameValues() {
+//        if(parsedResult != null)
+//            return;
+//
+//        //Parse all Ranges of strings, either as names or JSONStrings.
+//        List<Range> stringRanges = pairedScopes.get(JSONString.class);
+//        for (Range stringRange : stringRanges) {
+//            String content = getStringContent(jsonContext, stringRange);
+//            rangedValues.put(stringRange, new JSONString(content));
+//        }
+//
+//        //Then parse all simple Name Value pairs where Values are not JSONObjects or JSONArrays
+//        List<Range> nvpRanges = pairedScopes.get(NamedValue.class);
+//        for (Range nvpRange : nvpRanges) {
+////            String nvpString = subString(nvpRange);
+//            List<Range> stringRangesContained = stringRanges.stream().filter(r -> nvpRange.contains(r)).collect(Collectors.toList());
+//            int count = stringRangesContained.size();
+//            checkState(count != 0, "Failed to find the name of the NameValuePair.");
+//            checkState(count <= 2, "There shall never be 3rd String in a NameValuePair.");
+//
+//            Range nameRange = stringRangesContained.get(0);
+//            JSONString nameJson = (JSONString)(rangedValues.get(nameRange));
+//            String name = nameJson.getFirst();
+//            IJSONValue value = count == 2 ?
+//                    (JSONString)rangedValues.get(stringRangesContained.get(1))
+//                    : parseValuePortion(jsonContext, Range.closedOpen(nameRange.getEndExclusive(), nvpRange.getEndExclusive()));
+//            NamedValue nvp = new NamedValue(name, value);
+//            rangedValues.put(nvpRange, nvp);
+//        }
+//    }
+//
+//    private void parseObjectOrArrays() {
+//        List<Range> arrayRanges = pairedScopes.get(JSONArray.class);
+//        List<Range> objectRanges = pairedScopes.get(JSONObject.class);
+//        List<Range> objectOrArrayRanges = new ArrayList<Range>(arrayRanges);
+//        objectOrArrayRanges.addAll(objectRanges);
+//        objectOrArrayRanges.sort(Comparator.comparing(Range::size));
+//        Set<Integer> commaIndexes = specialCharIndexes.get(COMMA);
+//
+//        for (Range range : objectOrArrayRanges) {
+//            if(arrayRanges.contains(range)) {
+//                List<Integer> commasInRange = commaIndexes.stream().filter(i -> range.contains(i)).collect(Collectors.toList());
+//                commasInRange.add(0, range.getStartInclusive());
+//                commasInRange.add(range.getEndInclusive());
+//                List<Range> elementRanges = IntStream.range(1, commasInRange.size())
+//                        .mapToObj(i -> Range.open(commasInRange.get(i-1), commasInRange.get(i)))
+//                        .collect(Collectors.toList());
+//                IJSONValue[] values = elementRanges.stream()
+//                        .map(r -> parseValue(subString(jsonContext, r))).toArray(i -> new IJSONValue[i]);
+//                JSONArray array = new JSONArray(values);
+//
+//                Range namedArrayRange = namedArrayRanges.stream().filter(r -> r.contains(range)).findFirst().orElse(null);
+//                Range nameRange = stringRanges.stream().filter(r -> namedArrayRange.contains(r)).findFirst().orElse(null);
+//                NamedValue nvp = new NamedValue(rangedValues.get(nameRange).toString(), array);
+//                rangedValues.put(namedArrayRange, nvp);
+//            } else {
+//                List<NamedValue> namedValues = rangedValues.entrySet().stream()
+//                        .filter(entry -> range.contains(entry.getKey()) && (entry.getValue() instanceof NamedValue))
+//                        .map(entry -> (NamedValue)(entry.getValue())).collect(Collectors.toList());
+//
+//            }
+//        }
+//    }
 
     public IJSONValue parse() {
         if(parsedResult != null){
             return parsedResult;
         }
 
-        scan();
+        Map<Character, List<Integer>> specialCharIndexes = scanSpecialIndexes();
 
-        getScopes();
+        Map<Character, List<Integer>> activeCharIndexes = demarcateStrings(specialCharIndexes);
 
-        validateScopes();
+        List<Range> objectOrArrayRanges = demarcateObjectAndArrays(activeCharIndexes);
 
-        parseNameValues();
-
-        parseObjectOrArrays();
+        List<Range> unnamedObjectOrArrayRanges = demarcateNamedValues(objectOrArrayRanges, activeCharIndexes);
 
         return null;
     }
