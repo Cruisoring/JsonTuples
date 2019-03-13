@@ -5,10 +5,7 @@ import com.google.common.collect.Iterables;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -17,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 public class Range extends Tuple2<Integer, Integer> {
-    public static final long INFINITE_LENGTH = -1;
+    public static final long INFINITE_LENGTH = Long.MAX_VALUE;
 
     //Integer number reserved to represent negative infinity: −∞, shall not be used explicitly as argument to specify the below or upper bound
     public static final Integer NEGATIVE_INFINITY;
@@ -323,6 +320,37 @@ public class Range extends Tuple2<Integer, Integer> {
         return _end == POSITIVE_INFINITY ? POSITIVE_INFINITY : _end;
     }
 
+    /**
+     * Get the direct children Rnges as a list.
+     * @param ranges    Sorted Ranges instances with no one overlaps with another to be evaluated.
+     * @return      All Range instances contained by this Range only.
+     */
+    public List<Range> getChildrens(TreeSet<Range> ranges) {
+        List<Range> children = new ArrayList<>();
+        Range lastChild = null;
+        for (Range range : ranges) {
+            if(_end < range._start) {
+                return children;
+            } else if( equals(range)) {
+                continue;
+            } else if (contains(range)) {
+                if(lastChild == null || !lastChild.contains(range)) {
+                    children.add(range);
+                    lastChild = range;
+                }
+            }
+        }
+        return children;
+    }
+
+    public Range getInside(){
+        if(_size <= 2) {
+            return NONE;
+        } else {
+            return new Range(_start+1, _end-1);
+        }
+    }
+
     @Override
     public int compareTo(Tuple o) {
         if(o == null) {
@@ -335,8 +363,10 @@ public class Range extends Tuple2<Integer, Integer> {
 
         Range other = (Range) o;
         if(_start == other._start){
-            return _end - other._end;
+            //Keep the largest one first
+            return other._end - _end;
         } else {
+            //Or keep the leftest one first
             return _start - other._start;
         }
     }

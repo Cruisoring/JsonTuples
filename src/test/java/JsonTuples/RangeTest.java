@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -430,4 +431,26 @@ public class RangeTest {
     }
 
 
+    @Test
+    public void getChildrens() {
+        Range container = Range.closed(10, 50);
+        TreeSet<Range> allRanges = new TreeSet<>(Arrays.asList(
+                Range.closed(0, 100),
+                    Range.closed(1, 9),
+                        Range.open(1, 3), Range.open(3, 7), Range.open(7, 9),
+                    Range.closed(10, 50),
+                        Range.open(10, 20),
+                            Range.closed(12, 15), Range.closed(16, 18),
+                        Range.closed(21, 30),
+                        Range.closed(30, 49),
+                            Range.open(30, 35),
+                                Range.openClosed(32, 33),
+                            Range.open(36, 40),
+                            Range.openClosed(41, 48),
+                    Range.closed(51, 89),
+                    Range.closed(90, 99)
+        ));
+
+        assertEquals(Arrays.asList(Range.open(10, 20),Range.closed(21, 30), Range.closed(30, 49)), container.getChildrens(allRanges));
+    }
 }
