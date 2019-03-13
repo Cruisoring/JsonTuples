@@ -15,6 +15,7 @@ import static java.util.Comparator.comparing;
  * Utility to parse JSON text based on information disclosed on <a href="http://www.json.org/">json.org</a>
  */
 public final class Parser {
+    //region static variables
     public static final String JSON_NULL = "null";
     public static final String JSON_TRUE = "true";
     public static final String JSON_FALSE = "false";
@@ -34,6 +35,7 @@ public final class Parser {
     final static List<Character> VALUE_END_INDICATORS = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, COMMA);
     final static Character MIN_MARKER = Collections.min(MARKERS);
     final static Character MAX_MARKER = Collections.max(MARKERS);
+    //endregion
 
     /**
      * Get subString of the concerned JSON text with its Range.
@@ -208,41 +210,64 @@ public final class Parser {
     }
 
     private static List<Range> _asRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
-        int size = startIndexes.size();
-        if(size == 0) {
-            return new ArrayList<>();
-        } else if (size == 1) {
-            return Arrays.asList(Range.closed(startIndexes.get(0), endIndexes.get(0)));
-        }
-
-        checkState(startIndexes.get(0) < endIndexes.get(0),
-                String.format("First startIndex of %d is greater or equal to first endIndex of %d.",
-                        startIndexes.get(0), endIndexes.get(0)));
+        TreeSet<Integer> sortedSet = new TreeSet<>(startIndexes);
+        sortedSet.addAll(endIndexes);
 
         List<Range> ranges = new ArrayList<>();
-        List<Integer> availableStarts = new ArrayList<>(startIndexes);
 
-        Integer end, start;
-        boolean getMatched;
-        for (int j = 0; j < size; j++) {
-            end = endIndexes.get(j);
-            getMatched = false;
-            for (int i = availableStarts.size()-1; i>=0; i--) {
-                start = availableStarts.get(i);
-                if(start < end) {
-                    Range newRange = Range.closed(start, end);
-                    ranges.add(newRange);
-                    availableStarts.remove(start);
-                    getMatched = true;
+        for (int i = startIndexes.size()-1; i>=0; i--) {
+            Integer start = null;
+            Integer end = null;
+            for (Integer index : sortedSet) {
+                if(start == null || startIndexes.contains(index)) {
+                    start = index;
+                } else {
+                    end = index;
                     break;
                 }
             }
-
-            checkState(getMatched,
-                    String.format("Not start index matching end index of %d!", end));
+            ranges.add(Range.closed(start, end));
+            sortedSet.remove(start);
+            sortedSet.remove(end);
         }
 
-        return Collections.unmodifiableList(ranges);
+        return ranges;
+
+//        int size = startIndexes.size();
+//        checkState(startIndexes.get(0) < endIndexes.get(0),
+//                String.format("First startIndex of %d is greater or equal to first endIndex of %d.",
+//                        startIndexes.get(0), endIndexes.get(0)));
+//
+//        if(size == 0) {
+//            return new ArrayList<>();
+//        } else if (size == 1) {
+//            return Arrays.asList(Range.closed(startIndexes.get(0), endIndexes.get(0)));
+//        }
+//
+//        List<Range> ranges = new ArrayList<>();
+//        List<Integer> availableStarts = new ArrayList<>(startIndexes);
+//
+//        Integer end, start;
+//        boolean getMatched;
+//        for (int j = 0; j < size; j++) {
+//            end = endIndexes.get(j);
+//            getMatched = false;
+//            for (int i = availableStarts.size()-1; i>=0; i--) {
+//                start = availableStarts.get(i);
+//                if(start < end) {
+//                    Range newRange = Range.closed(start, end);
+//                    ranges.add(newRange);
+//                    availableStarts.remove(start);
+//                    getMatched = true;
+//                    break;
+//                }
+//            }
+//
+//            checkState(getMatched,
+//                    String.format("Not start index matching end index of %d!", end));
+//        }
+//
+//        return Collections.unmodifiableList(ranges);
     }
 
     private static List<Range> getPairsWithValueRanges(Set<Range> nameRangeSet, Collection<Range> valueRanges, Set<Integer> indicatorIndexes) {
@@ -355,7 +380,7 @@ public final class Parser {
      * @return      Parsed JSONObject instance from the given range of the {@code jsonContext}
      */
     protected JSONObject asJSONObject(Range range) {
-        List<Range> namedValueChildren = range.getChildrens(getSortedRanges());
+        List<Range> namedValueChildren = range.getChildRanges(getSortedRanges());
         System.out.println("???????" + subString(range) + ": as JSONObject");
         namedValueChildren.forEach(r -> System.out.println(subString(r)));
 
@@ -372,7 +397,7 @@ public final class Parser {
      * @return      Parsed JSONArray instance from the given range of the {@code jsonContext}
      */
     protected JSONArray asJSONOArray(Range range) {
-        List<Range> elementRanges = range.getChildrens(unnamedValueRanges);
+        List<Range> elementRanges = range.getChildRanges(unnamedValueRanges);
         IJSONValue[] values = elementRanges.stream()
                 .map(r -> parseValue(subString(jsonContext, r))).toArray(i -> new IJSONValue[i]);
         JSONArray array = new JSONArray(values);
@@ -396,7 +421,7 @@ public final class Parser {
 
     protected NamedValue asNamedValue(Range nameRange, Range valueRange) {
         String name = subString(nameRange.getInside());
-        IJSONValue value = asValue(valueRange);
+        IJSONValue value = (IJSONValue) rangedElements.get(valueRange).getValue();
         return new NamedValue(name, value);
     }
 

@@ -451,6 +451,6 @@ public class RangeTest {
                     Range.closed(90, 99)
         ));
 
-        assertEquals(Arrays.asList(Range.open(10, 20),Range.closed(21, 30), Range.closed(30, 49)), container.getChildrens(allRanges));
+        assertEquals(Arrays.asList(Range.open(10, 20),Range.closed(21, 30), Range.closed(30, 49)), container.getChildRanges(allRanges));
     }
 }

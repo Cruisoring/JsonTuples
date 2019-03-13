@@ -321,11 +321,11 @@ public class Range extends Tuple2<Integer, Integer> {
     }
 
     /**
-     * Get the direct children Rnges as a list.
+     * Get the direct children Ranges as a list.
      * @param ranges    Sorted Ranges instances with no one overlaps with another to be evaluated.
      * @return      All Range instances contained by this Range only.
      */
-    public List<Range> getChildrens(TreeSet<Range> ranges) {
+    public List<Range> getChildRanges(TreeSet<Range> ranges) {
         List<Range> children = new ArrayList<>();
         Range lastChild = null;
         for (Range range : ranges) {
@@ -338,6 +338,25 @@ public class Range extends Tuple2<Integer, Integer> {
                     children.add(range);
                     lastChild = range;
                 }
+            }
+        }
+        return children;
+    }
+
+    /**
+     * Get the indexes within this Range as a list.
+     * @param indexes    Sorted indexes to be evaluated.
+     * @return      All indexes fall into this Range but not on the boundries as a list.
+     */
+    public List<Integer> getWithinIndexes(TreeSet<Integer> indexes) {
+        List<Integer> children = new ArrayList<>();
+        for (Integer index : indexes) {
+            if(_end <= index) {
+                return children;
+            } else if( _start >= index) {
+                continue;
+            } else if (index < _end) {
+                children.add(index);
             }
         }
         return children;
