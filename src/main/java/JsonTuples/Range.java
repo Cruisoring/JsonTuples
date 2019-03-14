@@ -4,6 +4,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -124,8 +126,8 @@ public class Range extends Tuple2<Integer, Integer> {
      * @return  An Range object above {@code startInclusive} exclusive.
      */
     public static Range aboveOpen(int startExclusive) {
-         return startExclusive > NEGATIVE_INFINITY+1 ?
-                 new Range(startExclusive+1, POSITIVE_INFINITY) : ALL_INT;
+        return startExclusive > NEGATIVE_INFINITY+1 ?
+                new Range(startExclusive+1, POSITIVE_INFINITY) : ALL_INT;
     }
 
     /**
@@ -146,6 +148,102 @@ public class Range extends Tuple2<Integer, Integer> {
     public static Range belowOpen(int endExclusive) {
         return endExclusive < POSITIVE_INFINITY-1 ?
                 new Range(NEGATIVE_INFINITY, endExclusive) : ALL_INT;
+    }
+
+    /**
+     * Get subString of the concerned JSON text with its Range.
+     * @param jsonText  All JSON text to be parsed.
+     * @param range     Range of the subString within the jsonText.
+     * @return          SubString specified by the given Range.
+     */
+    public static String subString(String jsonText, Range range) {
+        checkState(StringUtils.isNotBlank(jsonText));
+        checkState(Range.isValidOfLength(range, jsonText.length()));
+
+        return jsonText.substring(range.getStartInclusive(), range.getEndExclusive());
+    }
+
+    /**
+     * Extract content of a JSON String object.
+     * @param jsonText      All JSON Text to be parsed.
+     * @param stringRange   Range of the JSON String object including leading and ending quotation marks '"".
+     * @return              Unescaped content of the JSON String object returned as a String.
+     */
+    public static String getStringContent(String jsonText, Range stringRange) {
+        checkState(StringUtils.isNotBlank(jsonText));
+        checkNotNull(stringRange);
+        checkState('"'== jsonText.charAt(stringRange.getStartInclusive()) && '"'== jsonText.charAt(stringRange.getEndInclusive()));
+
+        String enclosedText = jsonText.substring(stringRange.getStartInclusive()+1, stringRange.getEndInclusive());
+        return StringEscapeUtils.unescapeJson(enclosedText);
+    }
+
+    /**
+     * Converting the indexes of wrapping characters in pairs as unmodifiable Range list.
+     * @param indexes   List of the indexes that must be even.
+     * @return      List of the ranges with even indexes as startInclusive, and odd indexes as endInclusive.
+     */
+    public static List<Range> indexesToRanges(List<Integer> indexes) {
+        checkNotNull(indexes);
+        checkState(indexes.size() % 2 == 0);
+
+        Collections.sort(indexes);
+        return _indexesToRanges(indexes);
+    }
+
+    static List<Range> _indexesToRanges(List<Integer> indexes) {
+        int size = indexes.size();
+
+        List<Range> ranges = new ArrayList<>();
+        for (int i = 0; i < size; i+=2) {
+            Integer startIndex = indexes.get(i);
+            Integer endIndex = indexes.get(i+1);
+            Range range = Range.closed(startIndex, endIndex);
+            ranges.add(range);
+        }
+
+        return Collections.unmodifiableList(ranges);
+    }
+
+    /**
+     * Converting the indexes of starts and indexes of ends in pairs as unmodifiable Range list.
+     * @param startIndexes  Index list of the starting characters.
+     * @param endIndexes    Index list of the ending characters.
+     * @return      Unmodifiable list of the ranges with one of the index of starting character, and one of the index of the ending character.
+     */
+    public static List<Range> indexesToRanges(Collection<Integer> startIndexes, Collection<Integer> endIndexes) {
+        checkNotNull(startIndexes);
+        checkNotNull(endIndexes);
+
+        int size = startIndexes.size();
+        checkState(size == endIndexes.size());
+
+        return _indexesToRanges(startIndexes, endIndexes);
+    }
+
+    static List<Range> _indexesToRanges(Collection<Integer> startIndexes, Collection<Integer> endIndexes) {
+        TreeSet<Integer> sortedSet = new TreeSet<>(startIndexes);
+        sortedSet.addAll(endIndexes);
+
+        List<Range> ranges = new ArrayList<>();
+
+        for (int i = startIndexes.size()-1; i>=0; i--) {
+            Integer start = null;
+            Integer end = null;
+            for (Integer index : sortedSet) {
+                if(start == null || startIndexes.contains(index)) {
+                    start = index;
+                } else {
+                    end = index;
+                    break;
+                }
+            }
+            ranges.add(Range.closed(start, end));
+            sortedSet.remove(start);
+            sortedSet.remove(end);
+        }
+
+        return ranges;
     }
 
     public static List<Tuple2<Range, Range>> getRangePairs(Collection<Range> ranges1, Collection<Range> ranges2, Predicate<Tuple2<Range, Range>> predicate) {

@@ -50,11 +50,10 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
     }
 
     @Override
-    public String toJSONString(int indentFactor) {
-        return String.format("%s\"%s\": %s",
-                IJSONable.getIndent(indentFactor),
+    public String toJSONString(String indent) {
+        return String.format("\"%s\": %s",
                 getFirst(),
-                getSecond().toJSONString(indentFactor + 1));
+                getSecond().toJSONString(indent + SPACE));
     }
 }
 

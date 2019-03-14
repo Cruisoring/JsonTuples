@@ -2,10 +2,10 @@ package JsonTuples;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -390,7 +390,7 @@ public class RangeTest {
 
         List<Range> rangeList = Arrays.asList(range3_4, range3_5, range7_8, range0_1, range0_10, range1_2, range0_3, range1_1, range2_4, range1_9);
         Collections.sort(rangeList);
-        assertEquals(Arrays.asList(range0_1, range0_3, range0_10, range1_1, range1_2, range1_9, range2_4, range3_4, range3_5,  range7_8), rangeList);
+        assertEquals(Arrays.asList(range0_10, range0_3, range0_1, range1_9, range1_2, range1_1, range2_4, range3_5, range3_4, range7_8), rangeList);
     }
 
     @Test
@@ -422,6 +422,25 @@ public class RangeTest {
         assertEquals(new Range(-7, 1), range1_4.gapWith(Range.belowClosed(-8)));
     }
 
+
+    @Test
+    public void testIndexesToRanges_WithPairedIndexes_getAllRanges() {
+        List<Range> ranges;
+
+        ranges = Range.indexesToRanges(new ArrayList<Integer>(), new ArrayList<Integer>());
+        assertTrue(ranges.size() == 0);
+
+        ranges = Range.indexesToRanges(Arrays.asList(1), Arrays.asList(5));
+        assertEquals(Range.closed(1,5), ranges.get(0));
+
+        ranges = Range.indexesToRanges(Arrays.asList(1, 3, 5), Arrays.asList(7, 9, 11));
+        assertEquals(Arrays.asList(Range.closed(5, 7), Range.closed(3, 9), Range.closed(1, 11)), ranges);
+
+        ranges = Range.indexesToRanges(Arrays.asList(1, 3, 5, 10), Arrays.asList(7, 9, 11, 13));
+        assertEquals(Arrays.asList(Range.closed(5, 7), Range.closed(3, 9), Range.closed(10, 11), Range.closed(1, 13)), ranges);
+    }
+
+
     @Test
     public void equals() {
     }
@@ -431,26 +450,4 @@ public class RangeTest {
     }
 
 
-    @Test
-    public void getChildrens() {
-        Range container = Range.closed(10, 50);
-        TreeSet<Range> allRanges = new TreeSet<>(Arrays.asList(
-                Range.closed(0, 100),
-                    Range.closed(1, 9),
-                        Range.open(1, 3), Range.open(3, 7), Range.open(7, 9),
-                    Range.closed(10, 50),
-                        Range.open(10, 20),
-                            Range.closed(12, 15), Range.closed(16, 18),
-                        Range.closed(21, 30),
-                        Range.closed(30, 49),
-                            Range.open(30, 35),
-                                Range.openClosed(32, 33),
-                            Range.open(36, 40),
-                            Range.openClosed(41, 48),
-                    Range.closed(51, 89),
-                    Range.closed(90, 99)
-        ));
-
-        assertEquals(Arrays.asList(Range.open(10, 20),Range.closed(21, 30), Range.closed(30, 49)), container.getChildRanges(allRanges));
-    }
 }

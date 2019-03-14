@@ -1,9 +1,9 @@
 package JsonTuples;
 
+import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.Set;
+import io.github.cruisoring.tuple.Tuple2;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -13,10 +13,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
  */
 public class JSONObject extends Set<NamedValue> implements IJSONValue {
-    public static Character LeftBrace = '{';
-    public static Character RightBrace = '}';
 
+    //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
+
+    private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
 
     public static IJSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
@@ -26,52 +27,36 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue {
         return parse(valueString);
     }
 
-
     public static JSONObject parse(String valueString) {
         return null;
     }
 
-    private final Map<String, IJSONValue> map = new HashMap<>();
+    final TupleMap<String, IJSONValue> map = new TupleMap<>();
+
+    final Lazy<Set<Tuple2<String, IJSONValue>>> tuples = new Lazy<>(map::asTupleSet);
 
     protected JSONObject(NamedValue... namedValues) {
         super(checkNotNull(namedValues));
 
-        for (NamedValue namedValue :
-                namedValues) {
+        for (NamedValue namedValue : namedValues) {
+            //Assume JSON handle duplicated NamedValues by keeping only the value of latest copies
+            //TODO: Add static flag to handle them in another way
             map.put(namedValue.getName(), namedValue.getValue());
         }
     }
 
     @Override
-    public String toJSONString(int indentFactor) {
-        int length = getLength();
-
-        if(length == 0) {
-            return "{}";
-        }
-
-        //JSON string starts with '{'
-        StringBuilder sb = new StringBuilder(LeftBrace);
-
-        for (int i = 0; i < length; i++) {
-            NamedValue kvp = get(i);
-            sb.append(kvp.toJSONString(indentFactor+1));
-            sb.append(NewLine);
-        }
-
-        //JSON String ends with ']'
-        sb.append(IJSONable.getIndent(indentFactor) + RightBrace);
-        return sb.toString();
-
+    public String toJSONString(String indent) {
+        return map.toString(indent);
     }
 
     @Override
     public Object getObject() {
-        return asArray();
+        return map;
     }
 
     @Override
     public String toString() {
-        return toJSONString(0);
+        return toJSONString("");
     }
 }

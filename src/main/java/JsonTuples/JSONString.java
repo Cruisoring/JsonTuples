@@ -2,6 +2,8 @@ package JsonTuples;
 
 import org.apache.commons.text.StringEscapeUtils;
 
+import java.util.regex.Pattern;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -10,14 +12,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * A character is represented as a single character string. A string is very much like a C or Java string.
  */
 public class JSONString extends JSONValue<String> {
-    public final static Character Quote = '"';
-    public final static Character BackSlash = '\\';
+    //Regex to match potential String value wrapped by Quotes
+    public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
 
     public static JSONString parseString(String valueString) {
         valueString = valueString.trim();
         int length = valueString.length();
 
-        if(!Quote.equals(valueString.charAt(0)) || !Quote.equals(valueString.charAt(valueString.length()-1))) {
+        if(QUOTE != valueString.charAt(0) || QUOTE != valueString.charAt(valueString.length()-1)) {
             throw new IllegalArgumentException("The given valueString is not enclosed by quotes:" + valueString);
         }
 
@@ -31,7 +33,7 @@ public class JSONString extends JSONValue<String> {
     }
 
     @Override
-    public String toJSONString(int indentFactor) {
+    public String toJSONString(String indent) {
         String string = getFirst();
 
         return "\"" + StringEscapeUtils.escapeJson(string) + "\"";

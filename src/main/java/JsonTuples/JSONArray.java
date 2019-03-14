@@ -1,7 +1,11 @@
 package JsonTuples;
 
+import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.Set;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -10,9 +14,7 @@ import java.util.regex.Pattern;
  */
 public class JSONArray extends Set<IJSONValue> implements IJSONValue {
 
-    public static final Character LeftBracket = '[';
-    public static final Character RightBracket = ']';
-
+    //Pattern of string to represent a solid JSON Array
     public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);
 
     public static JSONArray parseArray(String valueString) {
@@ -24,32 +26,35 @@ public class JSONArray extends Set<IJSONValue> implements IJSONValue {
     }
 
     @Override
-    public String toJSONString(int indentFactor) {
+    public String toJSONString(String indent) {
         int length = getLength();
-
         if(length == 0) {
             return "[]";
         }
 
-        String indent = IJSONable.getIndent(indentFactor);
-        String childrenIndent = IJSONable.getIndent(indentFactor+1);
-        //JSON string starts with '['
-        StringBuilder sb = new StringBuilder(LeftBracket);
-
+        List<String> valueRows = new ArrayList<>();
         for (int i = 0; i < length; i++) {
-            IJSONValue element = get(i);
-            sb.append(childrenIndent);
-            sb.append(element.toJSONString(indentFactor+1));
-            sb.append(NewLine);
+            String valueString = get(i).toJSONString().replaceAll(NEW_LINE, NEW_LINE+ SPACE);
+            valueRows.add(String.format("%s%s%s", SPACE, valueString, i == length-1 ? "" : COMMA));
         }
+        valueRows.add(0, "" + LEFT_BRACKET);
+        valueRows.add("" + RIGHT_BRACKET);
 
-        //JSON String ends with ']'
-        sb.append(indent + RightBracket);
-        return sb.toString();
+        String string = String.join(NEW_LINE+indent, valueRows);
+        return string;
     }
+
+    protected Lazy<Object[]> arrayLazy = new Lazy<>(() -> Arrays.stream(asArray())
+            .map(IJSONValue::getObject)
+            .toArray());
 
     @Override
     public Object getObject() {
-        return asArray();
+        return arrayLazy.getValue();
+    }
+
+    @Override
+    public String toString() {
+        return toJSONString("");
     }
 }

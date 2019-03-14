@@ -42,7 +42,6 @@ public class JSONNumber extends JSONValue<Number> {
         }
     }
 
-
     public JSONNumber(Number number) {
         super(checkNotNull(number));
     }

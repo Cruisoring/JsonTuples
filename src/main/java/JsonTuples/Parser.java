@@ -2,8 +2,9 @@ package JsonTuples;
 
 import io.github.cruisoring.Lazy;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,34 +39,6 @@ public final class Parser {
     //endregion
 
     /**
-     * Get subString of the concerned JSON text with its Range.
-     * @param jsonText  All JSON text to be parsed.
-     * @param range     Range of the subString within the jsonText.
-     * @return          SubString specified by the given Range.
-     */
-    public static String subString(String jsonText, Range range) {
-        checkState(StringUtils.isNotBlank(jsonText));
-        checkState(Range.isValidOfLength(range, jsonText.length()));
-
-        return jsonText.substring(range.getStartInclusive(), range.getEndExclusive());
-    }
-
-    /**
-     * Extract content of a JSON String object.
-     * @param jsonText      All JSON Text to be parsed.
-     * @param stringRange   Range of the JSON String object including leading and ending quotation marks '"".
-     * @return              Unescaped content of the JSON String object returned as a String.
-     */
-    public static String getStringContent(String jsonText, Range stringRange) {
-        checkState(StringUtils.isNotBlank(jsonText));
-        checkNotNull(stringRange);
-        checkState(QUOTE== jsonText.charAt(stringRange.getStartInclusive()) && QUOTE== jsonText.charAt(stringRange.getEndInclusive()));
-
-        String enclosedText = jsonText.substring(stringRange.getStartInclusive()+1, stringRange.getEndInclusive());
-        return StringEscapeUtils.unescapeJson(enclosedText);
-    }
-
-    /**
      * Parse the remaining part of NamedValue other than Name to an IJSONValue instance.
      * @param jsonText      All JSON Text to be parsed.
      * @param valueRange    Range of the value portion of the NameValuePair, shall be led by COLON ':' with optional spaces.
@@ -75,38 +48,10 @@ public final class Parser {
         checkState(StringUtils.isNotBlank(jsonText));
         checkNotNull(valueRange);
 
-        String colonAndValue = subString(jsonText, valueRange).trim();
+        String colonAndValue = Range.subString(jsonText, valueRange).trim();
         checkState(colonAndValue.charAt(0)==COLON, "The value of the NameValuePair must be led by a COLON ':'.");
 
-        String valueString = colonAndValue.substring(1).trim();
-
-        return parseValue(valueString);
-    }
-
-    public static IJSONValue parseValue(String valueString) {
-        final String trimmed = valueString.trim();
-        switch (trimmed) {
-            case JSON_TRUE:
-                return JSONValue.True;
-            case JSON_FALSE:
-                return JSONValue.False;
-            case JSON_NULL:
-                return JSONValue.Null;
-            default:
-                //Switch based on the first character, leave the corresponding methods to validate and parse
-                switch(trimmed.charAt(0)) {
-                    case QUOTE:
-                        return JSONString.parseString(trimmed);
-                    case LEFT_BRACE:
-                        return JSONObject.parse(trimmed);
-                    case LEFT_BRACKET:
-                        return JSONArray.parseArray(trimmed);
-                    default:
-                        //The valueString can only stand for a number or get Exception thrown there
-                        return JSONNumber.parseNumber(trimmed);
-                }
-        }
-
+        return JSONValue.parse(colonAndValue.substring(1));
     }
 
 
@@ -164,112 +109,6 @@ public final class Parser {
         return result;
     }
 
-    /**
-     * Converting the indexes of wrapping characters in pairs as unmodifiable Range list.
-     * @param indexes   List of the indexes that must be even.
-     * @return      List of the ranges with even indexes as startInclusive, and odd indexes as endInclusive.
-     */
-    public static List<Range> pairsAsRanges(List<Integer> indexes) {
-        checkNotNull(indexes);
-        checkState(indexes.size() % 2 == 0);
-
-        Collections.sort(indexes);
-        return _asRanges(indexes);
-    }
-
-    private static List<Range> _asRanges(List<Integer> indexes) {
-        int size = indexes.size();
-
-        List<Range> ranges = new ArrayList<>();
-        for (int i = 0; i < size; i+=2) {
-            Integer startIndex = indexes.get(i);
-            Integer endIndex = indexes.get(i+1);
-            Range range = Range.closed(startIndex, endIndex);
-            ranges.add(range);
-        }
-
-        return Collections.unmodifiableList(ranges);
-    }
-
-    /**
-     * Converting the indexes of starts and indexes of ends in pairs as unmodifiable Range list.
-     * @param startIndexes  Index list of the starting characters.
-     * @param endIndexes    Index list of the ending characters.
-     * @return      Unmodifiable list of the ranges with one of the index of starting character, and one of the index of the ending character.
-     */
-    public static List<Range> pairsAsRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
-        checkNotNull(startIndexes);
-        checkNotNull(endIndexes);
-
-        int size = startIndexes.size();
-        checkState(size == endIndexes.size());
-
-        Collections.sort(startIndexes);
-        Collections.sort(endIndexes);
-        return _asRanges(startIndexes, endIndexes);
-    }
-
-    private static List<Range> _asRanges(List<Integer> startIndexes, List<Integer> endIndexes) {
-        TreeSet<Integer> sortedSet = new TreeSet<>(startIndexes);
-        sortedSet.addAll(endIndexes);
-
-        List<Range> ranges = new ArrayList<>();
-
-        for (int i = startIndexes.size()-1; i>=0; i--) {
-            Integer start = null;
-            Integer end = null;
-            for (Integer index : sortedSet) {
-                if(start == null || startIndexes.contains(index)) {
-                    start = index;
-                } else {
-                    end = index;
-                    break;
-                }
-            }
-            ranges.add(Range.closed(start, end));
-            sortedSet.remove(start);
-            sortedSet.remove(end);
-        }
-
-        return ranges;
-
-//        int size = startIndexes.size();
-//        checkState(startIndexes.get(0) < endIndexes.get(0),
-//                String.format("First startIndex of %d is greater or equal to first endIndex of %d.",
-//                        startIndexes.get(0), endIndexes.get(0)));
-//
-//        if(size == 0) {
-//            return new ArrayList<>();
-//        } else if (size == 1) {
-//            return Arrays.asList(Range.closed(startIndexes.get(0), endIndexes.get(0)));
-//        }
-//
-//        List<Range> ranges = new ArrayList<>();
-//        List<Integer> availableStarts = new ArrayList<>(startIndexes);
-//
-//        Integer end, start;
-//        boolean getMatched;
-//        for (int j = 0; j < size; j++) {
-//            end = endIndexes.get(j);
-//            getMatched = false;
-//            for (int i = availableStarts.size()-1; i>=0; i--) {
-//                start = availableStarts.get(i);
-//                if(start < end) {
-//                    Range newRange = Range.closed(start, end);
-//                    ranges.add(newRange);
-//                    availableStarts.remove(start);
-//                    getMatched = true;
-//                    break;
-//                }
-//            }
-//
-//            checkState(getMatched,
-//                    String.format("Not start index matching end index of %d!", end));
-//        }
-//
-//        return Collections.unmodifiableList(ranges);
-    }
-
     private static List<Range> getPairsWithValueRanges(Set<Range> nameRangeSet, Collection<Range> valueRanges, Set<Integer> indicatorIndexes) {
         List<Range> nvpRanges = new ArrayList<>();
         for (Range valueRange : valueRanges) {
@@ -324,12 +163,6 @@ public final class Parser {
 
     private List<Range> stringRanges = null;
 
-//    private List<Range> namedObjectRanges = null;
-//
-//    private List<Range> namedArrayRanges = null;
-//
-//    private Map<Class<? extends IJSONable>, List<Range>> pairedScopes = new HashMap<>();
-
     private final Map<Range, Lazy<IJSONable>> rangedElements = new HashMap<>();
 
     private TreeSet<Range> unnamedValueRanges = null;
@@ -347,10 +180,6 @@ public final class Parser {
 
         this.jsonContext = jsonText;
         length = jsonContext.length();
-
-//        for (Character marker : MARKERS) {
-//            specialCharIndexes.put(marker, new ArrayList<>());
-//        }
     }
 
     /**
@@ -381,8 +210,8 @@ public final class Parser {
      */
     protected JSONObject asJSONObject(Range range) {
         List<Range> namedValueChildren = range.getChildRanges(getSortedRanges());
-        System.out.println("???????" + subString(range) + ": as JSONObject");
-        namedValueChildren.forEach(r -> System.out.println(subString(r)));
+//        System.out.println("???????" + subString(range) + ": as JSONObject");
+//        namedValueChildren.forEach(r -> System.out.println(subString(r)));
 
         NamedValue[] namedValues = namedValueChildren.stream()
                 .map(child -> (NamedValue)rangedElements.get(child).getValue())
@@ -397,12 +226,25 @@ public final class Parser {
      * @return      Parsed JSONArray instance from the given range of the {@code jsonContext}
      */
     protected JSONArray asJSONOArray(Range range) {
-        List<Range> elementRanges = range.getChildRanges(unnamedValueRanges);
+        List<Range> elementRanges = range.getChildRanges(getSortedRanges());
         IJSONValue[] values = elementRanges.stream()
-                .map(r -> parseValue(subString(jsonContext, r))).toArray(i -> new IJSONValue[i]);
+                .map(r -> rangedElements.get(r).getValue())
+                .toArray(i -> new IJSONValue[i]);
         JSONArray array = new JSONArray(values);
         return array;
     }
+
+    /**
+     * Parse the given Range of the {@code jsonContext} as a JSONNumber.
+     * @param range Range to specify the content
+     * @return      Parsed JSONNumber instance from the given range of the {@code jsonContext}
+     */
+    protected JSONNumber asJSONNumber(Range range) {
+        String valueString = subString(range).trim();
+
+        return JSONNumber.parseNumber(valueString);
+    }
+
 
     protected IJSONValue asValue(Range range) {
         String valueString = subString(range).trim();
@@ -415,7 +257,14 @@ public final class Parser {
             case JSON_NULL:
                 return JSONValue.Null;
             default:
-                return JSONNumber.parseNumber(valueString);
+                char firstChar = valueString.charAt(0);
+                if(firstChar == LEFT_BRACE) {
+                    return asJSONObject(range);
+                } else if(firstChar == LEFT_BRACKET) {
+                    return asJSONOArray(range);
+                } else {
+                    return asJSONNumber(range);
+                }
         }
     }
 
@@ -487,7 +336,7 @@ public final class Parser {
         checkState(validStringBoundaries.size()%2==0, "JSON strings are not wrapped in double quotes!");
 
         //Notice the Ranges within stringRanges are sorted by nature
-        stringRanges = _asRanges(validStringBoundaries);
+        stringRanges = Range._indexesToRanges(validStringBoundaries);
         //Clear any index of special chars if they are contained by any of the stringRanges
         //TODO: not define it as class variable
         specialCharIndexes = markersIndexes.entrySet().stream()
@@ -496,8 +345,8 @@ public final class Parser {
                         entry -> entry.getKey(),
                         entry -> new HashSet<>(
                                 entry.getValue().stream()
-                                .filter(index -> !inAnyStringRange(index))
-                                .collect(Collectors.toSet())
+                                        .filter(index -> !inAnyStringRange(index))
+                                        .collect(Collectors.toSet())
                         )
                 ));
 
@@ -535,12 +384,12 @@ public final class Parser {
      */
     protected List<Range> demarcateObjectAndArrays(Map<Character, List<Integer>> activeCharIndexes) {
         //Get ranges of JSONObjects and keeps clues of how to process ranges as JSONObject instances
-        List<Range> objectRanges = _asRanges(activeCharIndexes.get(LEFT_BRACE), activeCharIndexes.get(RIGHT_BRACE));
+        List<Range> objectRanges = Range._indexesToRanges(activeCharIndexes.get(LEFT_BRACE), activeCharIndexes.get(RIGHT_BRACE));
         objectRanges.forEach(range -> rangedElements.put(range, new Lazy(() -> asJSONObject(range))));
-        objectRanges.forEach(objRange -> System.out.println(subString(objRange)));
+//        objectRanges.forEach(objRange -> System.out.println(subString(objRange)));
 
         //Get ranges of JSONArrays and keeps clues of how to process ranges as JSONArray instances
-        List<Range> arrayRanges = _asRanges(activeCharIndexes.get(LEFT_BRACKET), activeCharIndexes.get(RIGHT_BRACKET));
+        List<Range> arrayRanges = Range._indexesToRanges(activeCharIndexes.get(LEFT_BRACKET), activeCharIndexes.get(RIGHT_BRACKET));
         arrayRanges.forEach(range -> rangedElements.put(range, new Lazy(() -> asJSONOArray(range))));
 
         List<Range> bothRanges = new ArrayList<>(objectRanges);
@@ -592,12 +441,12 @@ public final class Parser {
             if(colonIndexes.contains(specialChars.get(0))) {
                 checkState(specialChars.size() == 1,
                         String.format("Unexpected NameValue connector: '%s' between '%s' and '%s...'",
-                            subString(gap), subString(lastStringBefore),
-                            objectArrayRange.size()>30 ? subString(objectArrayRange).substring(0, 30) : subString(objectArrayRange)));
+                                subString(gap), subString(lastStringBefore),
+                                objectArrayRange.size()>30 ? subString(objectArrayRange).substring(0, 30) : subString(objectArrayRange)));
 
                 consumedStringRange.add(lastStringBefore);
                 Range nameValueRange = lastStringBefore.intersection(objectArrayRange);
-                System.out.println(subString(nameValueRange));
+//                System.out.println(subString(nameValueRange));
                 rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(lastStringBefore, objectArrayRange)));
             } else {
                 //This JSONArray or JSONObject shall be a value of a JSONArray
@@ -627,7 +476,7 @@ public final class Parser {
                     consumedStringRange.add(nextStringRange);
                     Range nameValueRange = nextStringRange.intersection(nameRange);
                     rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, nextStringRange)));
-                    System.out.println(subString(nameValueRange));
+//                    System.out.println(subString(nameValueRange));
                     i++;    //bypass the next JSONString that is the identified value named by current JSONString instance
                     continue;
                 }
@@ -638,8 +487,8 @@ public final class Parser {
 
             if(!colonIndexes.contains(nextEnd)) {
                 //Current JSONString shall be a value of a JSONArray
-                rangedElements.put(nameRange, new Lazy<>(() -> asValue(nameRange)));
-                System.out.println(subString(nameRange));
+                rangedElements.put(nameRange, new Lazy<>(() -> asJSONString(nameRange)));
+//                System.out.println(subString(nameRange));
                 continue;
             }
 
@@ -652,128 +501,13 @@ public final class Parser {
 
             Range nameValueRange = Range.closedOpen(nameRange.getStartInclusive(), nextSpecialIndex);
             Range valueRange = Range.open(nextEnd, nextSpecialIndex);
-            System.out.println(subString(nameValueRange));
+//            System.out.println(subString(nameValueRange));
             rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, valueRange)));
         }
 
         //The root JSONValue shall be included as the one with largest size
         return unnamedValueRanges;
     }
-
-//    private void denote(Map<Character, List<Integer>> activeCharIndexes) {
-//
-//        denote(specialCharIndexes.get(COLON));
-//
-//
-//        Set<Range> stringRangeSet = new HashSet<Range>(pairedScopes.get(JSONString.class));
-//
-//        namedObjectRanges = getPairsWithValueRanges(stringRangeSet,
-//                pairedScopes.get(JSONObject.class), colonIndexes);
-//        System.out.println("++++++++namedObjectRanges:");
-//        namedObjectRanges.stream().forEach(range -> System.out.println(subString(range)));
-//
-//        namedArrayRanges = getPairsWithValueRanges(stringRangeSet,
-//                pairedScopes.get(JSONArray.class), colonIndexes);
-//        System.out.println("++++++++namedArrayRanges:");
-//        namedArrayRanges.stream().forEach(range -> System.out.println(subString(range)));
-//
-//        List<Integer> valueEnderIndexes = new ArrayList<>(specialCharIndexes.get(COMMA));
-//        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACE));
-//        valueEnderIndexes.addAll(markersIndexes.get(RIGHT_BRACKET));
-//
-//        List<Range> nameValueRanges = _getNamedValueRanges(stringRangeSet, colonIndexes, valueEnderIndexes);
-//        System.out.println("++++++++nameValueRanges:");
-//        nameValueRanges.stream().forEach(range -> System.out.println(subString(range)));
-//
-//        pairedScopes.put(NamedValue.class, nameValueRanges);
-//    }
-
-//    private void validateScopes() {
-//        if(parsedResult != null)
-//            return;
-//
-//        List<List<Range>> categoredScopes = new ArrayList(pairedScopes.values());
-//        int size = categoredScopes.size();
-//        for (int i = 0; i < size - 1; i++) {
-//            for (int j = i+1; j < size; j++) {
-//                List<Tuple2<Range, Range>> overlapped = Range.getOverlappedRangePairs(categoredScopes.get(i), categoredScopes.get(j));
-//
-//                if(!overlapped.isEmpty()) {
-//                    for (Tuple2<Range, Range> tuple : overlapped) {
-//                        System.out.println(String.format("--------------%s overlaps %s", tuple.getFirst(), tuple.getSecond()));
-//                        String text1 = subString(tuple.getFirst());
-//                        String text2 = subString(tuple.getSecond());
-//                        System.out.println(String.format("'%s' is overlapped with '%s'", text1, text2));
-//                    }
-//                }
-//                checkState(overlapped.isEmpty());
-//            }
-//        }
-//    }
-
-//    private void parseNameValues() {
-//        if(parsedResult != null)
-//            return;
-//
-//        //Parse all Ranges of strings, either as names or JSONStrings.
-//        List<Range> stringRanges = pairedScopes.get(JSONString.class);
-//        for (Range stringRange : stringRanges) {
-//            String content = getStringContent(jsonContext, stringRange);
-//            rangedValues.put(stringRange, new JSONString(content));
-//        }
-//
-//        //Then parse all simple Name Value pairs where Values are not JSONObjects or JSONArrays
-//        List<Range> nvpRanges = pairedScopes.get(NamedValue.class);
-//        for (Range nvpRange : nvpRanges) {
-////            String nvpString = subString(nvpRange);
-//            List<Range> stringRangesContained = stringRanges.stream().filter(r -> nvpRange.contains(r)).collect(Collectors.toList());
-//            int count = stringRangesContained.size();
-//            checkState(count != 0, "Failed to find the name of the NameValuePair.");
-//            checkState(count <= 2, "There shall never be 3rd String in a NameValuePair.");
-//
-//            Range nameRange = stringRangesContained.get(0);
-//            JSONString nameJson = (JSONString)(rangedValues.get(nameRange));
-//            String name = nameJson.getFirst();
-//            IJSONValue value = count == 2 ?
-//                    (JSONString)rangedValues.get(stringRangesContained.get(1))
-//                    : parseValuePortion(jsonContext, Range.closedOpen(nameRange.getEndExclusive(), nvpRange.getEndExclusive()));
-//            NamedValue nvp = new NamedValue(name, value);
-//            rangedValues.put(nvpRange, nvp);
-//        }
-//    }
-//
-//    private void parseObjectOrArrays() {
-//        List<Range> arrayRanges = pairedScopes.get(JSONArray.class);
-//        List<Range> objectRanges = pairedScopes.get(JSONObject.class);
-//        List<Range> objectOrArrayRanges = new ArrayList<Range>(arrayRanges);
-//        objectOrArrayRanges.addAll(objectRanges);
-//        objectOrArrayRanges.sort(Comparator.comparing(Range::size));
-//        Set<Integer> commaIndexes = specialCharIndexes.get(COMMA);
-//
-//        for (Range range : objectOrArrayRanges) {
-//            if(arrayRanges.contains(range)) {
-//                List<Integer> commasInRange = commaIndexes.stream().filter(i -> range.contains(i)).collect(Collectors.toList());
-//                commasInRange.add(0, range.getStartInclusive());
-//                commasInRange.add(range.getEndInclusive());
-//                List<Range> elementRanges = IntStream.range(1, commasInRange.size())
-//                        .mapToObj(i -> Range.open(commasInRange.get(i-1), commasInRange.get(i)))
-//                        .collect(Collectors.toList());
-//                IJSONValue[] values = elementRanges.stream()
-//                        .map(r -> parseValue(subString(jsonContext, r))).toArray(i -> new IJSONValue[i]);
-//                JSONArray array = new JSONArray(values);
-//
-//                Range namedArrayRange = namedArrayRanges.stream().filter(r -> r.contains(range)).findFirst().orElse(null);
-//                Range nameRange = stringRanges.stream().filter(r -> namedArrayRange.contains(r)).findFirst().orElse(null);
-//                NamedValue nvp = new NamedValue(rangedValues.get(nameRange).toString(), array);
-//                rangedValues.put(namedArrayRange, nvp);
-//            } else {
-//                List<NamedValue> namedValues = rangedValues.entrySet().stream()
-//                        .filter(entry -> range.contains(entry.getKey()) && (entry.getValue() instanceof NamedValue))
-//                        .map(entry -> (NamedValue)(entry.getValue())).collect(Collectors.toList());
-//
-//            }
-//        }
-//    }
 
     public IJSONValue parse() {
         if(parsedResult != null){
@@ -788,7 +522,7 @@ public final class Parser {
 
         unnamedValueRanges = demarcateNamedValues(objectOrArrayRanges, activeCharIndexes);
 
-        Range largestRange = Collections.max(unnamedValueRanges);
+        Range largestRange = Collections.max(unnamedValueRanges, Comparator.comparing(Range::size));
 
         IJSONValue result = (IJSONValue) rangedElements.get(largestRange).getValue();
 
