@@ -183,21 +183,21 @@ public class Range extends Tuple2<Integer, Integer> {
      * @param indexes   List of the indexes that must be even.
      * @return      List of the ranges with even indexes as startInclusive, and odd indexes as endInclusive.
      */
-    public static List<Range> indexesToRanges(List<Integer> indexes) {
+    public static List<Range> indexesToRanges(Collection<Integer> indexes) {
         checkNotNull(indexes);
         checkState(indexes.size() % 2 == 0);
 
-        Collections.sort(indexes);
         return _indexesToRanges(indexes);
     }
 
-    static List<Range> _indexesToRanges(List<Integer> indexes) {
+    static List<Range> _indexesToRanges(Collection<Integer> indexes) {
         int size = indexes.size();
 
+        Iterator<Integer> iterator = indexes.iterator();
         List<Range> ranges = new ArrayList<>();
-        for (int i = 0; i < size; i+=2) {
-            Integer startIndex = indexes.get(i);
-            Integer endIndex = indexes.get(i+1);
+        while (iterator.hasNext()) {
+            Integer startIndex = iterator.next();
+            Integer endIndex = iterator.next();
             Range range = Range.closed(startIndex, endIndex);
             ranges.add(range);
         }
@@ -447,16 +447,8 @@ public class Range extends Tuple2<Integer, Integer> {
      * @return      All indexes fall into this Range but not on the boundries as a list.
      */
     public List<Integer> getWithinIndexes(TreeSet<Integer> indexes) {
-        List<Integer> children = new ArrayList<>();
-        for (Integer index : indexes) {
-            if(_end <= index) {
-                return children;
-            } else if( _start >= index) {
-                continue;
-            } else if (index < _end) {
-                children.add(index);
-            }
-        }
+        SortedSet<Integer> withinSet = indexes.subSet(_start+1, _end-1);
+        List<Integer> children = new ArrayList<>(withinSet);
         return children;
     }
 

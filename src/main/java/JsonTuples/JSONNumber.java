@@ -45,4 +45,9 @@ public class JSONNumber extends JSONValue<Number> {
     public JSONNumber(Number number) {
         super(checkNotNull(number));
     }
+
+    @Override
+    public String toString() {
+        return getFirst().toString();
+    }
 }

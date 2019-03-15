@@ -3,8 +3,6 @@ package JsonTuples;
 import io.github.cruisoring.Lazy;
 import org.apache.commons.lang3.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,6 +31,7 @@ public final class Parser {
 
     final static Set<Character> MARKERS = new HashSet<Character>(
             Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, QUOTE, BACK_SLASH));
+    final static List<Character> VALUE_START_INDICATORS = Arrays.asList(COMMA, LEFT_BRACE, LEFT_BRACKET);
     final static List<Character> VALUE_END_INDICATORS = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, COMMA);
     final static Character MIN_MARKER = Collections.min(MARKERS);
     final static Character MAX_MARKER = Collections.max(MARKERS);
@@ -324,11 +323,21 @@ public final class Parser {
 
         //Screen out escaped quotation marks, assume no BACK_SLASH presented out of JSONString elements.
         List<Integer> validStringBoundaries = new ArrayList<>(markersIndexes.get(QUOTE));
-        List<Integer> backSlashIndexes = markersIndexes.get(BACK_SLASH);
-        for (Integer backSlashIndex : backSlashIndexes) {
-            Integer toBeEscaped = backSlashIndex+1;
-            if(validStringBoundaries.contains(toBeEscaped)){
-                validStringBoundaries.remove(toBeEscaped);
+        List<Integer> escpaedQuotes = markersIndexes.get(BACK_SLASH).stream().map(i -> i+1).collect(Collectors.toList());
+        for (int i = validStringBoundaries.size()-1; i>=0; i--) {
+            for (int j = escpaedQuotes.size()-1; j>=0; j--) {
+                Integer x = validStringBoundaries.get(i);
+                Integer y = escpaedQuotes.get(j);
+                if(x == y) {
+                    validStringBoundaries.remove(i);
+                    j--;
+                } else if (x > y) {
+                    continue;
+                } else {
+                    do {
+                        y = escpaedQuotes.get(--j);
+                    }while(x < y);
+                }
             }
         }
 
@@ -414,95 +423,93 @@ public final class Parser {
                 .flatMap(list -> list.stream())
                 .sorted()
                 .collect(Collectors.toList());
-        List<Integer> specialIndexes = activeCharIndexes.values().stream()
+        TreeSet<Integer> specialIndexes = new TreeSet<>(activeCharIndexes.values().stream()
                 .flatMap(list -> list.stream())
                 .sorted()
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
 
         //Ensure the pairing happens from the big ones to small ones
         objectOrArrayRanges.sort(Comparator.comparing(Range::size).reversed());
+        //JSONObject or JSONArray can act as:
+        // 1) Root node
+        // 2) Child node of a bigger JSONArray
+        // 3) Value part of "Name": Value
         for (Range objectArrayRange : objectOrArrayRanges) {
-            Range lastStringBefore = unpairedStringRanges.stream()
-                    .filter(range -> range.getStartInclusive() < objectArrayRange.getStartInclusive())
-                    .findFirst().orElse(null);
-            if(lastStringBefore == null || consumedStringRange.contains(lastStringBefore)) {
-                //There is no JSONString ahead of the JSONObject or JSONArray, so it can be top level element
+            Integer markerAhead = specialIndexes.lower(objectArrayRange.getStartInclusive());
+
+            //When the node is the root
+            if(markerAhead == null) {
                 unnamedValueRanges.add(objectArrayRange);
                 continue;
             }
 
-            checkState(lastStringBefore.getEndInclusive() < objectArrayRange.getStartInclusive(), "Name String is overlapped with Object/Array?");
-
-            Range gap = objectArrayRange.gapWith(lastStringBefore);
-            checkState(gap.size() > 0);
-
-            List<Integer> specialChars = specialIndexes.stream().filter(i -> gap.contains(i)).collect(Collectors.toList());
-            //There must be at least one special char to make JSON format compliant
-            if(colonIndexes.contains(specialChars.get(0))) {
-                checkState(specialChars.size() == 1,
-                        String.format("Unexpected NameValue connector: '%s' between '%s' and '%s...'",
-                                subString(gap), subString(lastStringBefore),
-                                objectArrayRange.size()>30 ? subString(objectArrayRange).substring(0, 30) : subString(objectArrayRange)));
-
-                consumedStringRange.add(lastStringBefore);
-                Range nameValueRange = lastStringBefore.intersection(objectArrayRange);
-//                System.out.println(subString(nameValueRange));
-                rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(lastStringBefore, objectArrayRange)));
-            } else {
-                //This JSONArray or JSONObject shall be a value of a JSONArray
+            char marker = jsonContext.charAt(markerAhead);
+            //When the node is a Child node of a bigger JSONArray
+            if(VALUE_START_INDICATORS.contains(marker)){
                 unnamedValueRanges.add(objectArrayRange);
+                continue;
             }
+
+            //Now it can only be the Value of a NamedValue
+            checkState(marker==COLON, "Invlid marker '%s' ahead of: %s", marker, subString(objectArrayRange));
+
+            Range nameRange = unpairedStringRanges.stream()
+                    .filter(range -> range.getStartInclusive() < objectArrayRange.getStartInclusive())
+                    .findFirst().orElse(null);
+            checkState(nameRange != null && specialIndexes.higher(nameRange.getEndInclusive()) == markerAhead,
+                    "Invalid NamedValue: %s...", subString(Range.closed(nameRange.getStartInclusive(), objectArrayRange.getStartInclusive()+1)));
+
+            consumedStringRange.add(nameRange);
+            Range nameValueRange = nameRange.intersection(objectArrayRange);
+//            System.out.println(subString(nameValueRange));
+            rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, objectArrayRange)));
         }
 
         unpairedStringRanges.removeAll(consumedStringRange);
         unpairedStringRanges.sort(Comparator.naturalOrder());
 
         int size = unpairedStringRanges.size();
+        //JSONString can act as: 1) Name part of "Name": Value; 2) Value part of Name": Value; 3) Child node of JSONArray
         for (int i = 0; i < size; i++) {
             Range nameRange = unpairedStringRanges.get(i);
-            if(consumedStringRange.contains(nameRange)) {
-                continue;
-            }
+            Integer markerIndexAfter = specialIndexes.ceiling(nameRange.getEndInclusive());
+            checkNotNull(markerIndexAfter, "JSONString must be followed by some special marker chars");
 
-            Range nextStringRange = i == size-1 ? null : unpairedStringRanges.get(i+1);
-            if(nextStringRange != null) {
-                //Assume the JSONString is the value portion
-                Range gap = nextStringRange.gapWith(nameRange);
-                List<Integer> specialChars = specialIndexes.stream().filter(index -> gap.contains(index)).collect(Collectors.toList());
-                if(specialChars.size()==1 && colonIndexes.contains(specialChars.get(0))) {
-//                    //Remove the consume COLON by this NamedValue
-//                    colonIndexes.remove(specialChars.get(0));
-
-                    consumedStringRange.add(nextStringRange);
-                    Range nameValueRange = nextStringRange.intersection(nameRange);
-                    rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, nextStringRange)));
-//                    System.out.println(subString(nameValueRange));
-                    i++;    //bypass the next JSONString that is the identified value named by current JSONString instance
-                    continue;
-                }
-            }
-
-            Integer nextEnd = valueEndIndexes.stream().filter(index -> index > nameRange.getEndInclusive()).findFirst().orElse(null);
-            checkNotNull(nextEnd);
-
-            if(!colonIndexes.contains(nextEnd)) {
+            char marker = jsonContext.charAt(markerIndexAfter);
+            if (VALUE_END_INDICATORS.contains(marker)) {
+                //As Child node of JSONArray
                 //Current JSONString shall be a value of a JSONArray
                 rangedElements.put(nameRange, new Lazy<>(() -> asJSONString(nameRange)));
 //                System.out.println(subString(nameRange));
                 continue;
             }
+            checkState(marker == COLON);
 
-            Range gap = nameRange.gapWith(Range.closed(nextEnd, nextEnd));
-            List<Integer> specialChars = specialIndexes.stream().filter(index -> gap.contains(index)).collect(Collectors.toList());
-            checkState(specialChars.isEmpty());
+            if(i != size-1) {
+                //As Name part of "Name": Value;
+                Range nextStringRange = unpairedStringRanges.get(i+1);
+                Integer markerBeforeNext = specialIndexes.lower(nextStringRange.getStartInclusive());
+                if(markerBeforeNext == markerIndexAfter) {
+                    consumedStringRange.add(nextStringRange);
+                    Range nameValueRange = nameRange.intersection(nextStringRange);
+                    rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, nextStringRange)));
+                    i++;
+                    continue;
+                }
+            }
 
-            Integer nextSpecialIndex = specialIndexes.stream().filter(index -> index > nextEnd).findFirst().orElse(null);
-            checkState(VALUE_END_INDICATORS.contains(jsonContext.charAt(nextSpecialIndex)));
+            //Now need to find the matched value that is not JSONString, JSONObject or JSONArray
+            Integer valueEndIndex = specialIndexes.higher(markerIndexAfter);
+            checkState(VALUE_END_INDICATORS.contains(jsonContext.charAt(valueEndIndex)),
+                    "The value portion cannot be the end of JSON context.");
 
-            Range nameValueRange = Range.closedOpen(nameRange.getStartInclusive(), nextSpecialIndex);
-            Range valueRange = Range.open(nextEnd, nextSpecialIndex);
-//            System.out.println(subString(nameValueRange));
+            Range valueRange = Range.open(markerIndexAfter, valueEndIndex);
+            rangedElements.put(valueRange, new Lazy<>(() -> asValue(valueRange)));
+            Range nameValueRange = nameRange.intersection(valueRange);
             rangedElements.put(nameValueRange, new Lazy<>(() -> asNamedValue(nameRange, valueRange)));
+
+            consumedStringRange.add(nameRange);
+
         }
 
         //The root JSONValue shall be included as the one with largest size

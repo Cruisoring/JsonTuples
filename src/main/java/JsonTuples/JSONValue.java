@@ -76,11 +76,13 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public String toJSONString(String indent) {
+    public String toString() {
         Object obj = getFirst();
-        if(obj == null)
-            return JSON_NULL;
+        return (obj == null) ? JSON_NULL : obj.toString();
+    }
 
-        return getObject().toString();
+    @Override
+    public String toJSONString(String indent) {
+        return toString();
     }
 }
