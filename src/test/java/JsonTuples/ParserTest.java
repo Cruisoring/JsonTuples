@@ -73,6 +73,7 @@ public class ParserTest {
         assertTrue(value instanceof JSONObject);
         TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
         String actual = map.toString();
+        System.out.println(actual);
 
         assertEquals(expectedParsedJson, actual);
     }
