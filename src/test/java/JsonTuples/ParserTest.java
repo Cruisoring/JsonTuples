@@ -77,7 +77,12 @@ public class ParserTest {
     }
 
     @Test
-    public void testMediumJson() {
+    public void testMediumJson1() {
+        testPerformance("navigation.json");
+    }
+
+    @Test
+    public void testMediumJson2() {
         testPerformance("catalog.json");
     }
 }

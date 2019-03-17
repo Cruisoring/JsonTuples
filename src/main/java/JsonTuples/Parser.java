@@ -6,7 +6,10 @@ import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple3;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.omg.CORBA.NameValuePair;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -197,6 +200,10 @@ public final class Parser {
             value = asValue(valueRange);
         }
         return new NamedValue(name, value);
+    }
+
+    protected NamedValue asNamedValue(Range nameValueRange) {
+        return NamedValue.parse(subString(nameValueRange));
     }
 
     public IJSONValue getRootNode() {
@@ -671,21 +678,13 @@ public final class Parser {
                 action.accept(range);
             }
         }
-
     }
 
     public IJSONValue parse() {
-        Map<Range, Lazy<IJSONable>> map = parseFast();
-//        List<Range> ranges = map.keySet().stream()
-//                .sorted(Comparator.comparing(Range::size))
-//                .collect(Collectors.toList());
-//
-//        for (int i = 0; i < ranges.size(); i++) {
-//            Range range = ranges.get(i);
-//            Object value = map.get(range).getValue();
-//            System.out.println(String.format("%d: %s: %s", i, range, value==null ? "null": value));
-//        }
 
-        return getRootNode();
+        Map<Range, Lazy<IJSONable>> map = parseFast();
+
+        IJSONValue result = getRootNode();
+        return result;
     }
 }
