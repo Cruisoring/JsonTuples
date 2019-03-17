@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Comparator.comparing;
 
 public class Range extends Tuple2<Integer, Integer> {
     public static final long INFINITE_LENGTH = Long.MAX_VALUE;
@@ -204,6 +205,107 @@ public class Range extends Tuple2<Integer, Integer> {
 
         return Collections.unmodifiableList(ranges);
     }
+
+    /**
+     * Find the subList of the given index list within a specific range.
+     *
+     * @param allIndexes Indexes which would not contain the lower and upper end point of the range.
+     * @param range      Range under concern.
+     * @return Sublist of the given sorted index list within a specific range.
+     */
+    public static List<Integer> getIndexesInRange(List<Integer> allIndexes, Range range) {
+        checkNotNull(allIndexes);
+        checkNotNull(range);
+
+        if (allIndexes.isEmpty()) {
+            return new ArrayList<Integer>();
+        }
+
+        //Sort the indexes with nature order
+        Collections.sort(allIndexes, Comparator.naturalOrder());
+
+        return _getIndexesInRange(allIndexes, range);
+    }
+
+    private static List<Integer> _getIndexesInRange(List<Integer> allIndexes, Range range) {
+        List<Integer> result = new ArrayList<>();
+
+        int count = allIndexes.size();
+        Integer lower = range.getStartInclusive();
+        Integer upper = range.getEndInclusive();
+        if (count == 0 || lower > allIndexes.get(count - 1) || upper < allIndexes.get(0)) {
+            return result;
+        }
+
+        boolean belowRange = true;
+        for (int i = 0; i < count; i++) {
+            Integer index = allIndexes.get(i);
+
+            if (belowRange) {
+                if (index < lower)
+                    continue;
+                if (range.contains(index)) {
+                    result.add(index);
+                } else if (index > upper) {
+                    return result;
+                }
+                belowRange = false;
+            } else {
+                if (range.contains(index)) {
+                    result.add(index);
+                } else if (index > upper) {
+                    return result;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static List<Range> getPairsWithValueRanges(Set<Range> nameRangeSet, Collection<Range> valueRanges, Set<Integer> indicatorIndexes) {
+        List<Range> nvpRanges = new ArrayList<>();
+        for (Range valueRange : valueRanges) {
+            Range nameRange = nameRangeSet.stream()
+                    .filter(scope -> scope.getEndInclusive() < valueRange.getStartInclusive())
+                    .sorted(comparing(Range::getEndInclusive).reversed())
+                    .findFirst().orElse(null);
+            if (nameRange != null) {
+                Range gapRange = valueRange.gapWith(nameRange);
+                List<Integer> colonsWithin = indicatorIndexes.stream().filter(i -> gapRange.contains(i)).collect(Collectors.toList());
+                checkState(colonsWithin.size() == 1,
+                        String.format("Failed to get one single indictor between '%s' and '%s'", nameRange, valueRange));
+                Range nameValueRange = nameRange.intersection(valueRange);
+                nameRangeSet.remove(nameRange);
+                indicatorIndexes.remove(colonsWithin.get(0));
+                nvpRanges.add(nameValueRange);
+            }
+        }
+        return nvpRanges;
+    }
+
+    private static List<Range> _getNamedValueRanges(Set<Range> nameRangeSet, Set<Integer> indicatorIndexes, List<Integer> sortedEnderIndexes) {
+
+        List<Range> nvpRanges = new ArrayList<>();
+        for (Integer joinerIndex : indicatorIndexes) {
+            Range nameRange = nameRangeSet.stream()
+                    .filter(r -> r.getEndInclusive() < joinerIndex)
+                    .sorted(comparing(Range::getEndInclusive).reversed())
+                    .findFirst().orElse(null);
+
+            if (nameRange == null)
+                checkNotNull(nameRange, "Failed to locate the name range right before COLON at " + joinerIndex);
+            Integer endIndex = sortedEnderIndexes.stream()
+                    .filter(i -> i > joinerIndex)
+                    .sorted()
+                    .findFirst().orElse(null);
+            checkNotNull(endIndex, "Failed to find the end of value after COLON at " + joinerIndex);
+
+            Range range = Range.closedOpen(nameRange.getStartInclusive(), endIndex);
+            nvpRanges.add(range);
+        }
+        return nvpRanges;
+    }
+
+
 
     /**
      * Converting the indexes of starts and indexes of ends in pairs as unmodifiable Range list.

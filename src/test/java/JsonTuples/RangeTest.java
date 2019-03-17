@@ -442,6 +442,53 @@ public class RangeTest {
 
 
     @Test
+    public void testGetIndexesInRange() {
+        List<Integer> subList;
+        List<Integer> list = Arrays.asList(1, 3, 4, 5, 9, 10, 12, 15, 21, 23, 25);
+
+        //No overlapped:
+        subList = Range.getIndexesInRange(list, Range.open(3, 4));
+        assertTrue(subList.size() == 0);
+
+        subList = Range.getIndexesInRange(list, Range.closed(17, 19));
+        assertTrue(subList.size() == 0);
+
+        subList = Range.getIndexesInRange(list, Range.openClosed(-1, 0));
+        assertTrue(subList.size() == 0);
+
+        subList = Range.getIndexesInRange(list, Range.open(25, 27));
+        assertTrue(subList.size() == 0);
+
+        //With 1 element in range:
+        subList = Range.getIndexesInRange(list, Range.closed(4, 4));
+        assertTrue(subList.size() == 1 && subList.get(0).equals(4));
+
+        subList = Range.getIndexesInRange(list, Range.closed(5, 8));
+        assertTrue(subList.size() == 1 && subList.get(0).equals(5));
+
+        subList = Range.getIndexesInRange(list, Range.closed(0, 1));
+        assertTrue(subList.size() == 1 && subList.get(0).equals(1));
+
+        subList = Range.getIndexesInRange(list, Range.closed(24, 29));
+        assertTrue(subList.size() == 1 && subList.get(0).equals(25));
+
+        //With multiple element in range:
+        subList = Range.getIndexesInRange(list, Range.closed(4, 5));
+        assertEquals(Arrays.asList(4, 5), subList);
+
+        subList = Range.getIndexesInRange(list, Range.open(4, 10));
+        assertEquals(Arrays.asList(5, 9), subList);
+
+        subList = Range.getIndexesInRange(list, Range.closed(0, 25));
+        assertEquals(Arrays.asList(1, 3, 4, 5, 9, 10, 12, 15, 21, 23, 25), subList);
+
+        subList = Range.getIndexesInRange(list, Range.closed(22, 30));
+        assertEquals(Arrays.asList(23, 25), subList);
+
+
+    }
+
+    @Test
     public void equals() {
     }
 
