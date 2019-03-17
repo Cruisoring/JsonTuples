@@ -22,7 +22,7 @@ public class ParserTest {
                 .replaceAll("\r\n", "\n");
         Parser parser = new Parser(jsonText);
 
-        IJSONValue value = parser.parse2();
+        IJSONValue value = parser.parse();
         assertTrue(value instanceof JSONObject);
         TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
         String actual = map.toString();
@@ -62,7 +62,7 @@ public class ParserTest {
         Parser parser = new Parser(jsonText);
 
         LocalDateTime start = LocalDateTime.now();
-        IJSONValue value = parser.parse2();
+        IJSONValue value = parser.parse();
         Duration timeToParse = Duration.between(start, LocalDateTime.now());
         assertTrue(value instanceof JSONObject);
 
