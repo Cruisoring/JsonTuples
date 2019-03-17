@@ -9,6 +9,7 @@
         "id": "OpenNew",
         "label": "Open New"
       },
+      null,
       {
         "id": "ZoomIn",
         "label": "Zoom In"
@@ -21,6 +22,7 @@
         "id": "OriginalView",
         "label": "Original View"
       },
+      null,
       {
         "id": "Quality"
       },
@@ -30,6 +32,7 @@
       {
         "id": "Mute"
       },
+      null,
       {
         "id": "Find",
         "label": "Find..."
@@ -61,6 +64,7 @@
         "id": "SaveAs",
         "label": "Save As"
       },
+      null,
       {
         "id": "Help"
       },

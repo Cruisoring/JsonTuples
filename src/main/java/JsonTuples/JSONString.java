@@ -28,6 +28,59 @@ public class JSONString extends JSONValue<String> {
         return new JSONString(unescaped);
     }
 
+    protected static String unescapeJson(String jsonContext, Range range) {
+        return unescapeJson(jsonContext, range.getStartInclusive(), range.getEndExclusive());
+    }
+
+    protected static String unescapeJson(String jsonContext, int start, int end) {
+        StringBuilder sb = new StringBuilder();
+
+        int copyFrom = start;
+        int copyTo = -1;
+        int unicode = -1;
+        for (int i = start; i < end; i++) {
+            char current = jsonContext.charAt(i);
+            if(current != BACK_SLASH) {
+                continue;
+            }
+
+            copyTo = i;
+            if(copyTo > copyFrom) {
+                sb.append(jsonContext.substring(copyFrom, copyTo));
+            }
+
+            //Assume the valid BACK_SLASH is not the last char of the range
+            char next = jsonContext.charAt(i++);
+            switch (next){
+                case '"':
+                case '\\':
+                case '/':
+                case 'b':
+                    sb.append(next);
+                    break;
+                case 'n':
+                    sb.append('\n');
+                    break;
+                case 't':
+                    sb.append('\t');
+                    break;
+                case 'r':
+                    sb.append('\r');
+                    break;
+                case 'u':
+                    int charCode = Integer.parseInt(jsonContext.substring(i+1, i+5));
+                    sb.append(Character.toChars(charCode));
+                    i+=4;
+                    break;
+            }
+            copyFrom = i+1;
+        }
+        if(copyFrom < end){
+            sb.append(jsonContext.substring(copyFrom, end));
+        }
+        return sb.toString();
+    }
+
     protected JSONString(String s) {
         super(checkNotNull(s));
     }

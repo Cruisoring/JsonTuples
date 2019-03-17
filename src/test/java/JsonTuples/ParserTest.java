@@ -69,7 +69,7 @@ public class ParserTest {
                 .replaceAll("\r\n", "\n");
         Parser parser = new Parser(jsonText);
 
-        IJSONValue value = parser.parse();
+        IJSONValue value = parser.parse2();
         assertTrue(value instanceof JSONObject);
         TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
         String actual = map.toString();
@@ -104,13 +104,12 @@ public class ParserTest {
         compareJsonParsed("sample5");
     }
 
-    @Test
-    public void loadMediumJSON() {
-        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
+    private void testPerformance(String jsonFilename) {
+        String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
         Parser parser = new Parser(jsonText);
 
         LocalDateTime start = LocalDateTime.now();
-        IJSONValue value = parser.parse();
+        IJSONValue value = parser.parse2();
         Duration timeToParse = Duration.between(start, LocalDateTime.now());
         assertTrue(value instanceof JSONObject);
 
@@ -122,5 +121,10 @@ public class ParserTest {
         System.out.println(actual);
         System.out.println(String.format("Time elapsed to parse jsonText of %d: %s, show: %s",
                 parser.length, timeToParse.toString(), timeToShow.toString()));
+    }
+
+    @Test
+    public void testMediumJson() {
+        testPerformance("catalog.json");
     }
 }

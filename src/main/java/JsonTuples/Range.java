@@ -41,10 +41,10 @@ public class Range extends Tuple2<Integer, Integer> {
     public static final Range NONE = new Range(0, 0);
 
     /**
-     * Check if the Range is contained by the indexes of length.
+     * Check if the Range is contained by the indexes of bufferSize.
      * @param range     Range to be checked.
-     * @param length    Length of the valid range [0, length)
-     * @return          True if the range is contained by [0, length), otherwise False.
+     * @param length    Length of the valid range [0, bufferSize)
+     * @return          True if the range is contained by [0, bufferSize), otherwise False.
      */
     public static boolean isValidOfLength(Range range, Integer length) {
         checkState(length>=0);
@@ -53,7 +53,7 @@ public class Range extends Tuple2<Integer, Integer> {
     }
 
     /**
-     * Returns a range contains all indexes for a enumerable object with specific length.
+     * Returns a range contains all indexes for a enumerable object with specific bufferSize.
      * @param length Length of the enumerable object, must be greater than or equal to 0.
      * @return  Range of the indexes.
      */

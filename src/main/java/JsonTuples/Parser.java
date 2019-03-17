@@ -5,6 +5,7 @@ import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple3;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -39,16 +40,18 @@ public final class Parser {
 
     final static List<Character> VALUE_START_INDICATORS = Arrays.asList(COMMA, LEFT_BRACE, LEFT_BRACKET);
     final static List<Character> VALUE_END_INDICATORS = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, COMMA);
+    final static List<Character> ARRAY_VALUE_SPLITTERS = Arrays.asList(RIGHT_BRACE, RIGHT_BRACKET, LEFT_BRACKET, COMMA);
     final static Character MIN_CONTROL = Collections.min(CONTROLS);
     final static Character MAX_CONTROL = Collections.max(CONTROLS);
     //endregion
 
     public class StateMachine {
-        int length = 1024;
-        int[] positions = new int[length];
-        char[] controls = new char[length];
+        public static final char START_JSON_SIGN = '^';
+        int bufferSize = 1024;
+        int[] positions = new int[bufferSize];
+        char[] controls = new char[bufferSize];
         int controlCount = -1;
-        char lastControl = ' ';
+        char lastControl = START_JSON_SIGN;
 
         int currentStringStart = Integer.MAX_VALUE;
         int currentStringEnd = -1;
@@ -56,33 +59,71 @@ public final class Parser {
         Boolean isInObject = null;
         Tuple3<Boolean, Integer, Character> objectOpen = null;
         Tuple3<Boolean, Integer, Character> arrayOpen = null;
-        private final Map<Range, Lazy<IJSONable>> rangesLazyMap = new HashMap<>();
+
+        private Lazy<IJSONValue> rootNodeLazy = null;
 
         Stack<Tuple2<Integer, Consumer<Range>>> actionsToCloseSegment = new Stack<>();
 
-        void add(char control, int position) {
+        public IJSONValue getRootNode() {
+            return rootNodeLazy.getValue();
+        }
+
+        public Map<Range, Lazy<IJSONable>> parseFast() {
+            rangedElements.clear();
+            boolean isInString = false;
+
+            //Demarcate the JSONString elements, save all control characters
+            for (int i = 0; i < length; i++) {
+                char current = jsonContext.charAt(i);
+
+                //Since the Quote is not escaped by BACK_SLASH, it shall be the start or end of a JSONString
+                if (current == QUOTE) {
+                    boolean isEscaped = false;
+                    for (int j = i-1; j >= 0 ; j--) {
+                        if(jsonContext.charAt(j) == BACK_SLASH){
+                            isEscaped = !isEscaped;
+                        } else {
+                            break;
+                        }
+                    }
+                    if(isEscaped) {
+                        //This Quote is escaped, not a control
+                        continue;
+                    }
+
+                    isInString = !isInString;
+                    addControlFast(current, i);
+                    continue;
+                }
+
+                //Check if the position is within the scope of the current JSONString
+                if (isInString || current < MIN_CONTROL || current > MAX_CONTROL) {
+                    //When the String has not ended, or not any control char
+                    continue;
+                }
+
+                if(CONTROLS.contains(current)) {
+                    addControlFast(current, i);
+                }
+            }
+            return rangedElements;
+        }
+
+        void addControlFast(char control, int position) {
             Tuple2<Integer, Consumer<Range>> actionWhenClosing;
             switch (control) {
                 case LEFT_BRACE:    //Start of JSONObject
                     switch (lastControl) {
-                        case LEFT_BRACE:
-                        case RIGHT_BRACE:
-                        case RIGHT_BRACKET:
-                            checkState(false,
-                                    "Invalid state when %s follows %s immediately: %s",
-                                    control, lastControl, subString(Range.closed(controls[controlCount], position)));
-                            break;
-                        case COMMA:
-                            checkState(!isInObject, "It's not in a JSONArray?");
-                            break;
                         case COLON:
-                            checkState(isInObject, "It is not in a bigger JSONObject");
-                            //It must be led by a JSONString
-                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==QUOTE);
                             final Range objectNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
                             actionWhenClosing = Tuple.create(position,
-                                    objectRange -> rangesLazyMap.put(
+                                    objectRange -> rangedElements.put(
                                         objectNameRange.intersection(objectRange), new Lazy<>(() -> asNamedValue(objectNameRange, objectRange))));
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        case START_JSON_SIGN:
+                            actionWhenClosing = Tuple.create(position,
+                                    objectRange -> rootNodeLazy = new Lazy<>(() -> asJSONObject(objectRange)) );
                             actionsToCloseSegment.push(actionWhenClosing);
                             break;
                         default:
@@ -92,29 +133,22 @@ public final class Parser {
                     isInObject = true;
                     objectOpen = Tuple.create(isInObject, position, control);
                     segmentStack.push(objectOpen);
+
                     break;
                 case RIGHT_BRACE:   //End of current JSONObject
                     switch (lastControl) {
-                        case COMMA:
-                            checkState(false,
-                                    "Invalid state when %s follows %s immediately: %s",
-                                    control, lastControl, subString(Range.closed(controls[controlCount], position)));
-                            break;
                         case COLON:
-                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==QUOTE);
                             final Range objectNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
-                            Range vRange = Range.open(controls[controlCount], position);
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(()-> asValue(vRange)));
                             Range nvRange = objectNameRange.intersection(vRange);
-                            rangesLazyMap.put(nvRange, new Lazy<>(() -> asNamedValue(objectNameRange, vRange)));
+                            rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(objectNameRange, vRange)));
                             break;
                         case QUOTE:
-                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==COLON
-                                    && controls[controlCount-3]==QUOTE && controls[controlCount-4]==QUOTE
-                            );
                             Range nRange = Range.closed(positions[controlCount-4], positions[controlCount-3]);
                             Range sRange = Range.closed(positions[controlCount-1], positions[controlCount]);
                             Range namedStringRange = nRange.intersection(sRange);
-                            rangesLazyMap.put(namedStringRange, new Lazy<>(() -> asNamedValue(nRange, sRange)));
+                            rangedElements.put(namedStringRange, new Lazy<>(() -> asNamedValue(nRange, sRange)));
                             break;
                         default:
                             break;
@@ -125,7 +159,222 @@ public final class Parser {
                             objectOpen.getThird(), objectOpen.getSecond(), control, position);
 
                     Range objectRange = Range.closed(objectOpen.getSecond(), position);
-                    rangesLazyMap.put(objectRange, new Lazy<>(() -> asJSONObject(objectRange)));
+                    rangedElements.put(objectRange, new Lazy<>(() -> asJSONObject(objectRange)));
+                    //Check if the JSONObject is marked as named, if yes then save the corresponding NamedValue
+                    tryCloseRegion(objectRange);
+
+                    //restore state to parent of the current JSONObject
+                    restoreState();
+                    break;
+                case LEFT_BRACKET:  //Start of JSONArray
+                    switch (lastControl) {
+                        case COMMA:
+                            actionWhenClosing = Tuple.create(position, null);
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        case COLON:
+                            final Range arrayNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
+                            actionWhenClosing = Tuple.create(position, arrayRange ->
+                                    rangedElements.put(
+                                            arrayNameRange.intersection(arrayRange), new Lazy<>(() -> asNamedValue(arrayNameRange, arrayRange))));
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        case START_JSON_SIGN:
+                            actionWhenClosing = Tuple.create(position,
+                                    arrayRange -> rootNodeLazy = new Lazy<>(() -> asJSONOArray(arrayRange)));
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        default:
+                            break;
+                    }
+                    isInObject = false;
+                    arrayOpen = Tuple.create(isInObject, position, control);
+                    segmentStack.push(arrayOpen);
+                    break;
+                case RIGHT_BRACKET: //Close of current JSONArray
+                    switch (lastControl) {
+                        case COMMA:
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(() -> asValue(vRange)));
+                            break;
+                        default:
+                            break;
+                    }
+
+                    checkState(arrayOpen == segmentStack.pop(),
+                            "The stacked '%s' at %d is not matched with '%s' at %d",
+                            arrayOpen.getThird(), arrayOpen.getSecond(), control, position);
+
+                    Range arrayRange = Range.closed(arrayOpen.getSecond(), position);
+                    rangedElements.put(arrayRange, new Lazy<>(() -> asJSONOArray(arrayRange)));
+                    //Check if the array is marked as named, if yes then save the corresponding NamedValue
+                    tryCloseRegion(arrayRange);
+
+                    //restore state to parent of the current JSONArray
+                    restoreState();
+                    break;
+                case COMMA: //End of Value in JSONArray or NamedValue in JSONObject
+                    switch (lastControl) {
+                        case COMMA:
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(() -> asValue(vRange)));
+                            break;
+                        case COLON:
+                            final Range nRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
+                            final Range valueRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(valueRange, new Lazy<>(() -> asValue(valueRange)));
+                            rangedElements.put(nRange.intersection(valueRange), new Lazy<>(() -> asNamedValue(nRange, valueRange)));
+                            break;
+                        case QUOTE:
+                            if(isInObject) {
+                                final Range nameRange = Range.closed(positions[controlCount-4], positions[controlCount-3]);
+                                final Range strRange = Range.closed(positions[controlCount-1], positions[controlCount]);
+                                rangedElements.put(nameRange.intersection(strRange), new Lazy<>(() -> asNamedValue(nameRange, strRange)));
+                            }
+                        default:
+                            break;
+                    }
+                    break;
+                case QUOTE:
+                    if (currentStringEnd == Integer.MAX_VALUE) {
+                        //This position is the end of an existing String scope, keep it with currentStringEnd
+                        currentStringEnd = position;
+                        Range range = Range.closed(currentStringStart, currentStringEnd);
+                        rangedElements.put(range, new Lazy<>(() -> asJSONString(range)));
+                    } else {
+                        //This position is the start of a new String scope
+                        currentStringStart = position;
+                        currentStringEnd = Integer.MAX_VALUE;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+            if(++controlCount == bufferSize) {
+                bufferSize = bufferSize *2;
+                controls = Arrays.copyOf(controls, bufferSize);
+                positions = Arrays.copyOf(positions, bufferSize);
+            }
+            controls[controlCount] = control;
+            positions[controlCount] = position;
+            lastControl = control;
+        }
+
+        public Map<Range, Lazy<IJSONable>> parse() {
+            rangedElements.clear();
+            boolean isInString = false;
+
+            //Demarcate the JSONString elements, save all control characters
+            for (int i = 0; i < length; i++) {
+                char current = jsonContext.charAt(i);
+
+                //Since the Quote is not escaped by BACK_SLASH, it shall be the start or end of a JSONString
+                if (current == QUOTE) {
+                    boolean isEscaped = false;
+                    for (int j = i-1; j >= 0 ; j--) {
+                        if(jsonContext.charAt(j) == BACK_SLASH){
+                            isEscaped = !isEscaped;
+                        } else {
+                            break;
+                        }
+                    }
+                    if(isEscaped) {
+                        //This Quote is escaped, not a control
+                        continue;
+                    }
+
+                    isInString = !isInString;
+                    addControl(current, i);
+                    continue;
+                }
+
+                //Check if the position is within the scope of the current JSONString
+                if (isInString || current < MIN_CONTROL || current > MAX_CONTROL) {
+                    //When the String has not ended, or not any control char
+                    continue;
+                }
+
+                if(CONTROLS.contains(current)) {
+                    addControl(current, i);
+                }
+            }
+            return rangedElements;
+        }
+
+        void addControl(char control, int position) {
+            Tuple2<Integer, Consumer<Range>> actionWhenClosing;
+            switch (control) {
+                case LEFT_BRACE:    //Start of JSONObject
+                    switch (lastControl) {
+                        case LEFT_BRACE:
+                        case RIGHT_BRACE:
+                        case RIGHT_BRACKET:
+                            checkState(false,
+                                    "Invalid state when %s follows %s immediately: %s",
+                                    control, lastControl, subString(Range.closed(positions[controlCount], position)));
+                            break;
+                        case COMMA:
+                            checkState(!isInObject, "It's not in a JSONArray?");
+                            break;
+                        case COLON:
+                            checkState(isInObject, "It is not in a bigger JSONObject");
+                            //It must be led by a JSONString
+                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==QUOTE);
+                            final Range objectNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
+                            actionWhenClosing = Tuple.create(position,
+                                    objectRange -> rangedElements.put(
+                                        objectNameRange.intersection(objectRange), new Lazy<>(() -> asNamedValue(objectNameRange, objectRange))));
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        case START_JSON_SIGN:
+                            actionWhenClosing = Tuple.create(position,
+                                    objectRange -> rootNodeLazy = new Lazy<>(() -> asJSONObject(objectRange)) );
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        default:
+                            break;
+                    }
+
+                    isInObject = true;
+                    objectOpen = Tuple.create(isInObject, position, control);
+                    segmentStack.push(objectOpen);
+
+                    break;
+                case RIGHT_BRACE:   //End of current JSONObject
+                    switch (lastControl) {
+                        case COMMA:
+                            checkState(false,
+                                    "Invalid state when %s follows %s immediately: %s",
+                                    control, lastControl, subString(Range.closed(positions[controlCount], position)));
+                            break;
+                        case COLON:
+                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==QUOTE);
+                            final Range objectNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(()-> asValue(vRange)));
+                            Range nvRange = objectNameRange.intersection(vRange);
+                            rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(objectNameRange, vRange)));
+                            break;
+                        case QUOTE:
+                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==COLON
+                                    && controls[controlCount-3]==QUOTE && controls[controlCount-4]==QUOTE
+                            );
+                            Range nRange = Range.closed(positions[controlCount-4], positions[controlCount-3]);
+                            Range sRange = Range.closed(positions[controlCount-1], positions[controlCount]);
+                            Range namedStringRange = nRange.intersection(sRange);
+                            rangedElements.put(namedStringRange, new Lazy<>(() -> asNamedValue(nRange, sRange)));
+                            break;
+                        default:
+                            break;
+                    }
+
+                    checkState(objectOpen == segmentStack.pop(),
+                            "The stacked '%s' at %d is not matched with '%s' at %d",
+                            objectOpen.getThird(), objectOpen.getSecond(), control, position);
+
+                    Range objectRange = Range.closed(objectOpen.getSecond(), position);
+                    rangedElements.put(objectRange, new Lazy<>(() -> asJSONObject(objectRange)));
                     //Check if the JSONObject is marked as named, if yes then save the corresponding NamedValue
                     tryCloseRegion(objectRange);
 
@@ -138,7 +387,7 @@ public final class Parser {
                         case RIGHT_BRACKET:
                             checkState(false,
                                     "Invalid state when %s follows %s immediately: %s",
-                                    control, lastControl, subString(Range.closed(controls[controlCount], position)));
+                                    control, lastControl, subString(Range.closed(positions[controlCount], position)));
                             break;
                         case COMMA:
                             checkState(!isInObject, "It's not in a JSONArray?");
@@ -151,8 +400,13 @@ public final class Parser {
                             checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==QUOTE);
                             final Range arrayNameRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
                             actionWhenClosing = Tuple.create(position, arrayRange ->
-                                    rangesLazyMap.put(
+                                    rangedElements.put(
                                             arrayNameRange.intersection(arrayRange), new Lazy<>(() -> asNamedValue(arrayNameRange, arrayRange))));
+                            actionsToCloseSegment.push(actionWhenClosing);
+                            break;
+                        case START_JSON_SIGN:
+                            actionWhenClosing = Tuple.create(position,
+                                    arrayRange -> rootNodeLazy = new Lazy<>(() -> asJSONOArray(arrayRange)));
                             actionsToCloseSegment.push(actionWhenClosing);
                             break;
                         default:
@@ -168,14 +422,15 @@ public final class Parser {
                         case COLON:
                             checkState(false,
                                     "Invalid state when %s follows %s immediately: %s",
-                                    control, lastControl, subString(Range.closed(controls[controlCount], position)));
+                                    control, lastControl, subString(Range.closed(positions[controlCount], position)));
                             break;
                         case COMMA:
-                            Range vRange = Range.open(controls[controlCount], position);
-                            rangesLazyMap.put(vRange, new Lazy<>(() -> asValue(vRange)));
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(() -> asValue(vRange)));
                             break;
                         case QUOTE:
-                            checkState(controls[controlCount-1]==QUOTE && controls[controlCount-2]==COMMA);
+                            checkState(controls[controlCount-1]==QUOTE && ARRAY_VALUE_SPLITTERS.contains(controls[controlCount-2]),
+                                    "Invalid state encounter at position %d", position);
                             break;
                         default:
                             break;
@@ -186,7 +441,7 @@ public final class Parser {
                             arrayOpen.getThird(), arrayOpen.getSecond(), control, position);
 
                     Range arrayRange = Range.closed(arrayOpen.getSecond(), position);
-                    rangesLazyMap.put(arrayRange, new Lazy<>(() -> asJSONOArray(arrayRange)));
+                    rangedElements.put(arrayRange, new Lazy<>(() -> asJSONOArray(arrayRange)));
                     //Check if the array is marked as named, if yes then save the corresponding NamedValue
                     tryCloseRegion(arrayRange);
 
@@ -199,12 +454,12 @@ public final class Parser {
                         case LEFT_BRACKET:
                             checkState(false,
                                     "Invalid state when %s follows %s immediately: %s",
-                                    control, lastControl, subString(Range.closed(controls[controlCount], position)));
+                                    control, lastControl, subString(Range.closed(positions[controlCount], position)));
                             break;
                         case COMMA:
                             checkState(!isInObject, "It's not in a JSONArray?");
-                            Range vRange = Range.open(controls[controlCount], position);
-                            rangesLazyMap.put(vRange, rangesLazyMap.put(vRange, new Lazy<>(() -> asValue(vRange))));
+                            Range vRange = Range.open(positions[controlCount], position);
+                            rangedElements.put(vRange, new Lazy<>(() -> asValue(vRange)));
                             break;
                         case COLON:
                             checkState(isInObject, "It shall be in a bigger JSONObject");
@@ -212,17 +467,19 @@ public final class Parser {
                             checkState(controls[controlCount-2]==QUOTE && controls[controlCount-1]==QUOTE);
                             final Range nRange = Range.closed(positions[controlCount-2], positions[controlCount-1]);
                             final Range valueRange = Range.open(positions[controlCount], position);
-                            rangesLazyMap.put(valueRange, new Lazy<>(() -> asValue(valueRange)));
-                            rangesLazyMap.put(nRange.intersection(valueRange), new Lazy<>(() -> asNamedValue(nRange, valueRange)));
+                            rangedElements.put(valueRange, new Lazy<>(() -> asValue(valueRange)));
+                            rangedElements.put(nRange.intersection(valueRange), new Lazy<>(() -> asNamedValue(nRange, valueRange)));
                             break;
                         case QUOTE:
-                            checkState(controls[controlCount-1]==QUOTE, "The JSONString is not enclosed by two Quotes.");
+                            checkState(controls[controlCount-1]==QUOTE,
+                                    "The JSONString is not enclosed by two Quotes at %d.", position);
                             if(isInObject) {
                                 checkState(controls[controlCount-3]==QUOTE && controls[controlCount-4]==QUOTE
-                                        && controls[controlCount-2]==COLON);
+                                        && controls[controlCount-2]==COLON,
+                                        "Unexpected pattern at %d: %s", position, subString(Range.closed(positions[controlCount-4], position)));
                                 final Range nameRange = Range.closed(positions[controlCount-4], positions[controlCount-3]);
                                 final Range strRange = Range.closed(positions[controlCount-1], positions[controlCount]);
-                                rangesLazyMap.put(nameRange.intersection(strRange), new Lazy<>(() -> asNamedValue(nameRange, strRange)));
+                                rangedElements.put(nameRange.intersection(strRange), new Lazy<>(() -> asNamedValue(nameRange, strRange)));
                             }
                         default:
                             break;
@@ -237,7 +494,7 @@ public final class Parser {
                         //This position is the end of an existing String scope, keep it with currentStringEnd
                         currentStringEnd = position;
                         Range range = Range.closed(currentStringStart, currentStringEnd);
-                        rangesLazyMap.put(range, new Lazy<>(() -> asJSONString(range)));
+                        rangedElements.put(range, new Lazy<>(() -> asJSONString(range)));
                     } else {
                         //This position is the start of a new String scope
                         currentStringStart = position;
@@ -248,10 +505,10 @@ public final class Parser {
                 default:
                     checkState(false, "Unexpected control char of: %s at %d", control, position);
             }
-            if(++controlCount == length) {
-                length = length*2;
-                controls = Arrays.copyOf(controls, length);
-                positions = Arrays.copyOf(positions, length);
+            if(++controlCount == bufferSize) {
+                bufferSize = bufferSize *2;
+                controls = Arrays.copyOf(controls, bufferSize);
+                positions = Arrays.copyOf(positions, bufferSize);
             }
             controls[controlCount] = control;
             positions[controlCount] = position;
@@ -445,43 +702,6 @@ public final class Parser {
         return jsonContext.substring(range.getStartInclusive(), end > length ? length : end);
     }
 
-
-    protected void demarcateValues(List<Tuple2<Character, Integer>> controls) {
-        Stack<Boolean> isInObjects = new Stack<>();
-        int size = controls.size();
-        int nameStart = -1, nameEnd = -1, valueStart = -1, valueEnd = -1;
-        int colonIndex = -1;
-        for (int i = 0; i < size; i++) {
-            Tuple2<Character, Integer> current = controls.get(i);
-            switch (current.getFirst()) {
-                case LEFT_BRACE:
-                    isInObjects.push(true);
-                    break;
-                case RIGHT_BRACE:
-                    checkState(isInObjects.pop());
-                    break;
-                case LEFT_BRACKET:
-                    isInObjects.push(false);
-                    break;
-                case RIGHT_BRACKET:
-                    checkState(!isInObjects.pop());
-                    break;
-                case COMMA:
-                    break;
-                case COLON:
-                    checkState(isInObjects.peek());
-
-                    break;
-                case QUOTE:
-                    break;
-                default:
-                    checkState(false, "Shall never contain other chars");
-            }
-        }
-    }
-
-    public StateMachine stateMachine = new StateMachine();
-
     /**
      * Scan all the characters of the jsonContext to keep indexes of special characters as defined in {@code MARKERS}
      *
@@ -527,7 +747,6 @@ public final class Parser {
                     currentStringEnd = Integer.MAX_VALUE;
                 }
                 activeControls.add(Tuple.create(current, i));
-                stateMachine.add(current, i);
                 continue;
             }
 
@@ -599,7 +818,6 @@ public final class Parser {
             //Keep the index of this CONTROL char into its list
             controlsIndexMap.get(current).add(i);
             activeControls.add(Tuple.create(current, i));
-            stateMachine.add(current, i);
         }
 
 //        List<Range> ranges = rangedElements.keySet().stream()
@@ -618,7 +836,8 @@ public final class Parser {
      * @return JSONString instance from the given range of the {@code jsonContext}
      */
     protected JSONString asJSONString(Range range) {
-        return new JSONString(subString(range.getInside()));
+        String string = JSONString.unescapeJson(jsonContext, range.getStartInclusive()+1, range.getEndExclusive());
+        return new JSONString(string);
     }
 
     /**
@@ -632,11 +851,23 @@ public final class Parser {
 //        System.out.println("???????" + subString(range) + ": as JSONObject");
 //        namedValueChildren.forEach(r -> System.out.println(subString(r)));
 
-        NamedValue[] namedValues = namedValueChildren.stream()
+        //*/
+        NamedValue[] namedValues = namedValueChildren.stream().parallel()
                 .map(child -> (NamedValue) rangedElements.get(child).getValue())
                 .toArray(size -> new NamedValue[size]);
         JSONObject object = new JSONObject(namedValues);
         return object;
+        /*/
+        int size = namedValueChildren.size();
+        NamedValue[] namedValues = new NamedValue[size];
+        for (int i = 0; i < size; i++) {
+            Range childRange = namedValueChildren.get(i);
+            IJSONable child = rangedElements.get(childRange).getValue();
+            NamedValue namedValue = (NamedValue)child;
+            namedValues[i] = namedValue;
+        }
+        return new JSONObject(namedValues);
+        //*/
     }
 
     /**
@@ -647,7 +878,7 @@ public final class Parser {
      */
     protected JSONArray asJSONOArray(Range range) {
         List<Range> elementRanges = range.getChildRanges(getSortedRanges());
-        IJSONValue[] values = elementRanges.stream()
+        IJSONValue[] values = elementRanges.stream().parallel()
                 .map(r -> rangedElements.get(r).getValue())
                 .toArray(i -> new IJSONValue[i]);
         JSONArray array = new JSONArray(values);
@@ -690,196 +921,21 @@ public final class Parser {
     }
 
     protected NamedValue asNamedValue(Range nameRange, Range valueRange) {
-        String name = subString(nameRange.getInside());
-        IJSONValue value = (IJSONValue) rangedElements.get(valueRange).getValue();
-        return new NamedValue(name, value);
-    }
-
-    /**
-     * Check if the index is within any Range of stringRanges.
-     *
-     * @param index Index to be checked.
-     * @return True if any Range contains it that make special char invalid for JSON parsing, otherwise False.
-     */
-    private boolean inAnyStringRange(Integer index) {
-        checkNotNull(index);
-        checkNotNull(stringRanges);
-
-        for (Range range : stringRanges) {
-            if (range.contains(index))
-                return true;
-            if (range.getStartInclusive() > index)
-                return false;
+        String name;
+        if(rangedElements.containsKey(nameRange)) {
+            name = ((JSONString) rangedElements.get(nameRange).getValue()).getFirst();
+        } else {
+            name = asJSONString(nameRange).getFirst();
         }
 
-        return false;
+        IJSONValue value;
+        if(rangedElements.containsKey(valueRange)) {
+            value = (IJSONValue) rangedElements.get(valueRange).getValue();;
+        } else {
+            value = asValue(valueRange);
+        }
+        return new NamedValue(name, value);
     }
-
-
-//    /**
-//     * Scan all the characters of the jsonContext to keep indexes of special characters as defined in {@code MARKERS}
-//     *
-//     * @return Indexes of all special characters as a Map.
-//     */
-//    private List<Range> scan() {
-//        List<Range> objectArrayRanges = new ArrayList<>();
-//
-//        CONTROLS.stream().forEach(c -> controlsIndexMap.put(c, new ArrayList<>()));
-//
-//        int lastBackSlash = -100;
-//        int currentStringStart = Integer.MAX_VALUE;
-//        int currentStringEnd = -1;
-//        Stack<Integer> objectStarts = new Stack<>();
-//        Stack<Integer> arrayStarts = new Stack<>();
-//        Stack<Range> nameRanges = new Stack<>();
-//        Range lastStringRange = null;
-//        Range lastNameRange = null;
-//        int valueStart = -1;
-//        Stack<Boolean> isInObjectStack = new Stack<>();
-//
-//        //Get all indexes of all concerned markers
-//        for (int i = 0; i < length; i++) {
-//            char current = jsonContext.charAt(i);
-//
-//            //Ensure only escapable chars following BACK_SLASH
-//            if(i == lastBackSlash+1) {
-//                checkState(ESCAPABLE_CHARS.contains(current));
-//                i++;
-//
-//                continue;
-//            }
-//
-//            //Since the Quote is not escaped by BACK_SLASH, it shall be the start or end of a JSONString
-//            if(current == QUOTE) {
-//                if (currentStringEnd == Integer.MAX_VALUE) {
-//                    //This position i is the end of an existing String scope, keep it with currentStringEnd
-//                    currentStringEnd = i;
-//                    Range range = Range.closed(currentStringStart, currentStringEnd);
-//                    rangesLazyMap.put(range, new Lazy<>(() -> asJSONString(range)));
-//                    lastStringRange = range;
-//                    stringRanges.add(range);
-//                } else {
-//                    //This position i is the start of a new String scope
-//                    currentStringStart = i;
-//                    currentStringEnd = Integer.MAX_VALUE;
-//                }
-//                activeControls.add(current);
-//                continue;
-//            }
-//
-//            //Check if the position is within the scope of the current JSONString
-//            if(i < currentStringEnd) {
-//                //When the String has not ended
-//                continue;
-//            }
-//
-//            //Now the position is out of JSONString
-//            switch (current) {
-//                case LEFT_BRACE:
-//                case LEFT_BRACKET:
-//                    if(current == LEFT_BRACE) {
-//                        isInObjectStack.push(true);
-//                        objectStarts.push(i);
-//                    } else {
-//                        isInObjectStack.push(false);
-//                        arrayStarts.push(i);
-//                        valueStart = i;
-//                    }
-//
-//                    if(lastNameRange != null) {
-//                        nameRanges.push(lastNameRange);
-//                        lastNameRange = null;
-//                    }
-//                    break;
-//                case RIGHT_BRACE:
-//                    checkState(isInObjectStack.pop(), "Incorrect state showing it is not exiting a JSONObject.");
-//
-//                    checkState(!objectStarts.isEmpty(),
-//                            "There is no matched '{' before the '}' at position %d", i);
-//                    //It close Value, NamedValue, JSONObject
-//                    int lastObjectStart = objectStarts.pop();
-//                    Range oRange = Range.closed(lastObjectStart, i);
-//                    rangedElements.put(oRange, new Lazy<>(() -> asJSONObject(oRange)));
-//                    objectArrayRanges.add(oRange);
-//                    if(!nameRanges.isEmpty()) {
-//                        Range nRange = nameRanges.pop();
-//                        Range nvRange = nRange.intersection(oRange);
-//                        rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(nRange, oRange)));
-//                        stringRanges.remove(nRange);
-//                    }
-//                    break;
-//                case RIGHT_BRACKET:
-//                    checkState(!isInObjectStack.pop(), "Incorrect state showing it is not exiting a JSONArray.");
-//                    checkState(!arrayStarts.isEmpty(),
-//                            "There is no matched '[' before the ']' at position %d", i);
-//                    int lastArrayStart = arrayStarts.pop();
-//                    Range aRange = Range.closed(lastArrayStart, i);
-//                    rangedElements.put(aRange, new Lazy<>(() -> asJSONOArray(aRange)));
-//                    objectArrayRanges.add(aRange);
-//                    if(!nameRanges.isEmpty()) {
-//                        Range nRange = nameRanges.pop();
-//                        Range nvRange = nRange.intersection(aRange);
-//                        rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(nRange, aRange)));
-//                        stringRanges.remove(nRange);
-//                    }
-//                    break;
-//                case COLON:
-//                    checkState(isInObjectStack.peek(), "COLON(:) shall present only within JSONObjects.");
-//                    valueStart = i;
-//                    checkNotNull(lastStringRange, "COLON(') must follow a JSONString immediately that is kept as lastStringRange.");
-//                    lastNameRange = lastStringRange;
-//                    lastStringRange = null;
-//                    break;
-//                case COMMA:
-//                    Character lastControl = activeControls.get(activeControls.size()-1);
-//                    if(lastControl.equals(QUOTE)){
-//                        Range vRange = lastStringRange;
-//                        if(isInObjectStack.peek()) {
-//                            checkNotNull(lastNameRange);
-//                            Range nRange = lastNameRange;
-//                            Range nvRange = lastNameRange.intersection(vRange);
-//                            rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(nRange, vRange)));
-//                            stringRanges.remove(nRange);
-//                            stringRanges.remove(vRange);
-//                            lastNameRange = null;
-//                            lastStringRange = null;
-//                        } else {
-//                            checkState(lastNameRange == null);
-//                        }
-//                    } else if(!lastControl.equals(RIGHT_BRACE) && !lastControl.equals(RIGHT_BRACKET)) {
-//                        Range vRange = Range.open(valueStart, i);
-//                        rangedElements.put(vRange, new Lazy<>(() -> asValue(vRange)));
-//                        if(isInObjectStack.peek()) {
-//                            checkNotNull(lastNameRange);
-//                            Range nRange = lastNameRange;
-//                            Range nvRange = lastNameRange.intersection(vRange);
-//                            rangedElements.put(nvRange, new Lazy<>(() -> asNamedValue(nRange, vRange)));
-//                            stringRanges.remove(nRange);
-//                            lastNameRange = null;
-//                        } else {
-//                            checkState(lastNameRange == null,
-//                                    "Invalid state: %s", subString(lastNameRange.intersection(vRange)));
-//                        }
-//                    }
-//                    valueStart = i;
-//                    break;
-//                default:
-//                    continue;
-//            }
-//
-//            //Keep the index of this CONTROL char into its list
-//            controlsIndexMap.get(current).add(i);
-//            activeControls.add(current);
-//        }
-//
-//        List<Range> ranges = rangedElements.keySet().stream()
-//                .sorted(Comparator.naturalOrder()).collect(Collectors.toList());
-//        for (Range r :
-//                ranges) {
-//            System.out.println(subString(r));
-//        }
-//        return objectArrayRanges;
-//    }
 
     /**
      * Mark the Ranges of all NamedValues by starting with JSONObject and JSONArray.
@@ -999,10 +1055,6 @@ public final class Parser {
 
         List<Range> objectOrArrayRanges = scan();
 
-//        Map<Character, List<Integer>> activeCharIndexes = demarcateStrings(specialCharIndexes);
-//
-//        List<Range> objectOrArrayRanges = demarcateObjectAndArrays(activeCharIndexes);
-
         demarcateNamedValues(objectOrArrayRanges);
 
         Range largestRange = Collections.max(rangedElements.keySet(), Comparator.comparing(Range::size));
@@ -1010,5 +1062,21 @@ public final class Parser {
         IJSONValue result = (IJSONValue) rangedElements.get(largestRange).getValue();
 
         return result;
+    }
+
+    public IJSONValue parse2() {
+        StateMachine stateMachine = new StateMachine();
+        Map<Range, Lazy<IJSONable>> map = stateMachine.parseFast();
+        List<Range> ranges = map.keySet().stream()
+                .sorted(Comparator.comparing(Range::size))
+                .collect(Collectors.toList());
+
+//        for (int i = 0; i < ranges.size(); i++) {
+//            Range range = ranges.get(i);
+//            Object value = map.get(range).getValue();
+//            System.out.println(String.format("%d: %s: %s", i, range, value==null ? "null": value));
+//        }
+
+        return stateMachine.getRootNode();
     }
 }
