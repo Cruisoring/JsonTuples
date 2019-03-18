@@ -54,6 +54,9 @@ public class TupleMap<K extends Comparable<K>,V> extends HashMap<K, V> {
         List<String> lines = new ArrayList<>();
         for (int i = 0; i < length; i++) {
             V value = tupleSet.get(i).getSecond();
+            if(value == null) {
+                break;
+            }
             String valueLines = value.toString();
             valueLines = valueLines.replaceAll(NEW_LINE, NEW_LINE+SPACE);
             String line = String.format(indent + "%s\"%s\": %s%s",

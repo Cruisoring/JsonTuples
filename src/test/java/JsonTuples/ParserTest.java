@@ -5,8 +5,6 @@ import org.junit.Test;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,7 +20,7 @@ public class ParserTest {
                 .replaceAll("\r\n", "\n");
         Parser parser = new Parser(jsonText);
 
-        IJSONValue value = parser.parse();
+        IJSONValue value = (IJSONValue) parser.parse();
         assertTrue(value instanceof JSONObject);
         TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
         String actual = map.toString();
@@ -62,7 +60,7 @@ public class ParserTest {
         Parser parser = new Parser(jsonText);
 
         LocalDateTime start = LocalDateTime.now();
-        IJSONValue value = parser.parse();
+        IJSONValue value = (IJSONValue) parser.parse();
         Duration timeToParse = Duration.between(start, LocalDateTime.now());
         assertTrue(value instanceof JSONObject);
 
@@ -77,12 +75,37 @@ public class ParserTest {
     }
 
     @Test
-    public void testMediumJson1() {
+    public void test70KJson() {
         testPerformance("navigation.json");
     }
 
     @Test
-    public void testMediumJson2() {
+    public void test180KJson() {
+        testPerformance("paths.json");
+    }
+
+    @Test
+    public void test188KJson() {
+        testPerformance("help.json");
+    }
+
+    @Test
+    public void test392KJson1() {
+        testPerformance("nls.metadata.json");
+    }
+
+    @Test
+    public void test626KJson1() {
+        testPerformance("places.json");
+    }
+
+    @Test
+    public void test1238KJson1() {
+        testPerformance("people.json");
+    }
+
+    @Test
+    public void test6257KJson() {
         testPerformance("catalog.json");
     }
 }
