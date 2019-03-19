@@ -64,8 +64,10 @@ public class JSONString extends JSONValue<String> {
                 case '"':
                 case '\\':
                 case '/':
-                case 'b':
                     sb.append(next);
+                    break;
+                case 'b':
+                    sb.append('\b');
                     break;
                 case 'n':
                     sb.append('\n');

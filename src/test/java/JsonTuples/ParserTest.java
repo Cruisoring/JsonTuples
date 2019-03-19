@@ -85,7 +85,7 @@ public class ParserTest {
     }
 
     @Test
-    public void test188KJson() {
+    public void test1314KJson() {
         testPerformance("help.json");
     }
 
