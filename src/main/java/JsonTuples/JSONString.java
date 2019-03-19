@@ -24,15 +24,24 @@ public class JSONString extends JSONValue<String> {
         }
 
         String jsonString = valueString.substring(1, length-1);
-        String unescaped = StringEscapeUtils.unescapeJson(jsonString);
+        String unescaped = _unescapeJson(jsonString);
         return new JSONString(unescaped);
     }
 
-    protected static String unescapeJson(String jsonContext, Range range) {
-        return unescapeJson(jsonContext, range.getStartInclusive(), range.getEndExclusive());
+    public static String unescapeJson(String jsonContext) {
+        checkNotNull(jsonContext);
+        return _unescapeJson(jsonContext);
     }
 
-    protected static String unescapeJson(String jsonContext, int start, int end) {
+    protected static String _unescapeJson(String jsonContext) {
+        return _unescapeJson(jsonContext, 0, jsonContext.length());
+    }
+
+    protected static String _unescapeJson(String jsonContext, Range range) {
+        return _unescapeJson(jsonContext, range.getStartInclusive(), range.getEndExclusive());
+    }
+
+    protected static String _unescapeJson(String jsonContext, int start, int end) {
         StringBuilder sb = new StringBuilder();
 
         int copyFrom = start;
@@ -68,7 +77,33 @@ public class JSONString extends JSONValue<String> {
                     sb.append('\r');
                     break;
                 case 'u':
+                    /*/
                     int charCode = Integer.parseInt(jsonContext.substring(i+1, i+5));
+                    /*/
+                    int charCode = 0;
+                    for (int j = 1; j < 5; j++) {
+                        charCode *= 16;
+                        switch (jsonContext.charAt(j)){
+                            case '0': break;
+                            case '1': charCode+=1; break;
+                            case '2': charCode+=2; break;
+                            case '3': charCode+=3; break;
+                            case '4': charCode+=4; break;
+                            case '5': charCode+=5; break;
+                            case '6': charCode+=6; break;
+                            case '7': charCode+=7; break;
+                            case '8': charCode+=8; break;
+                            case '9': charCode+=9; break;
+                            case 'a': charCode+=10; break;
+                            case 'b': charCode+=11; break;
+                            case 'c': charCode+=12; break;
+                            case 'd': charCode+=13; break;
+                            case 'e': charCode+=14; break;
+                            case 'f': charCode+=15; break;
+                            default: throw new IllegalArgumentException("Illegal escaped unicode char: " + jsonContext.substring(next-1, next+4));
+                        }
+                    }
+                    //*/
                     sb.append(Character.toChars(charCode));
                     i+=4;
                     break;
