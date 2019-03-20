@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 public class NamedValueTest {
@@ -12,43 +13,42 @@ public class NamedValueTest {
     public void fromJSONRaw_withInteger_getValueMatched() {
         NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": 200");
         Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-        Assert.assertEquals(Integer.valueOf(200), namedValue.getValue());
+        Assert.assertEquals(Integer.valueOf(200), namedValue.getValue().getObject());
     }
 
     @Test
-    @Ignore
     public void fromJSONRaw_withDouble_getValueMatched() {
         NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": -20.0");
         Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-        Assert.assertEquals(Double.valueOf(-20), namedValue.getValue());
+        Assert.assertEquals(BigDecimal.valueOf(-20.0), namedValue.getValue().getObject());
     }
 
     @Test
     public void fromJSONRaw_withBigInteger_getValueMatched() {
         NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": 20000000000000000000000000000");
         Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-        Assert.assertEquals(new BigInteger("20000000000000000000000000000"), namedValue.getValue());
+        Assert.assertEquals(new BigInteger("20000000000000000000000000000"), namedValue.getValue().getObject());
     }
 
     @Test
     public void fromJSONRaw_withStringValue_getStringMatched() {
         NamedValue namedValue = NamedValue.parse("\"servlet-name\": \"cofaxCDS\"");
         Assert.assertEquals("servlet-name", namedValue.getName());
-        Assert.assertEquals("cofaxCDS", namedValue.getValue());
+        Assert.assertEquals("cofaxCDS", namedValue.getValue().getObject());
     }
 
     @Test
     public void fromJSONRaw_withBooleanValue_getStringMatched() {
         NamedValue namedValue = NamedValue.parse("\"servlet-name\": true");
         Assert.assertEquals("servlet-name", namedValue.getName());
-        Assert.assertEquals(Boolean.TRUE, namedValue.getValue());
+        Assert.assertEquals(Boolean.TRUE, namedValue.getValue().getObject());
     }
 
     @Test
     public void fromJSONRaw_withNullValue_getStringMatched() {
         NamedValue namedValue = NamedValue.parse("\"servlet-name\": null");
         Assert.assertEquals("servlet-name", namedValue.getName());
-        Assert.assertEquals(null, namedValue.getValue());
+        Assert.assertEquals(null, namedValue.getValue().getObject());
     }
 
 
@@ -56,7 +56,7 @@ public class NamedValueTest {
     public void fromJSONRaw_nameWithColon_getParsed() {
         NamedValue namedValue = NamedValue.parse("\"configGlossary:poweredByIcon\": \"/images/cofax.gif\"");
         Assert.assertEquals("configGlossary:poweredByIcon", namedValue.getName());
-        Assert.assertEquals("/images/cofax.gif", namedValue.getValue());
+        Assert.assertEquals("/images/cofax.gif", namedValue.getValue().getObject());
     }
 
     //TODO: Following tests are not passed

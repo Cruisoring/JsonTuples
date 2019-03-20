@@ -178,16 +178,6 @@ public class JSONValueTest {
     }
 
     @Test
-    @Ignore
-    //Ignored since only big Decimal is used to keep float point numbers.
-    public void fromJSONRaw_ofDouble_objectMatched() {
-        String name = "double";
-        Range range = namedRanges.get(name);
-        IJSONValue number = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(Double.valueOf(-77.23), number.getObject());
-    }
-
-    @Test
     public void fromJSONRaw_ofBigDecimal_objectMatched() {
         String name = "bigDecimal";
         Range range = namedRanges.get(name);
