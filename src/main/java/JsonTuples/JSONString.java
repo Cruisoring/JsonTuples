@@ -15,6 +15,11 @@ public class JSONString extends JSONValue<String> {
     //Regex to match potential String value wrapped by Quotes
     public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
 
+    /**
+     * Parse given string enclosed by quotes(") as a JSONString instance by un-escape special characters.
+     * @param valueString   String to represent a JSON String value.
+     * @return              An JSONString instance that keeps the un-escaped string as a Tuple.
+     */
     public static JSONString parseString(String valueString) {
         valueString = valueString.trim();
         int length = valueString.length();
@@ -28,6 +33,11 @@ public class JSONString extends JSONValue<String> {
         return new JSONString(unescaped);
     }
 
+    /**
+     * Unescape special characters of JSON to normal JAVA string.
+     * @param jsonContext   Encoded JSON String.
+     * @return              Un-escaped string of the original JSON context.
+     */
     public static String unescapeJson(String jsonContext) {
         checkNotNull(jsonContext);
         return _unescapeJson(jsonContext);
@@ -79,9 +89,6 @@ public class JSONString extends JSONValue<String> {
                     sb.append('\r');
                     break;
                 case 'u':
-                    /*/
-                    int charCode = Integer.parseInt(jsonContext.substring(i+1, i+5));
-                    /*/
                     int charCode = 0;
                     for (int j = 1; j < 5; j++) {
                         charCode *= 16;
@@ -105,7 +112,6 @@ public class JSONString extends JSONValue<String> {
                             default: throw new IllegalArgumentException("Illegal escaped unicode char: " + jsonContext.substring(next-1, next+4));
                         }
                     }
-                    //*/
                     sb.append(Character.toChars(charCode));
                     i+=4;
                     break;

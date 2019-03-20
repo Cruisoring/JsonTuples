@@ -108,4 +108,12 @@ public class ParserTest {
     public void test6257KJson() {
         testPerformance("catalog.json");
     }
+
+    @Test
+    public void testParse(){
+        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
+        IJSONValue object = Parser.parse(jsonText);
+
+        assertTrue(object instanceof JSONObject);
+    }
 }
