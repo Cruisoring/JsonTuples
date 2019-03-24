@@ -18,7 +18,12 @@ public class JSONObjectTest {
     }
 
     @Test
-    public void sorted() {
+    public void deltaWith() {
+        JSONObject obj1 = JSONObject.parse("{ \"age\": 123, \"name\": null, \"other\": \"OK\" }");
+        JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
+
+        JSONObject delta = obj1.deltaWith(obj2);
+        System.out.println(delta.toString());
     }
 
     @Test
