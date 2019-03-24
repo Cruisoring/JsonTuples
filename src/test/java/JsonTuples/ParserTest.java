@@ -22,8 +22,7 @@ public class ParserTest {
 
         IJSONValue value = (IJSONValue) parser.parse();
         assertTrue(value instanceof JSONObject);
-        TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
-        String actual = map.toString();
+        String actual = value.toString();
         System.out.println(actual);
 
         assertEquals(expectedParsedJson, actual);
@@ -65,8 +64,8 @@ public class ParserTest {
         assertTrue(value instanceof JSONObject);
 
         start = LocalDateTime.now();
-        TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
-        String actual = map.toString();
+//        TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
+        String actual = value.toString();
         Duration timeToShow = Duration.between(start, LocalDateTime.now());
 
         System.out.println(actual);
