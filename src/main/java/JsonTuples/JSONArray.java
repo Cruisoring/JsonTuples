@@ -34,7 +34,8 @@ public class JSONArray extends Set<IJSONValue> implements IJSONValue {
 
         List<String> valueRows = new ArrayList<>();
         for (int i = 0; i < length; i++) {
-            String valueString = get(i).toJSONString().replaceAll(NEW_LINE, NEW_LINE+ SPACE);
+            IJSONValue value = get(i);
+            String valueString = value==null ? "null" : value.toJSONString().replaceAll(NEW_LINE, NEW_LINE+ SPACE);
             valueRows.add(String.format("%s%s%s", SPACE, valueString, i == length-1 ? "" : COMMA));
         }
         valueRows.add(0, "" + LEFT_BRACKET);

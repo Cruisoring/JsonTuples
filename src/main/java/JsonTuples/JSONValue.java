@@ -2,6 +2,8 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple1;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -64,6 +66,28 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
                         return JSONNumber.parseNumber(trimmed);
                 }
         }
+    }
+
+    public static IJSONValue asJSON(Object object) {
+        if(object == null) {
+            return Null;
+        } else if (object.equals(true)){
+            return True;
+        } else if (object.equals(false)){
+            return False;
+        } else if(object instanceof String){
+            return new JSONString((String)object);
+        } else if (object instanceof Number){
+            return new JSONNumber((Number)object);
+        } else if (object instanceof Map){
+
+        } else if(object instanceof Collection){
+
+        } else if(object.getClass().isArray()){
+
+        }
+
+        return null;
     }
 
     protected JSONValue(T t) {

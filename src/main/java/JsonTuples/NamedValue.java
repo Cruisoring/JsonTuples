@@ -54,7 +54,7 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
         IJSONValue value = getSecond();
         return String.format("\"%s\": %s",
                 getFirst(),
-                value.toJSONString(indent + SPACE));
+                value == null ? "null" : value.toJSONString(indent + SPACE));
     }
 
     @Override
