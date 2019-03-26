@@ -3,7 +3,6 @@ package JsonTuples;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 
 public class NamedValueTest {
@@ -19,7 +18,7 @@ public class NamedValueTest {
     public void fromJSONRaw_withDouble_getValueMatched() {
         NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": -20.0");
         Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-        Assert.assertEquals(BigDecimal.valueOf(-20.0), namedValue.getValue().getObject());
+        Assert.assertEquals(-20.0, namedValue.getValue().getObject());
     }
 
     @Test

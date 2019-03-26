@@ -27,9 +27,13 @@ public class JSONNumber extends JSONValue<Number> {
         }
 
         if(valueString.contains(".") || StringUtils.containsIgnoreCase(valueString, "e")) {
-            //Treat the valueString as bigDecimal if it contains '.'
             BigDecimal bigDecimal = new BigDecimal(valueString);
-            return new JSONNumber(bigDecimal);
+            Double dbl = Double.valueOf(valueString);
+            if(dbl.toString().equals(bigDecimal.toString())) {
+                return new JSONNumber(dbl);
+            } else {
+                return new JSONNumber(bigDecimal);
+            }
         } else {
             //Otherwise as integer
             try {
@@ -42,7 +46,7 @@ public class JSONNumber extends JSONValue<Number> {
         }
     }
 
-    public JSONNumber(Number number) {
+    protected JSONNumber(Number number) {
         super(checkNotNull(number));
     }
 

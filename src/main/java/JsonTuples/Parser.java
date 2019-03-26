@@ -17,8 +17,9 @@ public final class Parser {
 
     /**
      * Unique method to parse the given qualified JSON text to an IJSONValue.
-     * @param jsonText  JSON text to be parsed.
-     * @return          An IJSONValue that is either JSONObject or JSONArray.
+     *
+     * @param jsonText JSON text to be parsed.
+     * @return An IJSONValue that is either JSONObject or JSONArray.
      */
     public static IJSONValue parse(String jsonText) {
         Parser parser = new Parser(jsonText);
@@ -51,19 +52,46 @@ public final class Parser {
     //endregion
 
     //region Static methods
-    protected static JSONObject createObject(IJSONable[] children){
+
+    protected static JSONObject createObject(IJSONable[] children) {
         NamedValue[] namedValues = Arrays.stream(children)
-                .map(c -> (NamedValue)c).toArray(size -> new NamedValue[size]);
+                .map(c -> (NamedValue) c).toArray(size -> new NamedValue[size]);
         JSONObject object = new JSONObject(namedValues);
         return object;
     }
 
-    protected static JSONArray createArray(IJSONable[] children){
+    protected static JSONArray createArray(IJSONable[] children) {
         IJSONValue[] values = Arrays.stream(children)
-                .map(c -> (IJSONValue)c).toArray(size -> new IJSONValue[size]);
+                .map(c -> (IJSONValue) c).toArray(size -> new IJSONValue[size]);
 
         JSONArray array = new JSONArray(values);
         return array;
+    }
+
+    protected static IJSONValue asJSONValue(String valueString) {
+        final String trimmed = checkNotNull(valueString).trim();
+        switch (trimmed) {
+            case JSON_TRUE:
+                return JSONValue.True;
+            case JSON_FALSE:
+                return JSONValue.False;
+            case JSON_NULL:
+                return JSONValue.Null;
+            default:
+                //Switch based on the first character, leave the corresponding methods to validate and parse
+                switch (trimmed.charAt(0)) {
+                    case QUOTE:
+                        return JSONString.parseString(trimmed);
+                    case LEFT_BRACE:
+                        return JSONObject.parse(trimmed);
+                    case LEFT_BRACKET:
+                        return JSONArray.parseArray(trimmed);
+                    default:
+                        //The valueString can only stand for a number or get Exception thrown there
+                        return JSONNumber.parseNumber(trimmed);
+                }
+        }
+
     }
     //endregion
 
@@ -77,7 +105,7 @@ public final class Parser {
     int currentStringStart = Integer.MAX_VALUE;
     int currentStringEnd = -1;
 
-    JSONString lastName=null, lastStringValue;
+    JSONString lastName = null, lastStringValue;
 
     Stack<Tuple4<Boolean, IJSONable[], JSONString, Boolean>> contextStack = new Stack<>();
     //endregion
@@ -102,24 +130,12 @@ public final class Parser {
         return jsonContext.substring(range.getStartInclusive(), end > length ? length : end);
     }
 
-
-    protected IJSONValue asJSONValue(Range... ranges) {
-        Range range = ranges[0];
+    protected IJSONValue asJSONValue(Range range) {
         String valueString = subString(range).trim();
-
-        switch (valueString) {
-            case JSON_FALSE:
-                return JSONValue.False;
-            case JSON_TRUE:
-                return JSONValue.True;
-            case JSON_NULL:
-                return JSONValue.Null;
-            default:
-                return JSONNumber.parseNumber(valueString);
-        }
+        return asJSONValue(valueString);
     }
 
-    Tuple2<Boolean, IJSONValue> processControl(Boolean isObject, List<IJSONable> children, char control, int position){
+    Tuple2<Boolean, IJSONValue> processControl(Boolean isObject, List<IJSONable> children, char control, int position) {
 
         final JSONString nameElement;
         final IJSONValue valueElement;
@@ -163,13 +179,13 @@ public final class Parser {
                 children.clear();
 
                 state = contextStack.pop();
-                if(state.getFirst() == null) {
+                if (state.getFirst() == null) {
                     break;
                 }
 
                 children.addAll(Arrays.asList(state.getSecond()));
                 isObject = state.getFirst();
-                if(isObject) {
+                if (isObject) {
                     final JSONString name = state.getThird();
                     checkNotNull(name);
                     children.add(new NamedValue(name.getFirst(), closedValue));
@@ -188,8 +204,8 @@ public final class Parser {
                         break;
                     case LEFT_BRACKET:
                         String valueString = subString(Range.open(lastPosition, position));
-                        if(!StringUtils.isBlank(valueString)){
-                            valueElement = JSONValue.parse(valueString);
+                        if (!StringUtils.isBlank(valueString)) {
+                            valueElement = asJSONValue(valueString);
                             children.add(valueElement);
                         }
                         break;
@@ -201,13 +217,13 @@ public final class Parser {
                 children.clear();
 
                 state = contextStack.pop();
-                if(state.getFirst() == null) {
+                if (state.getFirst() == null) {
                     break;
                 }
 
                 children.addAll(Arrays.asList(state.getSecond()));
                 isObject = state.getFirst();
-                if(isObject) {
+                if (isObject) {
                     final JSONString name = state.getThird();
                     checkNotNull(name);
                     children.add(new NamedValue(name.getFirst(), closedValue));
@@ -229,7 +245,7 @@ public final class Parser {
                         children.add(namedValueElement);
                         break;
                     case QUOTE:
-                        if(isObject) {
+                        if (isObject) {
                             namedValueElement = new NamedValue(lastName.getFirst(), lastStringValue);
                             children.add(namedValueElement);
                         }
@@ -244,9 +260,9 @@ public final class Parser {
             case QUOTE:
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
-                    String string = jsonContext.substring(currentStringStart+1, currentStringEnd);
+                    String string = jsonContext.substring(currentStringStart + 1, currentStringEnd);
                     lastStringValue = new JSONString(string);
-                    if(!isObject){
+                    if (!isObject) {
                         children.add(lastStringValue);
                     }
                 } else {
@@ -266,9 +282,10 @@ public final class Parser {
 
     /**
      * Parse the preloaded string as an IJSONValue that can be either JSONObject or JSONArray.
+     *
      * @return The root node of either JSONObject or JSONArray.
      */
-    IJSONValue parse(){
+    IJSONValue parse() {
         Boolean isObject = null;
         List<IJSONable> children = new ArrayList<>();
         Tuple2<Boolean, IJSONValue> tuple = null;
@@ -281,14 +298,14 @@ public final class Parser {
             //Since the Quote is not escaped by BACK_SLASH, it shall be the start or end of a JSONString
             if (current == QUOTE) {
                 boolean isEscaped = false;
-                for (int j = i-1; j >= 0 ; j--) {
-                    if(jsonContext.charAt(j) == BACK_SLASH){
+                for (int j = i - 1; j >= 0; j--) {
+                    if (jsonContext.charAt(j) == BACK_SLASH) {
                         isEscaped = !isEscaped;
                     } else {
                         break;
                     }
                 }
-                if(isEscaped) {
+                if (isEscaped) {
                     //This Quote is escaped, not a control
                     continue;
                 }
@@ -305,7 +322,7 @@ public final class Parser {
                 continue;
             }
 
-            if(CONTROLS.contains(current)) {
+            if (CONTROLS.contains(current)) {
                 tuple = processControl(isObject, children, current, i);
                 isObject = tuple.getFirst();
             }

@@ -1,12 +1,15 @@
 package JsonTuples;
 
+import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.tuple.Tuple1;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * <a href="http://www.json.org">http://www.json.org</a>
@@ -23,6 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
+    //region Static constants
     //Regex to match legal values of Boolean, null, String or Number with optional leading/ending spaces
     public static final Pattern BASIC_VALUE_PATTERN = Pattern.compile("\\s*(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*");
 
@@ -34,60 +38,14 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
+    //endregion
 
     public static IJSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
         String valueString = jsonContext.substring(range.getStartInclusive(), range.getEndExclusive()).trim();
-        return parse(valueString);
-    }
-
-    public static IJSONValue parse(String valueString) {
-        final String trimmed = valueString.trim();
-        switch (trimmed) {
-            case JSON_TRUE:
-                return JSONValue.True;
-            case JSON_FALSE:
-                return JSONValue.False;
-            case JSON_NULL:
-                return JSONValue.Null;
-            default:
-                //Switch based on the first character, leave the corresponding methods to validate and parse
-                switch(trimmed.charAt(0)) {
-                    case QUOTE:
-                        return JSONString.parseString(trimmed);
-                    case LEFT_BRACE:
-                        return JSONObject.parse(trimmed);
-                    case LEFT_BRACKET:
-                        return JSONArray.parseArray(trimmed);
-                    default:
-                        //The valueString can only stand for a number or get Exception thrown there
-                        return JSONNumber.parseNumber(trimmed);
-                }
-        }
-    }
-
-    public static IJSONValue asJSON(Object object) {
-        if(object == null) {
-            return Null;
-        } else if (object.equals(true)){
-            return True;
-        } else if (object.equals(false)){
-            return False;
-        } else if(object instanceof String){
-            return new JSONString((String)object);
-        } else if (object instanceof Number){
-            return new JSONNumber((Number)object);
-        } else if (object instanceof Map){
-
-        } else if(object instanceof Collection){
-
-        } else if(object.getClass().isArray()){
-
-        }
-
-        return null;
+        return Parser.asJSONValue(valueString);
     }
 
     protected JSONValue(T t) {
@@ -100,13 +58,13 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public String toString() {
+    public String toJSONString(String indent) {
         Object obj = getFirst();
         return (obj == null) ? JSON_NULL : obj.toString();
     }
 
     @Override
-    public String toJSONString(String indent) {
-        return toString();
+    public String toString() {
+        return toJSONString("");
     }
 }
