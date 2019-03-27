@@ -121,6 +121,10 @@ public class JSONObjectTest {
                 "  },\n" +
                 "  \"class\": \"7A\"\n" +
                 "}");
+
+        JSONObject delta = expected.deltaWith(updated);
+        Logger.D(delta.toString());
+
         assertEquals(expected, updated);
     }
 

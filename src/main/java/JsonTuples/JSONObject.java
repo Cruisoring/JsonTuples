@@ -279,4 +279,14 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
         JSONObject newObject = Converter.asJSONObject(nameComparator, thisMap);
         return newObject;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
+
+    @Override
+    public boolean canEqual(Object other) {
+        return super.canEqual(other);
+    }
 }
