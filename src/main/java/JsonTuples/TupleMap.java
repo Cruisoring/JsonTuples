@@ -1,9 +1,9 @@
 package JsonTuples;
 
 
-import io.github.cruisoring.tuple.Set;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
+import io.github.cruisoring.tuple.TupleSet;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,13 +14,13 @@ public class TupleMap<K extends Comparable<K>,V> extends HashMap<K, V> {
     private static final String NEW_LINE = IJSONValue.NEW_LINE;
     private static final String SPACE = IJSONValue.SPACE;
 
-    public Set<Tuple2<K,V>> asTupleSet(){
+    public TupleSet<Tuple2<K,V>> asTupleSet(){
         Tuple2<K, V>[] sortedTuples = entrySet().stream()
                 .map(entry -> Tuple.create(entry.getKey(), entry.getValue()))
                 .sorted(Comparator.comparing(tuple -> tuple.getFirst()))
                 .toArray(size -> new Tuple2[size]);
 
-        return Set.setOf(sortedTuples);
+        return TupleSet.setOf(sortedTuples);
     }
 
 
@@ -45,7 +45,7 @@ public class TupleMap<K extends Comparable<K>,V> extends HashMap<K, V> {
     }
 
     public String toString(String indent) {
-        Set<Tuple2<K,V>> tupleSet = asTupleSet();
+        TupleSet<Tuple2<K,V>> tupleSet = asTupleSet();
         final int length = tupleSet.getLength();
         if(length == 0) {
             return "{}";

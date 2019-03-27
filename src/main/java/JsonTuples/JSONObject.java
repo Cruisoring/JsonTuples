@@ -1,7 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.Set;
+import io.github.cruisoring.tuple.TupleSet;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * http://www.json.org
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
  */
-public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<String, Object> {
+public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<String, Object> {
 
     public static final JSONObject EMPTY = new JSONObject();
     public static IJSONValue MISSING = JSONValue.Null;
@@ -71,15 +71,28 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
         return namedValues;
     }
 
-    final Map<String, IJSONValue> map = new LinkedHashMap<>();
+    private Map<String, Object> getMap(){
+        Map<String, Object> m = new HashMap<>();
 
-    final Lazy<Map<String, Object>> lazyObjectMap = new Lazy<>(() ->
-        map.entrySet().stream()
-            .collect(Collectors.toMap(
-                    entry -> entry.getKey(),
-                    entry -> entry.getValue().getObject()
-            ))
-    );
+        for (Object v : values) {
+            NamedValue nv = (NamedValue)v;
+            m.put(nv.getName(), nv.getValue().getObject());
+        }
+        return m;
+    }
+
+    final Lazy<Map<String, Object>> lazyMap = new Lazy<>(this::getMap);
+
+    private Map<String, IJSONValue> getValueMap() {
+        return Arrays.stream(values)
+                .map(obj -> (NamedValue)obj)
+                .collect(Collectors.toMap(
+                        entry -> entry.getName(),
+                        entry -> entry.getValue()
+                ));
+    }
+
+    final Lazy<Map<String, IJSONValue>> lazyValueMap = new Lazy<>(this::getValueMap);
 
     final Comparator<String> nameComparator;
 
@@ -88,13 +101,8 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
     }
 
     protected JSONObject(Comparator<String> comparator, NamedValue... namedValues) {
-        super(sorted(comparator, namedValues));
+        super(NamedValue.class, sorted(comparator, namedValues));
         nameComparator = comparator;
-
-        for (NamedValue namedValue : namedValues) {
-            String name = namedValue.getName();
-            map.put(name, namedValue.getValue());
-        }
     }
 
     public JSONObject getSorted(Comparator<String> comparator){
@@ -146,8 +154,8 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
         List<NamedValue> delta = new ArrayList<>();
         for(String key : allKeys){
             NamedValue nv = null;
-            IJSONValue thisValue = thisKeys.contains(key) ? map.get(key) : MISSING;
-            IJSONValue otherValue = otherKeys.contains(key) ? other.map.get(key) : MISSING;
+            IJSONValue thisValue = thisKeys.contains(key) ? lazyValueMap.getValue().get(key) : MISSING;
+            IJSONValue otherValue = otherKeys.contains(key) ? other.lazyValueMap.getValue().get(key) : MISSING;
             if(Objects.equals(thisValue, otherValue)){
                 continue;
             } else if (thisValue instanceof JSONObject && otherValue instanceof JSONObject) {
@@ -169,7 +177,7 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
 
     @Override
     public boolean isEmpty() {
-        return map.isEmpty();
+        return values.length == 0;
     }
 
     @Override
@@ -178,7 +186,7 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
             return false;
         }
 
-        return map.containsKey(key);
+        return lazyMap.getValue().containsKey(key);
     }
 
     @Override
@@ -188,7 +196,7 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
 
     @Override
     public Object get(Object key) {
-        return lazyObjectMap.getValue().get(key);
+        return lazyMap.getValue().get(key);
     }
 
     @Override
@@ -202,28 +210,27 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
     }
 
     @Override
-    public void putAll(Map<? extends String, ? extends Object> m) {
-
-    }
+    public void putAll(Map<? extends String, ? extends Object> m) {}
 
     @Override
-    public void clear() {
+    public void clear() {}
 
-    }
-
+    //No order of keyset guaranteed?
     @Override
     public java.util.Set<String> keySet() {
-        return map.keySet();
+        return lazyMap.getValue().keySet();
     }
 
+    //No order of values guaranteed?
     @Override
     public Collection<Object> values() {
-        return lazyObjectMap.getValue().values();
+        return lazyMap.getValue().values();
     }
 
+    //No order of entryset guaranteed?
     @Override
     public java.util.Set<Entry<String, Object>> entrySet() {
-        return lazyObjectMap.getValue().entrySet();
+        return lazyMap.getValue().entrySet();
     }
 
     @Override
@@ -256,11 +263,20 @@ public class JSONObject extends Set<NamedValue> implements IJSONValue, Map<Strin
 
     @Override
     public Object getObject() {
-        return lazyObjectMap.getValue();
+        return lazyMap.getValue();
     }
 
     @Override
     public String toString() {
         return toJSONString("");
+    }
+
+    public JSONObject withDelta(Map<String, Object> delta){
+        Map<String, Object> thisMap = lazyMap.getValue();
+//        lazyMap.closing();
+        thisMap.putAll(delta);
+
+        JSONObject newObject = Converter.asJSONObject(nameComparator, thisMap);
+        return newObject;
     }
 }

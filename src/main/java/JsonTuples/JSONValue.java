@@ -1,15 +1,10 @@
 package JsonTuples;
 
-import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.tuple.Tuple1;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * <a href="http://www.json.org">http://www.json.org</a>

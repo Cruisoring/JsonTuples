@@ -1,7 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.Set;
+import io.github.cruisoring.tuple.TupleSet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  * http://www.json.org
  * An array is an ordered collection of values. An array begins with [ (left bracket) and ends with ] (right bracket). Values are separated by , (comma).
  */
-public class JSONArray extends Set<IJSONValue> implements IJSONValue {
+public class JSONArray extends TupleSet<IJSONValue> implements IJSONValue {
 
     //Pattern of string to represent a solid JSON Array
     public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);

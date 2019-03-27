@@ -4,6 +4,7 @@ import io.github.cruisoring.TypeHelper;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -48,12 +49,18 @@ public class Converter {
     protected static JSONObject asJSONObject(Object object){
 //        checkNotNull(object);
 
+        return asJSONObject(null, object);
+    }
+
+    protected static JSONObject asJSONObject(Comparator<String> comparator, Object object){
+//        checkNotNull(object);
+
         //Let the casting throw exception if the object is not a map of String keys
         Map<String, Object> map = (Map<String, Object>)object;
         NamedValue[] namedValues = map.entrySet().stream()
                 .map(entry -> new NamedValue(entry.getKey(), asJSONValue(entry.getValue())))
                 .toArray(size -> new NamedValue[size]);
-        return new JSONObject(namedValues);
+        return new JSONObject(comparator, namedValues);
     }
 
     protected static JSONArray asJSONArrayFromArray(Object array){

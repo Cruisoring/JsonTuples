@@ -1,11 +1,15 @@
 package JsonTuples;
 
+import io.github.cruisoring.utility.Logger;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class JSONObjectTest {
 
@@ -18,6 +22,13 @@ public class JSONObjectTest {
                 "  \"other\": \"none\",\n" +
                 "  \"name\": null\n" +
                 "}", string);
+    }
+
+    @Test
+    public void getObject() {
+        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
+        Object map = obj.getObject();
+        assertTrue(map instanceof Map);
     }
 
     @Test
@@ -70,6 +81,47 @@ public class JSONObjectTest {
 
         JSONObject delta = obj1.deltaWith(obj2);
         System.out.println(delta.toString());
+    }
+
+    @Test
+    public void withDelta(){
+        JSONObject object = (JSONObject) Parser.parse("{\n" +
+                "  \"address\": null,\n" +
+                "  \"scores\": {\n" +
+                "    \"English\": 80,\n" +
+                "    \"Science\": 88,\n" +
+                "    \"Math\": 90\n" +
+                "  },\n" +
+                "  \"name\": \"test name\",\n" +
+                "  \"id\": 123456,\n" +
+                "  \"isActive\": true,\n" +
+                "  \"class\": \"7A\"\n" +
+                "}");
+//        Logger.D(object.toString());
+
+        Map<String, Object> map = new HashMap<String, Object>(){{
+            put("name", "another");
+            put("id", 778388);
+            put("isActive", false);
+            put("address", "11 ABC St, My City");
+        }};
+
+        JSONObject updated = object.withDelta(map);
+        Logger.D(updated.toString());
+
+        JSONObject expected = (JSONObject) Parser.parse("{\n" +
+                "  \"address\": \"11 ABC St, My City\",\n" +
+                "  \"name\": \"another\",\n" +
+                "  \"id\": 778388,\n" +
+                "  \"isActive\": false,\n" +
+                "  \"scores\": {\n" +
+                "    \"English\": 80,\n" +
+                "    \"Science\": 88,\n" +
+                "    \"Math\": 90\n" +
+                "  },\n" +
+                "  \"class\": \"7A\"\n" +
+                "}");
+        assertEquals(expected, updated);
     }
 
     @Test
