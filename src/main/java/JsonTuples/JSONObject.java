@@ -2,7 +2,6 @@ package JsonTuples;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.TupleSet;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -14,7 +13,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * http://www.json.org
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
  */
-public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<String, Object> {
+public class JSONObject extends TupleMap<String> implements IJSONValue {
 
     public static final JSONObject EMPTY = new JSONObject();
     public static IJSONValue MISSING = JSONValue.Null;
@@ -183,69 +182,6 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
         }
 
         return new JSONObject(delta.toArray(new NamedValue[0]));
-    }
-
-    @Override
-    public int size() {
-        return values.length;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return values.length == 0;
-    }
-
-    @Override
-    public boolean containsKey(Object key) {
-        if(key == null || !(key instanceof String)) {
-            return false;
-        }
-
-        return lazyValueMap.getValue().containsKey(key);
-    }
-
-    @Override
-    public boolean containsValue(Object value) {
-        return lazyMap.getValue().containsValue(value);
-    }
-
-    @Override
-    public Object get(Object key) {
-        return lazyMap.getValue().get(key);
-    }
-
-    @Override
-    public Object put(String key, Object value) {
-        return null;
-    }
-
-    @Override
-    public Object remove(Object key) {
-        return null;
-    }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends Object> m) {}
-
-    @Override
-    public void clear() {}
-
-    //No order of keyset guaranteed?
-    @Override
-    public java.util.Set<String> keySet() {
-        return lazyMap.getValue().keySet();
-    }
-
-    //No order of values guaranteed?
-    @Override
-    public Collection<Object> values() {
-        return lazyMap.getValue().values();
-    }
-
-    //No order of entryset guaranteed?
-    @Override
-    public java.util.Set<Entry<String, Object>> entrySet() {
-        return lazyMap.getValue().entrySet();
     }
 
     @Override

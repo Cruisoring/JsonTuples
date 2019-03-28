@@ -75,13 +75,14 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
     final Lazy<Collection<Object>> lazyValues;
     final Lazy<Set<Entry<K, Object>>> lazyEntrySet;
 
-    public TupleMap(final Tuple2<K, IJSONValue>[] nodes){
-        super(checkNotNull(nodes));
+    public TupleMap(final Class clazz, final Tuple2<K, IJSONValue>[] nodes){
+        super(clazz, checkNotNull(nodes));
         lazyMap = new Lazy<>(() -> {
             Map<K, Object> m = new LinkedHashMap<>();
 
             //Cannot use Collectors.toMap which would throw NullPointException when the value is null?
-            for (Tuple2<K, IJSONValue> node : asArray()) {
+            for (Object v : values) {
+                Tuple2<K, IJSONValue> node = (Tuple2<K, IJSONValue>)v;
                 m.put(node.getFirst(), node.getSecond().getObject());
             }
             return m;

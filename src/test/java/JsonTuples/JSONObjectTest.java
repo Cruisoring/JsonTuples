@@ -43,7 +43,7 @@ public class JSONObjectTest {
                 "}", string);
 
         JSONObject nullOrdered = obj.getSorted((Comparator<String>) null);
-        assertEquals(nullOrdered, naturalOrdered);
+        assertTrue(nullOrdered.equals(naturalOrdered));
 
         JSONObject naturalReversed = obj.getSorted(naturalOrdered.nameComparator.reversed());
         string = naturalReversed.toString();
