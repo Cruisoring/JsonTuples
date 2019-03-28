@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import com.google.common.collect.ImmutableMap;
 import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.TupleSet;
 
@@ -71,28 +72,42 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
         return namedValues;
     }
 
-    private Map<String, Object> getMap(){
-        Map<String, Object> m = new HashMap<>();
+    /**
+     * Convert the NamedValues as an ImmutableMap of IJSONValue values.
+     * @return  ImmutableMap with names as the keys, IJSONValues as the values.
+     */
+    private Map<String, IJSONValue> getValueMap() {
+        return Arrays.stream(values)
+                .map(obj -> (NamedValue)obj)
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                entry -> entry.getName(),
+                                entry -> entry.getValue()
+                        ),
+                        ImmutableMap::copyOf
+                ));
+    }
 
+    final Lazy<Map<String, IJSONValue>> lazyValueMap = new Lazy<>(this::getValueMap);
+
+    /**
+     * Convert the NamedValues as a conventional mutable Map that can be treated as a copy of this JSONObject.
+     * @return  MutableMap with names as the keys, Object the corresponding IJSONValue from as the values.
+     */
+    public Map<String, Object> asMap(){
+        return new HashMap<>(lazyMap.getValue());
+    }
+
+    final Lazy<Map<String, Object>> lazyMap = new Lazy<>(() -> {
+        Map<String, Object> m = new LinkedHashMap<>();
+
+        //Cannot use Collectors.toMap which would throw NullPointException when the value is null?
         for (Object v : values) {
             NamedValue nv = (NamedValue)v;
             m.put(nv.getName(), nv.getValue().getObject());
         }
         return m;
-    }
-
-    final Lazy<Map<String, Object>> lazyMap = new Lazy<>(this::getMap);
-
-    private Map<String, IJSONValue> getValueMap() {
-        return Arrays.stream(values)
-                .map(obj -> (NamedValue)obj)
-                .collect(Collectors.toMap(
-                        entry -> entry.getName(),
-                        entry -> entry.getValue()
-                ));
-    }
-
-    final Lazy<Map<String, IJSONValue>> lazyValueMap = new Lazy<>(this::getValueMap);
+    });
 
     final Comparator<String> nameComparator;
 
@@ -186,12 +201,12 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
             return false;
         }
 
-        return lazyMap.getValue().containsKey(key);
+        return lazyValueMap.getValue().containsKey(key);
     }
 
     @Override
     public boolean containsValue(Object value) {
-        return false;
+        return lazyMap.getValue().containsValue(value);
     }
 
     @Override
@@ -272,8 +287,7 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
     }
 
     public JSONObject withDelta(Map<String, Object> delta){
-        Map<String, Object> thisMap = lazyMap.getValue();
-//        lazyMap.closing();
+        Map<String, Object> thisMap = asMap();
         thisMap.putAll(delta);
 
         JSONObject newObject = Converter.asJSONObject(nameComparator, thisMap);
@@ -282,11 +296,26 @@ public class JSONObject extends TupleSet<NamedValue> implements IJSONValue, Map<
 
     @Override
     public boolean equals(Object obj) {
-        return super.equals(obj);
+        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map))
+            return false;
+        if (obj == this)
+            return true;
+
+        final JSONObject other;
+        if(obj instanceof JSONObject){
+            other = (JSONObject)obj;
+        } else {
+            other = Converter.asJSONObject(obj);
+        }
+
+        if(!other.canEqual(this) || getLength() != other.getLength())
+            return false;
+
+        return this.deltaWith(other).getLength() == 0;
     }
 
     @Override
     public boolean canEqual(Object other) {
-        return super.canEqual(other);
+        return other instanceof JSONObject;
     }
 }
