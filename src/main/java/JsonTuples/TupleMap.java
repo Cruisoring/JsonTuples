@@ -53,17 +53,27 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
         keys.addAll(right.keySet());
 
         for (K key : keys) {
-            Object leftValue = left.containsKey(key) ? left.get(key) : null;
-            Object rightValue = right.containsKey(key) ? right.get(key) : null;
-            if(leftValue instanceof Map && rightValue instanceof Map){
-                Map<K, Object> valueDif = getDifferences((Map)leftValue, (Map)rightValue);
-                if(!valueDif.isEmpty()){
+            if(!left.containsKey(key)){
+                differences.put(key, Tuple.create(null, right.get(key)));
+                continue;
+            } else if(!right.containsKey(key)) {
+                differences.put(key, Tuple.create(left.get(key), null));
+                continue;
+            }
+
+            Object leftValue = left.get(key);
+            Object rightValue = right.get(key);
+            if(leftValue instanceof Map && rightValue instanceof Map) {
+                Map valueDif = getDifferences((Map) leftValue, (Map) rightValue);
+                if (valueDif.isEmpty()) {
+                    continue;
+                } else {
                     differences.put(key, valueDif);
                 }
-            }else {
-                if(!TypeHelper.valueEquals(leftValue, rightValue)){
-                    differences.put(key, Tuple.create(leftValue, rightValue));
-                }
+            }else if(leftValue instanceof Map || rightValue instanceof Map){
+                differences.put(key, Tuple.create(leftValue, rightValue));
+            }else if(!TypeHelper.valueEquals(leftValue, rightValue)){
+                differences.put(key, Tuple.create(leftValue, rightValue));
             }
         }
         return differences;
@@ -75,7 +85,7 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
     final Lazy<Collection<Object>> lazyValues;
     final Lazy<Set<Entry<K, Object>>> lazyEntrySet;
 
-    public TupleMap(final Class clazz, final Tuple2<K, IJSONValue>[] nodes){
+    protected TupleMap(final Class clazz, final Tuple2<K, IJSONValue>[] nodes){
         super(clazz, checkNotNull(nodes));
         lazyMap = new Lazy<>(() -> {
             Map<K, Object> m = new LinkedHashMap<>();

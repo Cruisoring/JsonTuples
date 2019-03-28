@@ -1,7 +1,10 @@
 package JsonTuples;
 
+import io.github.cruisoring.Lazy;
+import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -46,10 +49,21 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     protected JSONValue(T t) {
         super(t);
     }
+    final Lazy<String> toStringLazy = new Lazy<>(() -> toJSONString(""));
 
     @Override
     public Object getObject() {
         return getFirst();
+    }
+
+    @Override
+    public IJSONValue deltaWith(IJSONValue other) {
+        checkNotNull(other);
+
+        if(other instanceof JSONValue && Objects.equals(getObject(), other.getObject())){
+            return Null;
+        }
+        return new JSONArray(this, other);
     }
 
     @Override
@@ -59,7 +73,17 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
+    public int compareTo(Tuple o) {
+        return toString().compareTo(o.toString());
+    }
+
+    @Override
     public String toString() {
-        return toJSONString("");
+        return toStringLazy.getValue();
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        return 0;
     }
 }

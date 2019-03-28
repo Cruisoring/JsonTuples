@@ -1,10 +1,12 @@
 package JsonTuples;
 
 import Utilities.ResourceHelper;
+import io.github.cruisoring.utility.Logger;
 import org.junit.Test;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -23,7 +25,7 @@ public class ParserTest {
         IJSONValue value = (IJSONValue) parser.parse();
         assertTrue(value instanceof JSONObject);
         String actual = value.toString();
-        System.out.println(actual);
+        Logger.D(actual);
 
         assertEquals(expectedParsedJson, actual);
     }
@@ -59,18 +61,13 @@ public class ParserTest {
         Parser parser = new Parser(jsonText);
 
         LocalDateTime start = LocalDateTime.now();
-        IJSONValue value = (IJSONValue) parser.parse();
+        JSONObject value = (JSONObject) parser.parse();
         Duration timeToParse = Duration.between(start, LocalDateTime.now());
-        assertTrue(value instanceof JSONObject);
 
-        start = LocalDateTime.now();
-//        TupleMap<String, IJSONValue> map = (TupleMap<String, IJSONValue>) value.getObject();
-        String actual = value.toString();
-        Duration timeToShow = Duration.between(start, LocalDateTime.now());
+        Set<String> keys = value.keySet();
 
-        System.out.println(actual);
-        System.out.println(String.format("Time elapsed to parse jsonText of %d: %s, show: %s",
-                parser.length, timeToParse.toString(), timeToShow.toString()));
+        Logger.D("Time elapsed to parse jsonText of %d: %s, there are %d keys: %s",
+                parser.length, timeToParse, keys.size(), String.join(", ", keys));
     }
 
     @Test
@@ -108,11 +105,4 @@ public class ParserTest {
         testPerformance("catalog.json");
     }
 
-    @Test
-    public void testParse(){
-        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
-        IJSONValue object = Parser.parse(jsonText);
-
-        assertTrue(object instanceof JSONObject);
-    }
 }

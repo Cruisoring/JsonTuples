@@ -235,6 +235,7 @@ public final class Parser {
 
             case COMMA: //End of Value in JSONArray or NamedValue in JSONObject
                 switch (lastControl) {
+                    case LEFT_BRACKET:
                     case COMMA:
                         valueElement = asJSONValue(Range.open(lastPosition, position));
                         children.add(valueElement);
