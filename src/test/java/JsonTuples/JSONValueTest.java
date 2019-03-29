@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import static org.junit.Assert.assertEquals;
+
 public class JSONValueTest {
 
     public final static String jsonContext = "{\"web-app\": {\n" +
@@ -74,7 +76,7 @@ public class JSONValueTest {
         String name = "true";
         Range range = namedRanges.get(name);
         IJSONValue booleanValue = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(Boolean.TRUE, booleanValue.getObject());
+        assertEquals(Boolean.TRUE, booleanValue.getObject());
     }
 
     @Test
@@ -82,7 +84,7 @@ public class JSONValueTest {
         String name = "false";
         Range range = namedRanges.get(name);
         IJSONValue booleanValue = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(Boolean.FALSE, booleanValue.getObject());
+        assertEquals(Boolean.FALSE, booleanValue.getObject());
     }
 
 
@@ -91,11 +93,11 @@ public class JSONValueTest {
         String name = "servlet-name";
         Range range = namedRanges.get(name);
         IJSONValue value = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals("cofaxCDS", value.getObject());
+        assertEquals("cofaxCDS", value.getObject());
 
         range = namedRanges.get("dataStoreUrl");
         value = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals("jdbc:microsoft:sqlserver://LOCALHOST:1433;DatabaseName=goon", value.getObject());
+        assertEquals("jdbc:microsoft:sqlserver://LOCALHOST:1433;DatabaseName=goon", value.getObject());
     }
 
     @Test
@@ -103,7 +105,7 @@ public class JSONValueTest {
         String name = "integer";
         Range range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(Integer.valueOf(-100), number.getObject());
+        assertEquals(Integer.valueOf(-100), number.getObject());
     }
 
     @Test
@@ -111,7 +113,7 @@ public class JSONValueTest {
         String name = "bigInteger";
         Range range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(new BigInteger("12345678901234567890"), number.getObject());
+        assertEquals(new BigInteger("12345678901234567890"), number.getObject());
     }
 
     @Test
@@ -119,7 +121,15 @@ public class JSONValueTest {
         String name = "bigDecimal";
         Range range = namedRanges.get(name);
         IJSONValue number = JSONValue.parse(jsonContext, range);
-        Assert.assertEquals(new BigDecimal("12345678901234567890.12345678909"), number.getObject());
+        assertEquals(new BigDecimal("12345678901234567890.12345678909"), number.getObject());
     }
 
+    @Test
+    public void testToString(){
+        assertEquals("null", JSONValue.Null.toString());
+        assertEquals("true", JSONValue.True.toString());
+        assertEquals("false", JSONValue.False.toString());
+        assertEquals("\"abc\"", new JSONString("abc").toString());
+        assertEquals("77", new JSONNumber(77).toString());
+    }
 }

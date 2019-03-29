@@ -2,11 +2,9 @@ package JsonTuples;
 
 import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.Tuple;
-import io.github.cruisoring.tuple.TupleSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -19,7 +17,9 @@ import static com.google.common.base.Preconditions.checkState;
  * http://www.json.org
  * An array is an ordered collection of values. An array begins with [ (left bracket) and ends with ] (right bracket). Values are separated by , (comma).
  */
-public class JSONArray extends TupleSet<IJSONValue> implements IJSONValue {
+public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
+
+    public static final JSONArray EMPTY = new JSONArray();
 
     //Pattern of string to represent a solid JSON Array
     public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);
@@ -32,26 +32,6 @@ public class JSONArray extends TupleSet<IJSONValue> implements IJSONValue {
 
     protected JSONArray(IJSONValue... values) {
         super(values);
-    }
-
-    @Override
-    public String toJSONString(String indent) {
-        int length = getLength();
-        if(length == 0) {
-            return "[]";
-        }
-
-        checkState(StringUtils.isBlank(indent));
-
-        TextStringBuilder sb = new TextStringBuilder();
-        sb.append(LEFT_BRACKET + (indent==null?"":NEW_LINE+SPACE+indent));
-        final String valueIndent = indent == null ? null : SPACE+indent;
-        List<String> valueStrings = Arrays.stream(asArray())
-                .map(v -> v.toJSONString(valueIndent))
-                .collect(Collectors.toList());
-        sb.appendWithSeparators(valueStrings, indent==null?", ":COMMA+NEW_LINE+indent+SPACE);
-        sb.append(indent==null ? RIGHT_BRACKET : NEW_LINE+indent+RIGHT_BRACKET);
-        return sb.toString();
     }
 
     protected Lazy<Object[]> arrayLazy = new Lazy<>(() -> Arrays.stream(asArray())
@@ -74,12 +54,36 @@ public class JSONArray extends TupleSet<IJSONValue> implements IJSONValue {
     }
 
     @Override
-    public String toString() {
-        return toJSONString("");
+    public String toJSONString(String indent) {
+        checkState(StringUtils.isBlank(indent));
+
+        String noIndent = toString();
+        if(values.length == 0 || "".equals(indent)){
+            return noIndent;
+        }
+
+        String indented = indent==null ?
+                noIndent.replaceAll("(?m)\\n\\s*", "")
+                : noIndent.replaceAll("(?m)\\n", NEW_LINE+indent);
+        return indented;
     }
 
     @Override
-    public int compareTo(Tuple o) {
-        return toString().compareTo(o.toString());
+    public String toString() {
+        if(_toString == null){
+            if(values.length == 0) {
+                _toString = "[]";
+            } else {
+                TextStringBuilder sb = new TextStringBuilder();
+                sb.append(LEFT_BRACKET + NEW_LINE+SPACE);
+                List<String> valueStrings = Arrays.stream(values)
+                        .map(v -> v.toJSONString(SPACE))
+                        .collect(Collectors.toList());
+                sb.appendWithSeparators(valueStrings, COMMA+NEW_LINE+SPACE);
+                sb.append(NEW_LINE+RIGHT_BRACKET);
+                _toString = sb.toString();
+            }
+        }
+        return _toString;
     }
 }

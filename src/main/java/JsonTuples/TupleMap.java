@@ -5,13 +5,12 @@ import io.github.cruisoring.Lazy;
 import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
-import io.github.cruisoring.tuple.TupleSet;
 
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
+public class TupleMap<K extends Comparable<K>> extends Tuple<Tuple2>
         implements Map<K, Object> {
 
     public static <K> Tuple2[] toTuples(final Map.Entry<K, Object>[] entries){
@@ -81,9 +80,9 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
 
     final Lazy<Map<K, Object>> lazyMap;
 
-    final Lazy<Set<K>> lazyKeySet;
-    final Lazy<Collection<Object>> lazyValues;
-    final Lazy<Set<Entry<K, Object>>> lazyEntrySet;
+    Set<K> _keySet = null;
+    Collection<Object> _values = null;
+    Set<Entry<K, Object>> _entrySet = null;
 
     protected TupleMap(final Class clazz, final Tuple2<K, IJSONValue>[] nodes){
         super(clazz, checkNotNull(nodes));
@@ -97,10 +96,6 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
             }
             return m;
         });
-
-        lazyKeySet = new Lazy<>(() -> Collections.unmodifiableSet(lazyMap.getValue().keySet()));
-        lazyEntrySet = new Lazy<>(() -> Collections.unmodifiableSet(lazyMap.getValue().entrySet()));
-        lazyValues = new Lazy<>(() -> Collections.unmodifiableCollection(lazyMap.getValue().values()));
     }
 
     public TupleMap(final Map.Entry<K, Object>[] entries){
@@ -114,14 +109,17 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
             }
             return m;
         });
-
-        lazyKeySet = new Lazy<>(() -> Collections.unmodifiableSet(lazyMap.getValue().keySet()));
-        lazyEntrySet = new Lazy<>(() -> Collections.unmodifiableSet(lazyMap.getValue().entrySet()));
-        lazyValues = new Lazy<>(() -> Collections.unmodifiableCollection(lazyMap.getValue().values()));
     }
 
     public TupleMap(final Map<K, Object> map){
         this(checkNotNull(map).entrySet().toArray(new Map.Entry[0]));
+    }
+
+    private void populateSets(){
+        Map<K, Object> _map = lazyMap.getValue();
+        _keySet = Collections.unmodifiableSet(_map.keySet());
+        _values = Collections.unmodifiableCollection(_map.values());
+        _entrySet = Collections.unmodifiableSet(_map.entrySet());
     }
 
     @Override
@@ -169,17 +167,26 @@ public class TupleMap<K extends Comparable<K>> extends TupleSet<Tuple2>
 
     @Override
     public Set<K> keySet() {
-        return lazyKeySet.getValue();
+        if(_keySet == null){
+            populateSets();
+        }
+        return _keySet;
     }
 
     @Override
     public Collection<Object> values() {
-        return lazyValues.getValue();
+        if(_values == null){
+            populateSets();
+        }
+        return _values;
     }
 
     @Override
     public Set<Entry<K, Object>> entrySet() {
-        return lazyEntrySet.getValue();
+        if(_entrySet==null){
+            populateSets();
+        }
+        return _entrySet;
     }
 
     @Override

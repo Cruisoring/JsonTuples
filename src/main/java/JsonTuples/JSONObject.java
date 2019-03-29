@@ -1,8 +1,6 @@
 package JsonTuples;
 
-import com.google.common.collect.ImmutableMap;
 import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.Tuple;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -27,10 +25,6 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
 
     private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
 
-    @Override
-    public int compareTo(Object o) {
-        return 0;
-    }
 
     //region OrdinalComparator Definition
 
@@ -80,17 +74,8 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         return namedValues;
     }
 
-    /**
-     * Convert the NamedValues as a conventional mutable Map that can be treated as a copy of this JSONObject.
-     * @return  MutableMap with names as the keys, Object the corresponding IJSONValue from as the values.
-     */
-    public Map<String, Object> asMap(){
-        return new HashMap<>(lazyMap.getValue());
-    }
-
     final Comparator<String> nameComparator;
-    final Lazy<Map<String, IJSONValue>> lazyValueMap = new Lazy<>(() -> getValueMap());
-    final Lazy<String> toStringLazy = new Lazy<>(() -> toJSONString(""));
+    final Lazy<Map<String, IJSONValue>> lazyRawMap = new Lazy<>(() -> getRawMap());
 
     protected JSONObject(NamedValue... namedValues) {
         this(null, namedValues);
@@ -101,7 +86,15 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         nameComparator = comparator;
     }
 
-    private Map<String, IJSONValue> getValueMap(){
+    /**
+     * Convert the NamedValues as a conventional mutable Map that can be treated as a copy of this JSONObject.
+     * @return  MutableMap with names as the keys, Object the corresponding IJSONValue from as the values.
+     */
+    public Map<String, Object> asMap(){
+        return new HashMap<>(lazyMap.getValue());
+    }
+
+    private Map<String, IJSONValue> getRawMap(){
         Map<String, IJSONValue> valueMap = new HashMap<>();
         NamedValue[] nodes = (NamedValue[])values;
         for (NamedValue node :
@@ -160,8 +153,8 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         List<NamedValue> delta = new ArrayList<>();
         NamedValue nv = null;
         for(String key : allKeys){
-            IJSONValue thisValue = thisKeys.contains(key) ? this.lazyValueMap.getValue().get(key) : MISSING;
-            IJSONValue otherValue = otherKeys.contains(key) ? other.lazyValueMap.getValue().get(key) : MISSING;
+            IJSONValue thisValue = thisKeys.contains(key) ? this.lazyRawMap.getValue().get(key) : MISSING;
+            IJSONValue otherValue = otherKeys.contains(key) ? other.lazyRawMap.getValue().get(key) : MISSING;
             if(Objects.equals(thisValue, otherValue)){
                 continue;
             } else if (thisValue instanceof JSONObject && otherValue instanceof JSONObject) {
@@ -177,35 +170,43 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     }
 
     @Override
-    public String toJSONString(String indent) {
-
-        final int length = values.length;
-        if(length == 0) {
-            return "{}";
-        }
-
-        checkState(StringUtils.isBlank(indent));
-
-        TextStringBuilder sb = new TextStringBuilder();
-        sb.append(LEFT_BRACE + (indent==null?"":NEW_LINE+SPACE+indent));
-        final String valueIndent = indent == null ? null : SPACE+indent;
-        List<String> valueStrings = Arrays.stream(values)
-                .map(v -> (NamedValue)v)
-                .map(nv -> String.format("\"%s\": %s", nv.getName(), nv.getValue().toJSONString(valueIndent)))
-                .collect(Collectors.toList());
-        sb.appendWithSeparators(valueStrings, indent==null?", ":COMMA+NEW_LINE+indent+SPACE);
-        sb.append(indent==null ? RIGHT_BRACE : NEW_LINE+indent+RIGHT_BRACE);
-        return sb.toString();
-    }
-
-    @Override
     public Object getObject() {
         return lazyMap.getValue();
     }
 
     @Override
+    public String toJSONString(String indent) {
+        checkState(StringUtils.isBlank(indent));
+
+        String noIndent = toString();
+        if(values.length == 0 || "".equals(indent)){
+            return noIndent;
+        }
+
+        String indented = indent==null ?
+                noIndent.replaceAll("(?m)\\n\\s*", "")
+                : noIndent.replaceAll("(?m)\\n", NEW_LINE+indent);
+        return indented;
+    }
+
+    @Override
     public String toString() {
-        return toStringLazy.getValue();
+        if(_toString == null){
+            if(values.length == 0) {
+                _toString = "{}";
+            } else {
+                TextStringBuilder sb = new TextStringBuilder();
+                sb.append(LEFT_BRACE + NEW_LINE+SPACE);
+                NamedValue[] namedValues = (NamedValue[])values;
+                List<String> valueStrings = Arrays.stream(namedValues)
+                        .map(nv -> String.format("\"%s\": %s", nv.getName(), nv.getValue().toJSONString(SPACE)))
+                        .collect(Collectors.toList());
+                sb.appendWithSeparators(valueStrings, COMMA+NEW_LINE+SPACE);
+                sb.append(NEW_LINE+RIGHT_BRACE);
+                _toString = sb.toString();
+            }
+        }
+        return _toString;
     }
 
     public JSONObject withDelta(Map<String, Object> delta){
@@ -239,11 +240,6 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     @Override
     public boolean canEqual(Object other) {
         return other instanceof JSONObject;
-    }
-
-    @Override
-    public int compareTo(Tuple o) {
-        return toString().compareTo(o.toString());
     }
 
     @Override

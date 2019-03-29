@@ -129,14 +129,10 @@ public class JSONString extends JSONValue<String> {
     }
 
     @Override
-    public String toJSONString(String indent) {
-        String string = getFirst();
-
-        return "\"" + StringEscapeUtils.escapeJson(string) + "\"";
-    }
-
-    @Override
     public String toString() {
-        return String.format("\"%s\"", getFirst());
+        if(_toString==null){
+            _toString = String.format("\"%s\"", StringEscapeUtils.escapeJson(getFirst()));
+        }
+        return _toString;
     }
 }

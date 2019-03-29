@@ -1,7 +1,5 @@
 package JsonTuples;
 
-import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 
 import java.util.Objects;
@@ -14,13 +12,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <br>
  * Represent the value of JSON strings of following types:
  * <ul>
- *     <li>true</li>
- *     <li>false</li>
- *     <li>null</li>
- *     <li>string</li>
- *     <li>number</li>
+ * <li>true</li>
+ * <li>false</li>
+ * <li>null</li>
+ * <li>string</li>
+ * <li>number</li>
  * </ul>
- * @param <T>   JAVA type used to represent the type of the JSON value strings.
+ *
+ * @param <T> JAVA type used to represent the type of the JSON value strings.
  */
 public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
@@ -49,7 +48,6 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     protected JSONValue(T t) {
         super(t);
     }
-    final Lazy<String> toStringLazy = new Lazy<>(() -> toJSONString(""));
 
     @Override
     public Object getObject() {
@@ -57,33 +55,27 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other) {
-        checkNotNull(other);
-
-        if(other instanceof JSONValue && Objects.equals(getObject(), other.getObject())){
-            return Null;
-        }
-        return new JSONArray(this, other);
-    }
-
-    @Override
     public String toJSONString(String indent) {
-        Object obj = getFirst();
-        return (obj == null) ? JSON_NULL : obj.toString();
-    }
-
-    @Override
-    public int compareTo(Tuple o) {
-        return toString().compareTo(o.toString());
+        return toString();
     }
 
     @Override
     public String toString() {
-        return toStringLazy.getValue();
+        if (_toString == null) {
+            T value = getFirst();
+            _toString = value == null ? JSON_NULL : value.toString();
+        }
+        return _toString;
     }
 
     @Override
-    public int compareTo(Object o) {
-        return 0;
+    public IJSONValue deltaWith(IJSONValue other) {
+        checkNotNull(other);
+
+        if (other instanceof JSONValue && Objects.equals(getObject(), other.getObject())) {
+            return JSONArray.EMPTY;
+        }
+        return new JSONArray(this, other);
     }
+
 }

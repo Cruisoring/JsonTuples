@@ -27,19 +27,21 @@ public class JSONNumber extends JSONValue<Number> {
         }
 
         if(valueString.contains(".") || StringUtils.containsIgnoreCase(valueString, "e")) {
-            BigDecimal bigDecimal = new BigDecimal(valueString);
             Double dbl = Double.valueOf(valueString);
-            if(dbl.toString().equals(bigDecimal.toString())) {
+            String dblString = dbl.toString();
+            if(dblString.equals(valueString)) {
                 return new JSONNumber(dbl);
             } else {
-                return new JSONNumber(bigDecimal);
+                BigDecimal bigDecimal = new BigDecimal(valueString);
+                return bigDecimal.toString().equals(dblString) ? new JSONNumber(dbl) : new JSONNumber(bigDecimal);
             }
         } else {
-            //Otherwise as integer
+            //Otherwise as integer first
             try {
                 Integer integer = Integer.valueOf(valueString);
                 return new JSONNumber(integer);
             } catch (NumberFormatException ne) {
+                //Or bigInteger when integer cannot keep it
                 BigInteger bigInteger = new BigInteger(valueString);
                 return new JSONNumber(bigInteger);
             }
@@ -48,10 +50,5 @@ public class JSONNumber extends JSONValue<Number> {
 
     protected JSONNumber(Number number) {
         super(checkNotNull(number));
-    }
-
-    @Override
-    public String toString() {
-        return getFirst().toString();
     }
 }

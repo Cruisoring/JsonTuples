@@ -10,7 +10,7 @@ public class JSONArrayTest {
     public void toJSONString() {
         JSONArray array = JSONArray.parseArray("[123, \"abc\"]");
         assertEquals("[\n  123,\n  \"abc\"\n]", array.toString());
-        assertEquals("[123, \"abc\"]", array.toJSONString(null));
+        assertEquals("[123,\"abc\"]", array.toJSONString(null));
         assertEquals("[\n    123,\n    \"abc\"\n  ]", array.toJSONString("  "));
         assertEquals("[\n      123,\n      \"abc\"\n    ]", array.toJSONString("    "));
     }

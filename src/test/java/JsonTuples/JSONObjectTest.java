@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.Logger;
 import org.junit.Test;
 
@@ -131,13 +132,13 @@ public class JSONObjectTest {
     @Test
     public void toJSONString() {
         JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
-        assertEquals("{\"age\": 123, \"other\": \"none\", \"name\": null}", obj.toJSONString(null));
+        assertEquals("{\"age\": 123,\"other\": \"none\",\"name\": null}", obj.toJSONString(null));
         assertEquals("{\n  \"age\": 123,\n  \"other\": \"none\",\n  \"name\": null\n}", obj.toJSONString(""));
         assertEquals("{\n    \"age\": 123,\n    \"other\": \"none\",\n    \"name\": null\n  }", obj.toJSONString("  "));
         assertEquals("{\n      \"age\": 123,\n      \"other\": \"none\",\n      \"name\": null\n    }", obj.toJSONString("    "));
 
         obj = JSONObject.parse("{ \"age\": 123, \"other\": [123, \"abc\"], \"name\": null }");
-        assertEquals("{\"age\": 123, \"other\": [123, \"abc\"], \"name\": null}", obj.toJSONString(null));
+        assertEquals("{\"age\": 123,\"other\": [123,\"abc\"],\"name\": null}", obj.toJSONString(null));
         assertEquals("{\n  \"age\": 123,\n  \"other\": [\n    123,\n    \"abc\"\n  ],\n  \"name\": null\n}", obj.toJSONString(""));
         assertEquals("{\n    \"age\": 123,\n    \"other\": [\n      123,\n      \"abc\"\n    ],\n    \"name\": null\n  }", obj.toJSONString("  "));
         assertEquals("{\n      \"age\": 123,\n      \"other\": [\n        123,\n        \"abc\"\n      ],\n      \"name\": null\n    }", obj.toJSONString("    "));
@@ -145,5 +146,25 @@ public class JSONObjectTest {
 
     @Test
     public void testToString() {
+    }
+
+    @Test
+    public void getHashCode(){
+        JSONObject object = (JSONObject) Parser.parse("{\n" +
+                "  \"address\": null,\n" +
+                "  \"scores\": {\n" +
+                "    \"English\": 80,\n" +
+                "    \"Science\": 88,\n" +
+                "    \"Math\": 90\n" +
+                "  },\n" +
+                "  \"name\": \"test name\",\n" +
+                "  \"id\": 123456,\n" +
+                "  \"isActive\": true,\n" +
+                "  \"class\": \"7A\"\n" +
+                "}");
+
+        int superHashCode = ((Tuple)object).hashCode();
+        int hashCode = object.hashCode();
+        Logger.D("hashCode=%d, superHashCode=%d", hashCode, superHashCode);
     }
 }
