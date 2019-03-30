@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.Logger;
 import org.junit.Test;
@@ -9,8 +10,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class JSONObjectTest {
 
@@ -77,11 +77,31 @@ public class JSONObjectTest {
 
     @Test
     public void deltaWith() {
+        assertEquals("[{},[]]", JSONObject.EMPTY.deltaWith(JSONArray.EMPTY).toJSONString(null));
+        assertEquals("[{},null]", JSONObject.EMPTY.deltaWith(JSONValue.Null).toJSONString(null));
+        assertEquals("[null,{}]", JSONValue.Null.deltaWith(JSONObject.EMPTY).toJSONString(null));
+
         JSONObject obj1 = JSONObject.parse("{ \"age\": 123, \"name\": null }");
+        assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj1));
+        //TODO: if MISSING shall be treated as equal with null?
+        assertEquals("{\"age\": [123,null]}", obj1.deltaWith(JSONObject.EMPTY).toJSONString(null));
+        assertEquals("{\"age\": [null,123]}", JSONObject.EMPTY.deltaWith(obj1).toJSONString(null));
+
+        JSONObject obj11 = JSONObject.parse("{\"name\": null,  \"age\": 123, }");
+        assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj11));
+
+        //TODO: to differentiate null or MISSING from JSONValue.Null?
+        assertEquals("[{\"age\": 123,\"name\": null},null]", obj1.deltaWith(null).toJSONString(null));
+        assertEquals("[{\"age\": 123,\"name\": null},null]", obj1.deltaWith(JSONValue.Null).toJSONString(null));
+
+        assertEquals("[true,{\"age\": 123,\"name\": null}]", JSONValue.True.deltaWith(obj1).toJSONString(null));
+        assertEquals("[{\"age\": 123,\"name\": null},[null,1]]", obj1.deltaWith(new JSONArray(JSONValue.Null, new JSONNumber(1))).toJSONString(null));
+
+
         JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
 
-        JSONObject delta = obj1.deltaWith(obj2);
-        System.out.println(delta.toString());
+        IJSONValue delta = obj1.deltaWith(Comparator.naturalOrder(), obj2);
+        assertEquals("{\"age\": [123,24],\"name\": [null,\"Tom\"],\"other\": [null,\"OK\"]}", delta.toJSONString(null));
     }
 
     @Test
@@ -123,7 +143,7 @@ public class JSONObjectTest {
                 "  \"class\": \"7A\"\n" +
                 "}");
 
-        JSONObject delta = expected.deltaWith(updated);
+        IJSONValue delta = expected.deltaWith(updated);
         Logger.D(delta.toString());
 
         assertEquals(expected, updated);
@@ -150,7 +170,7 @@ public class JSONObjectTest {
 
     @Test
     public void getHashCode(){
-        JSONObject object = (JSONObject) Parser.parse("{\n" +
+        String text = "{\n" +
                 "  \"address\": null,\n" +
                 "  \"scores\": {\n" +
                 "    \"English\": 80,\n" +
@@ -161,10 +181,15 @@ public class JSONObjectTest {
                 "  \"id\": 123456,\n" +
                 "  \"isActive\": true,\n" +
                 "  \"class\": \"7A\"\n" +
-                "}");
+                "}";
+        JSONObject object1 = JSONObject.parse(text);
+        JSONObject object2 = JSONObject.parse(text);
 
-        int superHashCode = ((Tuple)object).hashCode();
-        int hashCode = object.hashCode();
-        Logger.D("hashCode=%d, superHashCode=%d", hashCode, superHashCode);
+        int superHashCode = TypeHelper.deepHashCode(object1.asArray());;
+        int hashCode = object2.hashCode();
+        String string1 = object1.toString();
+        assertEquals(hashCode, object1.hashCode());
+        assertEquals(hashCode, string1.hashCode());
+        assertNotEquals(hashCode, superHashCode);
     }
 }

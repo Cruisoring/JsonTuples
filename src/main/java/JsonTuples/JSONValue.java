@@ -1,8 +1,9 @@
 package JsonTuples;
 
+import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 
-import java.util.Objects;
+import java.util.Comparator;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -69,13 +70,63 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
+    public int hashCode() {
+        if(_hashCode == null){
+            _hashCode = toString().hashCode();
+        }
+        return _hashCode;
+
+    }
+
+    @Override
+    public boolean canEqual(Object obj) {
+        return obj instanceof JSONValue;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof JSONValue)) {
+            return false;
+        } else if (obj == this) {
+            return true;
+        }
+
+        //*///JSONValues must have identical toString() and thus identical hashCode()?
+        if(getFirst()==null){
+            return ((JSONValue)obj).getFirst()==null;
+        } else {
+            return (hashCode() == obj.hashCode() && toString().equals(obj.toString()));
+        }
+        /*/
+        //Fallback if comparing with hashCode() and toString() only get problems
+        JSONValue other = (JSONValue) obj;
+
+        if (!other.canEqual(this) || hashCode() != other.hashCode()) {
+            return false;
+        }
+
+        Object thisValue = getFirst();
+        Object otherValue = other.getFirst();
+        if (thisValue == otherValue || (thisValue != null && thisValue.equals(otherValue))) {
+            return true;
+        } else {
+            return toString().equals(other.toString());
+        }
+        //*/
+    }
+
+    @Override
     public IJSONValue deltaWith(IJSONValue other) {
         checkNotNull(other);
 
-        if (other instanceof JSONValue && Objects.equals(getObject(), other.getObject())) {
+        if (equals(other)) {
             return JSONArray.EMPTY;
         }
         return new JSONArray(this, other);
     }
 
+    @Override
+    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
+        return deltaWith(other);
+    }
 }

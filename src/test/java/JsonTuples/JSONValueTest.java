@@ -1,5 +1,8 @@
 package JsonTuples;
 
+import com.google.common.primitives.UnsignedInteger;
+import io.github.cruisoring.tuple.Tuple;
+import io.github.cruisoring.tuple.Tuple1;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -10,6 +13,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class JSONValueTest {
 
@@ -131,5 +135,67 @@ public class JSONValueTest {
         assertEquals("false", JSONValue.False.toString());
         assertEquals("\"abc\"", new JSONString("abc").toString());
         assertEquals("77", new JSONNumber(77).toString());
+    }
+
+    @Test
+    public void testEqals(){
+        assertEquals(JSONValue.Null, new JSONValue<>(null));
+        assertEquals(JSONValue.True, new JSONValue<>(true));
+        assertEquals(JSONValue.False, new JSONValue<>(false));
+//        assertEquals(new JSONString(null), JSONValue.Null);               //Shall JSONString(null) be JSONValue.Null treated as equal?
+        assertEquals(JSONValue.Null, new JSONNumber(null));
+//        assertEquals(new JSONString(""), new JSONValue<>(""));            //How to prevent new JSONValue<>("")?
+//        assertEquals(new JSONString("ABC"), new JSONValue<>("ABC"));        //Shall never create new JSONValue<>("ABC")
+        assertEquals(new JSONNumber(3.3f), new JSONNumber(3.3));
+        assertEquals(new JSONNumber(25), new JSONNumber(25L));
+        assertEquals(new JSONNumber(25), new JSONNumber(UnsignedInteger.valueOf(25)));
+        assertEquals(new JSONNumber(25L), new JSONNumber(Integer.valueOf(25).byteValue()));
+        assertEquals(new JSONNumber(25), new JSONNumber(BigInteger.valueOf(25L)));
+        assertEquals(new JSONNumber(25.0), new JSONNumber(25.0));
+        assertEquals(new JSONNumber(Short.valueOf("25")), new JSONNumber(BigInteger.valueOf(25)));
+        assertEquals(new JSONNumber(0d), new JSONNumber(BigDecimal.valueOf(0.0)));
+
+        assertNotEquals(JSONValue.Null, new JSONValue<>(true));
+        assertNotEquals(null, new JSONValue<>(null));
+        assertNotEquals(JSONValue.False, new JSONValue<>(true));
+        assertNotEquals(new JSONString(""), new JSONString(" "));
+        assertNotEquals(JSONValue.Null, Tuple.create(null));
+        assertNotEquals(new JSONString("ABC"), Tuple.create("ABC"));
+        assertNotEquals(new JSONString(""), Tuple1.create(""));
+        assertNotEquals(Tuple.create(3.3), new JSONNumber(3.3));
+        assertNotEquals(new JSONNumber(25), new JSONNumber(25d));
+        assertNotEquals(new JSONNumber(25.0f), new JSONNumber(BigInteger.valueOf(25L)));
+        assertNotEquals(new JSONNumber(0d), new JSONNumber(BigDecimal.valueOf(0)));
+    }
+
+    @Test
+    public void deltaWith(){
+        assertEquals(JSONArray.EMPTY, JSONValue.Null.deltaWith(new JSONValue<>(null)));
+        assertEquals(JSONArray.EMPTY, JSONValue.True.deltaWith(new JSONValue<>(true)));
+        assertEquals(JSONArray.EMPTY, JSONValue.False.deltaWith(new JSONValue<>(false)));
+        assertEquals(JSONArray.EMPTY, new JSONString(null).deltaWith(JSONValue.Null));          //Shall JSONString(null) be JSONValue.Null treated as equal?
+        assertEquals(JSONArray.EMPTY, JSONValue.Null.deltaWith(new JSONNumber(null)));
+        assertEquals(JSONArray.EMPTY, new JSONNumber(3.3f).deltaWith(new JSONNumber(3.3)));
+        assertEquals(JSONArray.EMPTY, new JSONNumber(25).deltaWith(new JSONNumber(25L)));
+        assertEquals(JSONArray.EMPTY, new JSONNumber(25).deltaWith(new JSONNumber(BigInteger.valueOf(25L))));
+        assertEquals(JSONArray.EMPTY, new JSONNumber(25.0).deltaWith(new JSONNumber(25.0)));
+        assertEquals(JSONArray.EMPTY, new JSONNumber(Short.valueOf("25")).deltaWith(new JSONNumber(BigInteger.valueOf(25))));
+
+        assertEquals("[null,\"null\"]", JSONValue.Null.deltaWith(new JSONString("null")).toJSONString(null));
+        assertEquals("[]", JSONValue.Null.deltaWith(new JSONString(null)).toJSONString(null));
+        assertEquals("[1.0,1]", new JSONNumber(1.0).deltaWith(new JSONNumber(1L)).toJSONString(null));
+        assertEquals("[-1.0,\"-1.0\"]", new JSONNumber(-1.0).deltaWith(new JSONString("-1.0")).toJSONString(null));
+
+        assertEquals("[\"ABC\",ABC]", new JSONString("ABC").deltaWith(new JSONValue<>("ABC")).toJSONString(null)); //How to prevent new JSONValue<>("ABC")?
+        assertEquals("[,\"\"]", new JSONValue("").deltaWith(new JSONString("")).toJSONString(null)); //How to prevent new JSONValue<>("")?
+    }
+
+    @Test
+    public void getLength(){
+        assertEquals(1, JSONValue.Null.getLength());
+        assertEquals(1, JSONValue.True.getLength());
+        assertEquals(1, JSONValue.False.getLength());
+        assertEquals(1, new JSONString("").getLength());
+        assertEquals(1, new JSONNumber(222).getLength());
     }
 }

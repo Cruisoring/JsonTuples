@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,6 +51,11 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
         if(other instanceof JSONArray){
 
         }
+        return null;
+    }
+
+    @Override
+    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
         return null;
     }
 

@@ -125,7 +125,7 @@ public class JSONString extends JSONValue<String> {
     }
 
     protected JSONString(String s) {
-        super(checkNotNull(s));
+        super(s);
     }
 
     @Override

@@ -55,6 +55,10 @@ public class Converter {
     protected static JSONObject asJSONObject(Comparator<String> comparator, Object object){
 //        checkNotNull(object);
 
+        if(object instanceof JSONObject){
+            return (JSONObject)object;
+        }
+
         //Let the casting throw exception if the object is not a map of String keys
         Map<String, Object> map = (Map<String, Object>)object;
         NamedValue[] namedValues = map.entrySet().stream()

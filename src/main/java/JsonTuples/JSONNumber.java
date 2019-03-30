@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /**
  * http://www.json.org
  * A number is very much like a C or Java number, except that the octal and hexadecimal formats are not used.
@@ -49,6 +47,7 @@ public class JSONNumber extends JSONValue<Number> {
     }
 
     protected JSONNumber(Number number) {
-        super(checkNotNull(number));
+        super(number);
     }
+
 }

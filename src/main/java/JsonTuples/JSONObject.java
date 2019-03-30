@@ -1,6 +1,8 @@
 package JsonTuples;
 
 import io.github.cruisoring.Lazy;
+import io.github.cruisoring.tuple.Tuple;
+import netscape.javascript.JSObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -51,6 +53,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     }
     //endregion
 
+    //region Parse given text as a JSONObject
     public static IJSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
@@ -63,7 +66,9 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     public static JSONObject parse(String valueString) {
         return (JSONObject) Parser.parse(valueString);
     }
+    //endregion
 
+    //region Use the given comparator to sort a NamedValue array by their names
     protected static NamedValue[] sorted(Comparator<String> comparator, NamedValue[] namedValues){
         checkNotNull(namedValues);
 
@@ -73,6 +78,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         }
         return namedValues;
     }
+    //endregion
 
     final Comparator<String> nameComparator;
     final Lazy<Map<String, IJSONValue>> lazyRawMap = new Lazy<>(() -> getRawMap());
@@ -142,33 +148,6 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         return new JSONObject(comparator, copy);
     }
 
-    public JSONObject deltaWith(JSONObject other) {
-        checkNotNull(other);
-
-        Set<String> thisKeys = keySet();
-        Set<String> otherKeys = other.keySet();
-        Set<String> allKeys = new HashSet<>(thisKeys);
-        allKeys.addAll(otherKeys);
-
-        List<NamedValue> delta = new ArrayList<>();
-        NamedValue nv = null;
-        for(String key : allKeys){
-            IJSONValue thisValue = thisKeys.contains(key) ? this.lazyRawMap.getValue().get(key) : MISSING;
-            IJSONValue otherValue = otherKeys.contains(key) ? other.lazyRawMap.getValue().get(key) : MISSING;
-            if(Objects.equals(thisValue, otherValue)){
-                continue;
-            } else if (thisValue instanceof JSONObject && otherValue instanceof JSONObject) {
-                JSONObject childDelta = ((JSONObject) thisValue).deltaWith((JSONObject) otherValue);
-                nv = new NamedValue(key, childDelta);
-            } else {
-                nv = new NamedValue(key, new JSONArray(thisValue, otherValue));
-            }
-            delta.add(nv);
-        }
-
-        return new JSONObject(delta.toArray(new NamedValue[0]));
-    }
-
     @Override
     public Object getObject() {
         return lazyMap.getValue();
@@ -218,23 +197,29 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map))
-            return false;
-        if (obj == this)
-            return true;
+    public int hashCode() {
+        if(_hashCode == null){
+            _hashCode = toString().hashCode();
+        }
+        return _hashCode;
+    }
 
-        final JSONObject other;
-        if(obj instanceof JSONObject){
-            other = (JSONObject)obj;
-        } else {
-            other = Converter.asJSONObject(obj);
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
+            return false;
+        } else if (obj == this) {
+            return true;
         }
 
-        if(!other.canEqual(this) || getLength() != other.getLength())
+        final JSONObject other = Converter.asJSONObject(nameComparator, obj);
+        if(this.isEmpty() && other.isEmpty()){
+            return true;
+        } else if(!other.canEqual(this) || getLength() != other.getLength()) {
             return false;
+        }
 
-        return this.deltaWith(other).getLength() == 0;
+        return deltaWith(other) == EMPTY;
     }
 
     @Override
@@ -244,7 +229,49 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
 
     @Override
     public IJSONValue deltaWith(IJSONValue other) {
-        return null;
+        return deltaWith(nameComparator, other);
+    }
+
+    @Override
+    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
+        if(other == null){
+            return new JSONArray(this, MISSING);
+        }else if(other == this){
+            return EMPTY;
+        }else if(!(other instanceof JSONObject)){
+            return new JSONArray(this, other);
+        }
+
+        JSONObject otherObject = (JSONObject)other;
+        Set<String> allKeys = new HashSet<String>(){{
+            addAll(keySet());
+            addAll(otherObject.keySet());
+        }};
+
+        if(allKeys.isEmpty()){
+            return EMPTY;
+        }
+
+        List<NamedValue> differences = new ArrayList<>();
+        Map<String, IJSONValue> thisValues = lazyRawMap.getValue();
+        Map<String, IJSONValue> otherValues = otherObject.lazyRawMap.getValue();
+
+        for (String key : allKeys) {
+            IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key) : MISSING;
+            IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key) : MISSING;
+            IJSONValue valueDelta = thisValue.deltaWith(otherValue);
+            if(valueDelta.getLength() != 0){
+                NamedValue newDif = new NamedValue(key, valueDelta);
+                differences.add(newDif);
+            }
+        };
+
+        if(differences.isEmpty()){
+            return EMPTY;
+        }
+
+        JSONObject delta = new JSONObject(comparator, differences.toArray(new NamedValue[differences.size()]));
+        return delta;
     }
 
 }
