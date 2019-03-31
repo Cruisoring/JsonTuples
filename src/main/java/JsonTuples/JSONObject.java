@@ -215,11 +215,11 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         final JSONObject other = Converter.asJSONObject(nameComparator, obj);
         if(this.isEmpty() && other.isEmpty()){
             return true;
-        } else if(!other.canEqual(this) || getLength() != other.getLength()) {
+        } else if(!other.canEqual(this) || getLength() != other.getLength()) {  //Should getLength() count the NamedValues if the value is null?
             return false;
         }
 
-        return deltaWith(other) == EMPTY;
+        return deltaWith(other).getLength() == 0;
     }
 
     @Override

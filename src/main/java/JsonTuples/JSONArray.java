@@ -45,21 +45,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other) {
-        checkNotNull(other);
-
-        if(other instanceof JSONArray){
-
-        }
-        return null;
-    }
-
-    @Override
-    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
-        return null;
-    }
-
-    @Override
     public String toJSONString(String indent) {
         checkState(StringUtils.isBlank(indent));
 
@@ -91,5 +76,51 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
             }
         }
         return _toString;
+    }
+
+    @Override
+    public int hashCode() {
+        if(_hashCode == null){
+            _hashCode = toString().hashCode();
+        }
+        return _hashCode;
+    }
+
+//    @Override
+//    public boolean equals(Object obj) {
+//        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
+//            return false;
+//        } else if (obj == this) {
+//            return true;
+//        }
+//
+//        final JSONObject other = Converter.asJSONObject(nameComparator, obj);
+//        if(this.isEmpty() && other.isEmpty()){
+//            return true;
+//        } else if(!other.canEqual(this) || getLength() != other.getLength()) {  //Should getLength() count the NamedValues if the value is null?
+//            return false;
+//        }
+//
+//        return deltaWith(other).getLength() == 0;
+//    }
+
+    @Override
+    public boolean canEqual(Object other) {
+        return other instanceof JSONArray;
+    }
+
+    @Override
+    public IJSONValue deltaWith(IJSONValue other) {
+        checkNotNull(other);
+
+        if(other instanceof JSONArray){
+
+        }
+        return null;
+    }
+
+    @Override
+    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
+        return null;
     }
 }
