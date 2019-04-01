@@ -1,8 +1,6 @@
 package JsonTuples;
 
 import io.github.cruisoring.Lazy;
-import io.github.cruisoring.tuple.Tuple;
-import netscape.javascript.JSObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -215,8 +213,10 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         final JSONObject other = Converter.asJSONObject(nameComparator, obj);
         if(this.isEmpty() && other.isEmpty()){
             return true;
-        } else if(!other.canEqual(this) || getLength() != other.getLength()) {  //Should getLength() count the NamedValues if the value is null?
+        }else if(!other.canEqual(this)) {
             return false;
+        }else if(getLength()==other.getLength() && toString().equals(other.toString())){
+            return true;
         }
 
         return deltaWith(other).getLength() == 0;
@@ -224,7 +224,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
 
     @Override
     public boolean canEqual(Object other) {
-        return other instanceof JSONObject;
+        return other instanceof JSONObject || other instanceof Map;
     }
 
     @Override

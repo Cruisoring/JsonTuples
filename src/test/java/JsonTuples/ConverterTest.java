@@ -1,6 +1,6 @@
 package JsonTuples;
 
-import io.github.cruisoring.utility.Logger;
+import io.github.cruisoring.logger.Logger;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -13,10 +13,10 @@ public class ConverterTest {
 
     @Test
     public void asJSONValue() {
-        assertEquals(JSONValue.Null, Converter.asJSONValue(null));
-        assertEquals(JSONValue.True, Converter.asJSONValue(true));
-        assertEquals(JSONValue.False, Converter.asJSONValue(false));
-        assertEquals(new JSONString("string"), Converter.asJSONValue("string"));
+        assertEquals(JSONValue.Null, Converter.jsonify(null));
+        assertEquals(JSONValue.True, Converter.jsonify(true));
+        assertEquals(JSONValue.False, Converter.jsonify(false));
+        assertEquals(new JSONString("string"), Converter.jsonify("string"));
     }
 
     @Test

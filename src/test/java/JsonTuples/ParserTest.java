@@ -1,11 +1,12 @@
 package JsonTuples;
 
 import Utilities.ResourceHelper;
-import io.github.cruisoring.utility.Logger;
+import io.github.cruisoring.logger.Logger;
 import org.junit.Test;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -22,9 +23,9 @@ public class ParserTest {
                 .replaceAll("\r\n", "\n");
         Parser parser = new Parser(jsonText);
 
-        IJSONValue value = (IJSONValue) parser.parse();
+        IJSONValue value = Logger.M(() ->(IJSONValue) parser.parse());
         assertTrue(value instanceof JSONObject);
-        String actual = value.toString();
+        String actual = Logger.M(() ->value.toString());
         Logger.D(actual);
 
         assertEquals(expectedParsedJson, actual);
@@ -60,14 +61,9 @@ public class ParserTest {
         String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
         Parser parser = new Parser(jsonText);
 
-        LocalDateTime start = LocalDateTime.now();
-        JSONObject value = (JSONObject) parser.parse();
-        Duration timeToParse = Duration.between(start, LocalDateTime.now());
-
-        Set<String> keys = value.keySet();
-
-        Logger.D("Time elapsed to parse jsonText of %d: %s, there are %d keys: %s",
-                parser.length, timeToParse, keys.size(), String.join(", ", keys));
+        JSONObject value = Logger.M(()-> (JSONObject) parser.parse());
+        JSONObject natualValue = Logger.M(()-> value.getSortedDeep(Comparator.naturalOrder()));
+        Logger.M(() -> Logger.V(natualValue.toString()));
     }
 
     @Test

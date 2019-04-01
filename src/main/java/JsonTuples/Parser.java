@@ -96,7 +96,7 @@ public final class Parser {
     //endregion
 
     //region instance variables
-    public final String jsonContext;
+    public final CharSequence jsonContext;
     public final int length;
 
     char lastControl = START_JSON_SIGN;
@@ -127,7 +127,7 @@ public final class Parser {
         checkNotNull(range);
 
         int end = range.getEndExclusive();
-        return jsonContext.substring(range.getStartInclusive(), end > length ? length : end);
+        return jsonContext.subSequence(range.getStartInclusive(), end > length ? length : end).toString();
     }
 
     protected IJSONValue asJSONValue(Range range) {
@@ -261,7 +261,7 @@ public final class Parser {
             case QUOTE:
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
-                    String string = jsonContext.substring(currentStringStart + 1, currentStringEnd);
+                    String string = jsonContext.subSequence(currentStringStart + 1, currentStringEnd).toString();
                     lastStringValue = new JSONString(string);
                     if (!isObject) {
                         children.add(lastStringValue);

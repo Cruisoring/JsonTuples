@@ -5,13 +5,11 @@ import io.github.cruisoring.tuple.Tuple;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -19,6 +17,8 @@ import static com.google.common.base.Preconditions.checkState;
  * An array is an ordered collection of values. An array begins with [ (left bracket) and ends with ] (right bracket). Values are separated by , (comma).
  */
 public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
+
+    public static boolean isElementOrderMatter = true;
 
     public static final JSONArray EMPTY = new JSONArray();
 
@@ -86,36 +86,73 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
         return _hashCode;
     }
 
-//    @Override
-//    public boolean equals(Object obj) {
-//        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
-//            return false;
-//        } else if (obj == this) {
-//            return true;
-//        }
-//
-//        final JSONObject other = Converter.asJSONObject(nameComparator, obj);
-//        if(this.isEmpty() && other.isEmpty()){
-//            return true;
-//        } else if(!other.canEqual(this) || getLength() != other.getLength()) {  //Should getLength() count the NamedValues if the value is null?
-//            return false;
-//        }
-//
-//        return deltaWith(other).getLength() == 0;
-//    }
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null || !(obj instanceof JSONArray || obj instanceof Collection || obj.getClass().isArray())) {
+            return false;
+        } else if (obj == this) {
+            return true;
+        }
+
+        final JSONArray other = (JSONArray) Converter.jsonify(obj);
+        if(this.isEmpty() && other.isEmpty()){
+            return true;
+        } else if(!other.canEqual(this)) {
+            return false;
+        }else if(getLength()==other.getLength() && toString().equals(other.toString())){
+            return true;
+        }
+
+        return deltaWith(other).getLength() == 0;
+    }
 
     @Override
     public boolean canEqual(Object other) {
-        return other instanceof JSONArray;
+        return other != null &&
+                (other instanceof JSONArray || other instanceof Collection || other.getClass().isArray());
+    }
+
+    public JSONObject asIndexedObject(){
+        NamedValue[] namedValues = IntStream.range(0, getLength()).boxed()
+            .map(i -> new NamedValue(i.toString(), get(i)))
+            .toArray(size -> new NamedValue[size]);
+        return new JSONObject(namedValues);
+    }
+
+    public Map<String, List<Integer>> getValueIndexes(){
+        Map<String, List<Integer>> indexes = new HashMap<>();
+        for (int i = 0; i < getLength(); i++) {
+            IJSONValue value = get(i);
+            String valueString = value.toString();
+            if(indexes.containsKey(valueString)){
+                indexes.get(valueString).add(i);
+            }else{
+                indexes.put(valueString, new ArrayList<>(Arrays.asList(i)));
+            }
+        }
+        return indexes;
     }
 
     @Override
     public IJSONValue deltaWith(IJSONValue other) {
-        checkNotNull(other);
-
-        if(other instanceof JSONArray){
-
+        if(other == null){
+            return new JSONArray(this, JSONObject.MISSING);
+        }else if(other == this){
+            return EMPTY;
+        }else if(!(other instanceof JSONArray)){
+            return new JSONArray(this, other);
         }
+
+        final JSONArray otherArray = (JSONArray)other;
+
+        if(isElementOrderMatter){
+            return asIndexedObject().deltaWith(otherArray.asIndexedObject());
+        }
+
+        Map<String, List<Integer>> thisValueIndexes = getValueIndexes();
+        Map<String, List<Integer>> otherValueIndexes = otherArray.getValueIndexes();
+
+
         return null;
     }
 

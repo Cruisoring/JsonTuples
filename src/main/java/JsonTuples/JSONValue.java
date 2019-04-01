@@ -1,6 +1,5 @@
 package JsonTuples;
 
-import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 
 import java.util.Comparator;
