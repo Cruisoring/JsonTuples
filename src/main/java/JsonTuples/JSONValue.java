@@ -2,7 +2,10 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple1;
 
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -52,6 +55,11 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     @Override
     public Object getObject() {
         return getFirst();
+    }
+
+    @Override
+    public Set<Integer> getSignatures() {
+        return new HashSet<Integer>(Arrays.asList(hashCode()));
     }
 
     @Override
@@ -115,17 +123,12 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other) {
+    public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
         checkNotNull(other);
 
         if (equals(other)) {
             return JSONArray.EMPTY;
         }
         return new JSONArray(this, other);
-    }
-
-    @Override
-    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
-        return deltaWith(other);
     }
 }

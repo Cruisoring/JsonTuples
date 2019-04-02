@@ -1,14 +1,10 @@
 package JsonTuples;
 
 import io.github.cruisoring.TypeHelper;
-import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.logger.Logger;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -58,7 +54,7 @@ public class JSONObjectTest {
     @Test
     public void getSortedWithOrderedNames() {
         JSONObject obj = JSONObject.parse("{ \"age\": 123, \"name\": null, \"other\": \"none\" }");
-        JSONObject naturalOrdered = obj.getSorted(Arrays.asList("name", "other"));
+        JSONObject naturalOrdered = (JSONObject) obj.getSorted(Arrays.asList("name", "other"));
         String string = naturalOrdered.toString();
         assertEquals("{\n" +
                 "  \"name\": null,\n" +
@@ -100,7 +96,7 @@ public class JSONObjectTest {
 
         JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
 
-        IJSONValue delta = obj1.deltaWith(Comparator.naturalOrder(), obj2);
+        IJSONValue delta = obj1.deltaWith(obj2, Comparator.naturalOrder());
         assertEquals("{\"age\": [123,24],\"name\": [null,\"Tom\"],\"other\": [null,\"OK\"]}", delta.toJSONString(null));
     }
 
@@ -192,4 +188,36 @@ public class JSONObjectTest {
         assertEquals(hashCode, string1.hashCode());
         assertNotEquals(hashCode, superHashCode);
     }
+
+    @Test
+    public void getSignatures() {
+        String text = "{\n" +
+                "  \"address\": null,\n" +
+                "  \"scores\": {\n" +
+                "    \"English\": 80,\n" +
+                "    \"Science\": 88,\n" +
+                "    \"Math\": 90\n" +
+                "  },\n" +
+                "  \"name\": \"test name\",\n" +
+                "  \"id\": 123456,\n" +
+                "  \"isActive\": true,\n" +
+                "  \"class\": \"7A\"\n" +
+                "}";
+        JSONObject object1 = JSONObject.parse(text);
+        Set<Integer> signature1 = object1.getSignatures();
+
+        JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
+        Set<Integer> signature2 = object2.getSignatures();
+
+        Set<Integer> common = new HashSet(Arrays.asList("\"address\": null".hashCode(), "\"name\": \"test name\"".hashCode(),
+                "\"id\": 123456".hashCode(), "\"isActive\": true".hashCode(), "\"class\": \"7A\"".hashCode()));
+        assertTrue(signature1.containsAll(common));
+        assertTrue(signature2.containsAll(common));
+
+        signature1.removeAll(signature2);
+        signature2.removeAll(common);
+        signature1.addAll(signature2);
+        assertEquals(4, signature1.size());
+    }
+
 }

@@ -61,5 +61,13 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
     public String toString(){
         return toJSONString("");
     }
+
+    @Override
+    public int hashCode() {
+        if(_hashCode == null){
+            _hashCode = toString().hashCode();
+        }
+        return _hashCode;
+    }
 }
 

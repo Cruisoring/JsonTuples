@@ -29,10 +29,14 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
         return (JSONArray) Parser.parse(valueString);
     }
 
-    final Lazy<String> toStringLazy = new Lazy<>(() -> toJSONString(""));
-
+    final Comparator<String> nameComparator;
     protected JSONArray(IJSONValue... values) {
+        this(null, values);
+    }
+
+    protected JSONArray(Comparator<String> comparator, IJSONValue... values){
         super(values);
+        this.nameComparator = comparator;
     }
 
     protected Lazy<Object[]> arrayLazy = new Lazy<>(() -> Arrays.stream(asArray())
@@ -103,7 +107,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
             return true;
         }
 
-        return deltaWith(other).getLength() == 0;
+        return deltaWith(other, nameComparator).getLength() == 0;
     }
 
     @Override
@@ -112,17 +116,17 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
                 (other instanceof JSONArray || other instanceof Collection || other.getClass().isArray());
     }
 
-    public JSONObject asIndexedObject(){
+    public JSONObject asIndexedObject(Comparator<String> comparator){
         NamedValue[] namedValues = IntStream.range(0, getLength()).boxed()
             .map(i -> new NamedValue(i.toString(), get(i)))
             .toArray(size -> new NamedValue[size]);
-        return new JSONObject(namedValues);
+        return new JSONObject(comparator, namedValues);
     }
 
-    public Map<String, List<Integer>> getValueIndexes(){
+    protected Map<String, List<Integer>> getValueIndexes(Comparator<String> comparator){
         Map<String, List<Integer>> indexes = new HashMap<>();
         for (int i = 0; i < getLength(); i++) {
-            IJSONValue value = get(i);
+            IJSONValue value = get(i).getSorted(comparator);
             String valueString = value.toString();
             if(indexes.containsKey(valueString)){
                 indexes.get(valueString).add(i);
@@ -134,7 +138,21 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other) {
+    public IJSONValue getSorted(Comparator<String> comparator) {
+        if(nameComparator == comparator){
+            return this;
+        }
+        IJSONValue[] sorted = Arrays.stream(values)
+                .map(v -> v.getSorted(comparator))
+                .toArray(size -> new IJSONValue[size]);
+
+        return new JSONArray(comparator, sorted);
+    }
+
+    @Override
+    public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
+        checkState(nameComparator == comparator);
+
         if(other == null){
             return new JSONArray(this, JSONObject.MISSING);
         }else if(other == this){
@@ -143,21 +161,57 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
             return new JSONArray(this, other);
         }
 
-        final JSONArray otherArray = (JSONArray)other;
+        final JSONArray otherArray = (JSONArray) other;
 
         if(isElementOrderMatter){
-            return asIndexedObject().deltaWith(otherArray.asIndexedObject());
+            return asIndexedObject(comparator).deltaWith(otherArray.asIndexedObject(comparator), comparator);
+        }
+        boolean thisAllObject = Arrays.stream(values).allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
+        boolean otherAllObject = Arrays.stream(otherArray.values).allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
+        if(!thisAllObject || !otherAllObject){
+            return asIndexedObject(comparator).deltaWith(otherArray.asIndexedObject(comparator), comparator);
         }
 
-        Map<String, List<Integer>> thisValueIndexes = getValueIndexes();
-        Map<String, List<Integer>> otherValueIndexes = otherArray.getValueIndexes();
+        //Now both arrays are composed of either null or Objects, then their order is not concerned
+        Map<String, List<Integer>> thisValueIndexes = getValueIndexes(comparator);
+        Map<String, List<Integer>> otherValueIndexes = otherArray.getValueIndexes(comparator);
+        Set<String> allKeys = new HashSet<String>(){{
+            addAll(thisValueIndexes.keySet());
+            addAll(otherValueIndexes.keySet());
+        }};
+
+        //Get indexes of unequal JSONObjects of both array
+        List<Integer> thisUncertained = new ArrayList<>();
+        List<Integer> otherUncertained = new ArrayList<>();
+        for (String key : allKeys) {
+            if(!thisValueIndexes.containsKey(key)){
+                otherUncertained.addAll(otherValueIndexes.get(key));
+            }else if(!otherValueIndexes.containsKey(key)){
+                thisUncertained.addAll(thisValueIndexes.get(key));
+            }else{
+                int countDif = thisValueIndexes.get(key).size() - otherValueIndexes.get(key).size();
+                if(countDif<0){
+                    otherUncertained.addAll(otherValueIndexes.get(key).subList(0, -countDif));
+                }else if(countDif>0){
+                    thisUncertained.addAll(thisValueIndexes.get(key).subList(0, countDif));
+                }
+            }
+        };
+
+        Map<Integer, Set<Integer>> thisValueTokens = thisUncertained.stream()
+                .collect(Collectors.toMap(
+                        i -> i,
+                        i -> values[i].getSignatures()
+                ));
+        Map<Integer, Set<Integer>> otherValueTokens = otherUncertained.stream()
+                .collect(Collectors.toMap(
+                        i -> i,
+                        i -> values[i].getSignatures()
+                ));
+
 
 
         return null;
     }
 
-    @Override
-    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
-        return null;
-    }
 }

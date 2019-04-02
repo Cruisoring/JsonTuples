@@ -4,10 +4,7 @@ import Utilities.ResourceHelper;
 import io.github.cruisoring.logger.Logger;
 import org.junit.Test;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Comparator;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,9 +58,9 @@ public class ParserTest {
         String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
         Parser parser = new Parser(jsonText);
 
-        JSONObject value = Logger.M(()-> (JSONObject) parser.parse());
-        JSONObject natualValue = Logger.M(()-> value.getSortedDeep(Comparator.naturalOrder()));
-        Logger.M(() -> Logger.V(natualValue.toString()));
+        JSONObject value = Logger.M(()-> (JSONObject) parser.parse(), "parse()");
+        JSONObject natualValue = Logger.M(()-> value.getSorted(Comparator.naturalOrder()), "getSorted()");
+        String sortedString = Logger.M(() -> natualValue.toString(), "toString()");
     }
 
     @Test

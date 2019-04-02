@@ -34,19 +34,38 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
      */
     public static class OrdinalComparator<T> implements Comparator<T> {
 
-        private Map<T, Integer> orders = new HashMap<>();
+        Map<T, Integer> orders = new HashMap<>();
+        List<T> orderedKeys = new ArrayList<>();
+
+        Integer putIfAbsent(T key, Integer order){
+            if(!orders.containsKey(key)){
+                orders.put(key, order);
+                orderedKeys.add(key);
+                return order;
+            }else{
+                return orders.get(key);
+            }
+        }
 
         public OrdinalComparator(Collection<T> options){
             for (T option : checkNotNull(options)) {
-                orders.putIfAbsent(option, orders.size() + 1);
+                putIfAbsent(option, orders.size() + 1);
             }
         }
 
         @Override
         public int compare(T o1, T o2) {
-            orders.putIfAbsent(o1, orders.size() + 1);
-            orders.putIfAbsent(o2, orders.size() + 1);
-            return orders.get(o1).compareTo(orders.get(o2));
+            Integer order1 = putIfAbsent(o1, orders.size() + 1);
+            Integer order2 = putIfAbsent(o2, orders.size() + 1);
+            return order1.compareTo(order2);
+        }
+
+        @Override
+        public String toString() {
+            String string = orderedKeys.stream()
+                    .map(k -> k.toString())
+                    .collect(Collectors.joining(","));
+            return string;
         }
     }
     //endregion
@@ -66,7 +85,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
     }
     //endregion
 
-    //region Use the given comparator to sort a NamedValue array by their names
+    //region Use the given nameComparator to sort a NamedValue array by their names
     protected static NamedValue[] sorted(Comparator<String> comparator, NamedValue[] namedValues){
         checkNotNull(namedValues);
 
@@ -108,27 +127,8 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         return valueMap;
     }
 
+    @Override
     public JSONObject getSorted(Comparator<String> comparator){
-        if(comparator == null || comparator == nameComparator)
-            return this;
-
-        NamedValue[] copy = Arrays.stream(values).map(v -> (NamedValue)v).toArray(size->new NamedValue[size]);
-        return new JSONObject(comparator, copy);
-    }
-
-    public JSONObject getSorted(Collection<String> orderedNames){
-        Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
-        NamedValue[] copy = Arrays.stream(values).map(v -> (NamedValue)v).toArray(size->new NamedValue[size]);
-        return new JSONObject(comparator, copy);
-    }
-
-    public JSONObject getSortedDeep(Collection<String> orderedNames){
-        checkNotNull(orderedNames);
-        Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
-        return getSortedDeep(comparator);
-    }
-
-    public JSONObject getSortedDeep(Comparator<String> comparator){
         if(comparator == null || comparator == nameComparator)
             return this;
 
@@ -137,7 +137,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         for (int i = 0; i < values.length; i++) {
             NamedValue original = (NamedValue)values[i];
             if(original.getValue() instanceof JSONObject) {
-                copy[i] = new NamedValue(original.getName(), ((JSONObject)original.getValue()).getSortedDeep(comparator));
+                copy[i] = new NamedValue(original.getName(), ((JSONObject)original.getValue()).getSorted(comparator));
             } else {
                 copy[i] = original;
             }
@@ -219,7 +219,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
             return true;
         }
 
-        return deltaWith(other).getLength() == 0;
+        return deltaWith(other, null).getLength() == 0;
     }
 
     @Override
@@ -227,13 +227,12 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         return other instanceof JSONObject || other instanceof Map;
     }
 
-    @Override
-    public IJSONValue deltaWith(IJSONValue other) {
-        return deltaWith(nameComparator, other);
-    }
+//    public IJSONValue deltaWith(IJSONValue other) {
+//        return deltaWith(other, nameComparator);
+//    }
 
     @Override
-    public IJSONValue deltaWith(Comparator<String> comparator, IJSONValue other) {
+    public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
         if(other == null){
             return new JSONArray(this, MISSING);
         }else if(other == this){
@@ -243,6 +242,10 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         }
 
         JSONObject otherObject = (JSONObject)other;
+        if(otherObject.hashCode()==this.hashCode() && other.toString() == toString()){
+            return EMPTY;
+        }
+
         Set<String> allKeys = new HashSet<String>(){{
             addAll(keySet());
             addAll(otherObject.keySet());
@@ -259,7 +262,7 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         for (String key : allKeys) {
             IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key) : MISSING;
             IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key) : MISSING;
-            IJSONValue valueDelta = thisValue.deltaWith(otherValue);
+            IJSONValue valueDelta = thisValue.deltaWith(otherValue, comparator);
             if(valueDelta.getLength() != 0){
                 NamedValue newDif = new NamedValue(key, valueDelta);
                 differences.add(newDif);
@@ -273,5 +276,4 @@ public class JSONObject extends TupleMap<String> implements IJSONValue {
         JSONObject delta = new JSONObject(comparator, differences.toArray(new NamedValue[differences.size()]));
         return delta;
     }
-
 }

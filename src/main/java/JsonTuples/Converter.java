@@ -91,8 +91,8 @@ public class Converter {
 //        checkNotNull(object);
 
         if(object instanceof JSONObject){
-            //No sorting for performance consideration
-            return (JSONObject)object;
+            JSONObject other = (JSONObject)object;
+            return other.getSorted(comparator);
         }
 
         //Let the casting throw exception if the object is not a map of String keys

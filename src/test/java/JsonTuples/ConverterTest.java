@@ -55,7 +55,7 @@ public class ConverterTest {
         }};
 
         JSONObject jsonObject = Converter.asJSONObject(map);
-        JSONObject withOrdered = jsonObject.getSorted(Arrays.asList("id", "name", "class", "isActive", "address", "scores", "English", "Science", "Math"));
+        JSONObject withOrdered = (JSONObject) jsonObject.getSorted(Arrays.asList("id", "name", "class", "isActive", "address", "scores", "English", "Science", "Math"));
         assertEquals("{\n" +
                 "  \"id\": 123456,\n" +
                 "  \"name\": \"test name\",\n" +

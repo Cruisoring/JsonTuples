@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import com.google.common.primitives.UnsignedInteger;
+import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 import org.junit.Assert;
@@ -10,10 +11,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 
 public class JSONValueTest {
 
@@ -197,5 +198,32 @@ public class JSONValueTest {
         assertEquals(1, JSONValue.False.getLength());
         assertEquals(1, new JSONString("").getLength());
         assertEquals(1, new JSONNumber(222).getLength());
+    }
+
+    @Test
+    public void getSignatures() {
+        Set<Integer> signatures;
+        signatures = JSONValue.Null.getSignatures();
+        assertTrue(signatures.contains("null".hashCode()) && signatures.size()==1);
+        signatures = JSONValue.True.getSignatures();
+        assertTrue(signatures.contains("true".hashCode()) && signatures.size()==1);
+        signatures = JSONValue.False.getSignatures();
+        assertTrue(signatures.contains("false".hashCode()) && signatures.size()==1);
+
+        signatures = new JSONString("string").getSignatures();
+        assertTrue(signatures.contains("\"string\"".hashCode()) && signatures.size()==1);
+        signatures = new JSONString("").getSignatures();
+        assertTrue(signatures.contains("\"\"".hashCode()) && signatures.size()==1);
+        signatures = new JSONNumber(-0L).getSignatures();
+        assertTrue(signatures.contains("0".hashCode()) && signatures.size()==1);
+        signatures = new JSONNumber(Short.valueOf("33")).getSignatures();
+        assertTrue(signatures.contains("33".hashCode()) && signatures.size()==1);
+        signatures = new JSONNumber(37.0f).getSignatures();
+        assertTrue(signatures.contains("37.0".hashCode()) && signatures.size()==1);
+        signatures = new JSONNumber(-0.0002).getSignatures();
+        assertTrue(signatures.contains("-2.0E-4".hashCode()) && signatures.size()==1);
+        signatures = JSONNumber.parseNumber("-20.0000000000000000000000002").getSignatures();
+        assertTrue(signatures.contains("-20.0000000000000000000000002".hashCode()) && signatures.size()==1);
+
     }
 }
