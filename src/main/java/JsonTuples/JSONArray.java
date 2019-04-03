@@ -16,7 +16,7 @@ import static com.google.common.base.Preconditions.checkState;
  * http://www.json.org
  * An array is an ordered collection of values. An array begins with [ (left bracket) and ends with ] (right bracket). Values are separated by , (comma).
  */
-public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
+public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue> {
 
     public static boolean isElementOrderMatter = true;
 
@@ -50,7 +50,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
 
     @Override
     public String toJSONString(String indent) {
-        checkState(StringUtils.isBlank(indent));
+//        checkState(StringUtils.isBlank(indent));
 
         String noIndent = toString();
         if(values.length == 0 || "".equals(indent)){
@@ -118,7 +118,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
 
     public JSONObject asIndexedObject(Comparator<String> comparator){
         NamedValue[] namedValues = IntStream.range(0, getLength()).boxed()
-            .map(i -> new NamedValue(i.toString(), get(i)))
+            .map(i -> new NamedValue(i.toString(), getValue(i)))
             .toArray(size -> new NamedValue[size]);
         return new JSONObject(comparator, namedValues);
     }
@@ -126,7 +126,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue {
     protected Map<String, List<Integer>> getValueIndexes(Comparator<String> comparator){
         Map<String, List<Integer>> indexes = new HashMap<>();
         for (int i = 0; i < getLength(); i++) {
-            IJSONValue value = get(i).getSorted(comparator);
+            IJSONValue value = (IJSONValue) getValue(i).getSorted(comparator);
             String valueString = value.toString();
             if(indexes.containsKey(valueString)){
                 indexes.get(valueString).add(i);

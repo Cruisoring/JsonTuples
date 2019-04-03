@@ -59,8 +59,10 @@ public class ParserTest {
         Parser parser = new Parser(jsonText);
 
         JSONObject value = Logger.M(()-> (JSONObject) parser.parse(), "parse()");
+        assertTrue(value != null);
         JSONObject natualValue = Logger.M(()-> value.getSorted(Comparator.naturalOrder()), "getSorted()");
         String sortedString = Logger.M(() -> natualValue.toString(), "toString()");
+//        Logger.V(sortedString);
     }
 
     @Test

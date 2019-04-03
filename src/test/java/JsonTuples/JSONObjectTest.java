@@ -204,10 +204,10 @@ public class JSONObjectTest {
                 "  \"class\": \"7A\"\n" +
                 "}";
         JSONObject object1 = JSONObject.parse(text);
-        Set<Integer> signature1 = object1.getSignatures();
+        Set<Integer> signature1 = new HashSet<>(object1.getSignatures());
 
         JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
-        Set<Integer> signature2 = object2.getSignatures();
+        Set<Integer> signature2 = new HashSet<>(object2.getSignatures());
 
         Set<Integer> common = new HashSet(Arrays.asList("\"address\": null".hashCode(), "\"name\": \"test name\"".hashCode(),
                 "\"id\": 123456".hashCode(), "\"isActive\": true".hashCode(), "\"class\": \"7A\"".hashCode()));

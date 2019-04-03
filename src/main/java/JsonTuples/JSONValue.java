@@ -123,7 +123,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
+    public IJSONValue deltaWith(IJSONValue other, Comparator comparator) {
         checkNotNull(other);
 
         if (equals(other)) {

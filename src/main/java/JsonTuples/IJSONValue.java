@@ -2,40 +2,32 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.WithValues;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.Collection;
+import java.util.Comparator;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public interface IJSONValue extends IJSONable, WithValues {
+public interface IJSONValue<T extends Object> extends IJSONable, ISortable, WithValues<T> {
 
     Object getObject();
 
-    int getLength();
-
     IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator);
 
-    default Set<Integer> getSignatures(){
-        List<Integer> elementHashCodes = IntStream.range(0, getLength())
-                .mapToObj(i -> getValueAt(i).hashCode())
-                .collect(Collectors.toList());
-        elementHashCodes.add(hashCode());
-        return new HashSet<Integer>(elementHashCodes);
-    }
-
-    default IJSONValue deltaWith(IJSONValue other){
-        return deltaWith(other, null);
-    }
-
-    default IJSONValue getSorted(Comparator<String> comparator){
+    @Override
+    default IJSONValue<T> getSorted(Comparator<String> comparator){
         return this;
     }
 
-    default IJSONValue getSorted(Collection<String> orderedNames){
+    @Override
+    default IJSONValue<T> getSorted(Collection<String> orderedNames){
         checkNotNull(orderedNames);
         Comparator<String> comparator = new JSONObject.OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
+    }
+
+
+    default IJSONValue deltaWith(IJSONValue other){
+        return deltaWith(other, null);
     }
 
     default boolean isEmpty(){

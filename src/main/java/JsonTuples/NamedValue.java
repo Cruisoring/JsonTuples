@@ -2,13 +2,14 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple2;
 
+import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Name value pair contained by JSONObject. Each name is followed by : (colon) and the name/value pairs are separated by , (comma)
  */
-public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable {
+public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONable, ISortable {
     public static final Character Colon = ':';
     public static final Character Comma = ',';
 
@@ -36,30 +37,35 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
         return new NamedValue(name, value);
     }
 
-
-    protected NamedValue(String name, IJSONValue value) {
+    protected NamedValue(JSONString name, IJSONValue value) {
         super(name, value);
     }
 
-    public String getName() {
-        return getFirst();
+    protected NamedValue(String nameString, IJSONValue value) {
+        super(new JSONString(nameString), value);
     }
 
-    public IJSONValue getValue() {
-        return getSecond();
+    public String getName() {
+        return getFirst().getFirst();
     }
+
+    public Object getValue() { return getSecond().getObject(); }
 
     @Override
     public String toJSONString(String indent) {
-        IJSONValue value = getSecond();
-        return String.format("\"%s\": %s",
-                getFirst(),
-                value == null ? "null" : value.toJSONString(indent + SPACE));
+        if("".equals(indent)){
+            return toString();
+        }
+
+        return indent+getFirst() + ": " + getSecond().toJSONString(indent);
     }
 
     @Override
     public String toString(){
-        return toJSONString("");
+        if(_toString == null){
+            _toString = getFirst().toString() + ": " + getSecond().toString();
+        }
+        return _toString;
     }
 
     @Override
@@ -68,6 +74,16 @@ public class NamedValue extends Tuple2<String, IJSONValue> implements IJSONable 
             _hashCode = toString().hashCode();
         }
         return _hashCode;
+    }
+
+    @Override
+    public NamedValue getSorted(Comparator<String> comparator) {
+        IJSONValue sortedValue = getSecond().getSorted(comparator);
+        if(sortedValue == getSecond()){
+            return this;
+        }else{
+            return new NamedValue(getFirst(), sortedValue);
+        }
     }
 }
 

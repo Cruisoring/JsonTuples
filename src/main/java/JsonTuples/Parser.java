@@ -160,14 +160,14 @@ public final class Parser {
                     case COLON:
                         valueElement = asJSONValue(Range.open(lastPosition, position));
                         nameElement = lastName;
-                        namedValueElement = new NamedValue(nameElement.getFirst(), valueElement);
+                        namedValueElement = new NamedValue(nameElement, valueElement);
                         lastName = null;
                         children.add(namedValueElement);
                         break;
                     case QUOTE:
                         valueElement = lastStringValue;
                         nameElement = lastName;
-                        namedValueElement = new NamedValue(nameElement.getFirst(), valueElement);
+                        namedValueElement = new NamedValue(nameElement, valueElement);
                         lastName = null;
                         children.add(namedValueElement);
                         break;
@@ -188,7 +188,7 @@ public final class Parser {
                 if (isObject) {
                     final JSONString name = state.getThird();
                     checkNotNull(name);
-                    children.add(new NamedValue(name.getFirst(), closedValue));
+                    children.add(new NamedValue(name, closedValue));
                 } else {
                     checkState(state.getThird() == null);
                     children.add(closedValue);
@@ -226,7 +226,7 @@ public final class Parser {
                 if (isObject) {
                     final JSONString name = state.getThird();
                     checkNotNull(name);
-                    children.add(new NamedValue(name.getFirst(), closedValue));
+                    children.add(new NamedValue(name, closedValue));
                 } else {
                     checkState(state.getThird() == null);
                     children.add(closedValue);
@@ -242,12 +242,12 @@ public final class Parser {
                         break;
                     case COLON:
                         valueElement = asJSONValue(Range.open(lastPosition, position));
-                        namedValueElement = new NamedValue(lastName.getFirst(), valueElement);
+                        namedValueElement = new NamedValue(lastName, valueElement);
                         children.add(namedValueElement);
                         break;
                     case QUOTE:
                         if (isObject) {
-                            namedValueElement = new NamedValue(lastName.getFirst(), lastStringValue);
+                            namedValueElement = new NamedValue(lastName, lastStringValue);
                             children.add(namedValueElement);
                         }
                     default:
