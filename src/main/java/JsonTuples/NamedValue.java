@@ -10,8 +10,6 @@ import java.util.regex.Pattern;
  * Name value pair contained by JSONObject. Each name is followed by : (colon) and the name/value pairs are separated by , (comma)
  */
 public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONable, ISortable {
-    public static final Character Colon = ':';
-    public static final Character Comma = ',';
 
     //TODO: check if name can contain escaped quotes?
     public static final Pattern SIMPLIFIED_NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":(.*)", Pattern.MULTILINE);

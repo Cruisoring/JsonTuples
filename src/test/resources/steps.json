@@ -1,0 +1,153 @@
+[{
+  "name": "Given I get some test data from  \"ABC Indroduction.xlsx\"",
+  "time": {
+    "start": 1552458120574,
+    "stop": 1552458120752,
+    "duration": 178
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "When I execute \"Initialize.sql\" to initialize the DB status with \"READY\" status",
+  "time": {
+    "start": 1552458120754,
+    "stop": 1552458136616,
+    "duration": 15862
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "And I inject data from Excel file",
+  "time": {
+    "start": 1552458136617,
+    "stop": 1552458141826,
+    "duration": 5209
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "And I execute \"Update.sql\" to update relevant settings",
+  "time": {
+    "start": 1552458141827,
+    "stop": 1552458154380,
+    "duration": 12553
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "Then I execute \"populate.sql\" to update relevant story",
+  "time": {
+    "start": 1552458154381,
+    "stop": 1552458155491,
+    "duration": 1110
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "When I login to the test service",
+  "time": {
+    "start": 1552458155492,
+    "stop": 1552458156241,
+    "duration": 749
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "And I navigate to \"Contact\" page",
+  "time": {
+    "start": 1552458156242,
+    "stop": 1552458157698,
+    "duration": 1456
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "Then I run \"Finalize\" step to make it completed",
+  "time": {
+    "start": 1552458157699,
+    "stop": 1552458350030,
+    "duration": 192331
+  },
+  "status": "passed",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}, {
+  "name": "Then I validate the results of all stores",
+  "time": {
+    "start": 1552458350031,
+    "stop": 1552458357593,
+    "duration": 7562
+  },
+  "status": "failed",
+  "statusMessage": "java.lang.AssertionError: expected:<0> but was:<48>\n\tat org.junit.Assert.fail(Assert.java:88)\n\tat org.junit.Assert.failNotEquals(Assert.java:834)\n\tat org.junit.Assert.assertEquals(Assert.java:645)\n\tat org.junit.Assert.assertEquals(Assert.java:631)\n\tat com.home.test.Steps.i_validate_stories(StorySteps.java:368)\n\tat ✽.Then I validate the results of all stores(src/test/features:22)\n",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": true,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": true
+}, {
+  "name": "And I logout from the server",
+  "time": {
+    "start": 1552458357594,
+    "stop": 1552458357595,
+    "duration": 1
+  },
+  "status": "skipped",
+  "steps": [],
+  "attachments": [],
+  "parameters": [],
+  "stepsCount": 0,
+  "hasContent": false,
+  "attachmentsCount": 0,
+  "shouldDisplayMessage": false
+}
+]

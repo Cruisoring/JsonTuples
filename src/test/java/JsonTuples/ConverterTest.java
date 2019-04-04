@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import Utilities.ResourceHelper;
 import io.github.cruisoring.logger.Logger;
 import org.junit.Test;
 
@@ -92,6 +93,11 @@ public class ConverterTest {
         Object object = array2.getObject();
         assertTrue(Objects.deepEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
                 new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object));
+
+        JSONArray steps = JSONArray.parseArray(ResourceHelper.getTextFromResourceFile("steps.json"));
+        Object stepArray = steps.getSorted(Comparator.naturalOrder()).getObject();
+        JSONArray converted = Converter.asJSONArrayFromArray(stepArray);
+        Logger.I(converted.toString());
     }
 
     @Test

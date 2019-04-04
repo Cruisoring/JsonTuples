@@ -2,7 +2,7 @@ package JsonTuples;
 
 import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.Tuple;
-import org.apache.commons.lang3.StringUtils;
+import io.github.cruisoring.tuple.Tuple3;
 import org.apache.commons.text.TextStringBuilder;
 
 import java.util.*;
@@ -138,7 +138,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     }
 
     @Override
-    public IJSONValue getSorted(Comparator<String> comparator) {
+    public JSONArray getSorted(Comparator<String> comparator) {
         if(nameComparator == comparator){
             return this;
         }
@@ -209,9 +209,36 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                         i -> values[i].getSignatures()
                 ));
 
+        List<Tuple3<Integer, Integer, Integer>> similarities = new ArrayList<>();
+        Comparator<Tuple3<Integer, Integer, Integer>> tuple3Comparator = Comparator.comparing(tuple -> tuple.getFirst());
+        Comparator<Tuple3<Integer, Integer, Integer>> _comparator = tuple3Comparator.reversed();
+        for (Integer thisIndex : thisValueTokens.keySet()) {
+            for (Integer otherIndex : otherValueTokens.keySet()) {
+                Set<Integer> set = new HashSet(thisValueTokens.get(thisIndex));
+                set.retainAll(otherValueTokens.get(otherIndex));
+                Integer similarity = set.size();
+                similarities.add(Tuple.create(similarity, thisIndex, otherIndex));
+            }
+        }
+        Collections.sort(similarities, _comparator);
 
+        List<IJSONValue> deltas = new ArrayList<>();
+        for (Tuple3<Integer, Integer, Integer> tuple3 : similarities) {
+            Integer index1 = tuple3.getSecond();
+            Integer index2 = tuple3.getThird();
+            if(!thisValueTokens.containsKey(index1) || !otherValueTokens.containsKey(index2)){
+                continue;
+            }
+            thisValueTokens.remove(index1);
+            otherValueTokens.remove(index2);
 
-        return null;
+            IJSONValue delta = this.getValue(index1).deltaWith(otherArray.getValue(index2), comparator);
+            if(!delta.isEmpty()){
+                deltas.add(delta);
+            }
+        }
+
+        return deltas.isEmpty() ? EMPTY : new JSONArray(comparator, deltas.toArray(new IJSONValue[deltas.size()]));
     }
 
 }

@@ -155,7 +155,7 @@ public final class Parser {
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
-                checkState(isObject);
+//                checkState(isObject);
                 switch (lastControl) {
                     case COLON:
                         valueElement = asJSONValue(Range.open(lastPosition, position));
@@ -187,16 +187,16 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-                    checkNotNull(name);
+//                    checkNotNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkState(state.getThird() == null);
+//                    checkState(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
 
             case RIGHT_BRACKET: //Close of current JSONArray
-                checkState(!isObject);
+//                checkState(!isObject);
                 switch (lastControl) {
                     case COMMA:
                         valueElement = asJSONValue(Range.open(lastPosition, position));
@@ -225,10 +225,10 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-                    checkNotNull(name);
+//                    checkNotNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkState(state.getThird() == null);
+//                    checkState(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
@@ -261,8 +261,7 @@ public final class Parser {
             case QUOTE:
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
-                    String string = jsonContext.subSequence(currentStringStart + 1, currentStringEnd).toString();
-                    lastStringValue = new JSONString(string);
+                    lastStringValue = new JSONString(JSONString._unescapeJson(jsonContext, currentStringStart+1, currentStringEnd));
                     if (!isObject) {
                         children.add(lastStringValue);
                     }

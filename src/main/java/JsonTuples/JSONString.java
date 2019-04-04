@@ -12,25 +12,51 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * A character is represented as a single character string. A string is very much like a C or Java string.
  */
 public class JSONString extends JSONValue<String> {
+    //A string is a sequence of Unicode code points wrapped with quotation marks (U+0022). All code points may
+    //be placed within the quotation marks except for the code points that must be escaped: quotation mark
+    //(U+0022), reverse solidus (U+005C), and the control characters U+0000 to U+001F. There are two-character
+    //escape sequence representations of some characters.
+
+    //The forbidUnescapedControls would screen out controls that have not been escaped '\r' or '\n'
+    public static boolean forbidUnescapedControls = false;
+
     //Regex to match potential String value wrapped by Quotes
     public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
 
     /**
      * Parse given string enclosed by quotes(") as a JSONString instance by un-escape special characters.
-     * @param valueString   String to represent a JSON String value.
+     * @param wrappedValueString   String to represent a JSON String value.
      * @return              An JSONString instance that keeps the un-escaped string as a Tuple.
      */
-    public static JSONString parseString(String valueString) {
-        valueString = valueString.trim();
-        int length = valueString.length();
+    public static JSONString parseString(String wrappedValueString) {
 
-        if(QUOTE != valueString.charAt(0) || QUOTE != valueString.charAt(valueString.length()-1)) {
-            throw new IllegalArgumentException("The given valueString is not enclosed by quotes:" + valueString);
+        wrappedValueString = forbidUnescapedControls ? JSONString.trimJSONString(wrappedValueString) : wrappedValueString.trim();
+        int length = wrappedValueString.length();
+
+        if(QUOTE != wrappedValueString.charAt(0) || QUOTE != wrappedValueString.charAt(wrappedValueString.length()-1)) {
+            throw new IllegalArgumentException("The given valueString is not enclosed by quotes:" + wrappedValueString);
         }
 
-        String jsonString = valueString.substring(1, length-1);
-        String unescaped = _unescapeJson(jsonString);
+        String unescaped = StringEscapeUtils.unescapeJson(wrappedValueString.substring(1, length-1));
         return new JSONString(unescaped);
+    }
+
+    static Pattern illegalCharsPattern = Pattern.compile("\\r|\\n|\\t|[\b]", Pattern.MULTILINE);
+    //
+    protected static JSONString _parseString(String valueStringOnly){
+        String unescaped =StringEscapeUtils.unescapeJson(forbidUnescapedControls ?
+                illegalCharsPattern.matcher(valueStringOnly).replaceAll("") : valueStringOnly);
+        return new JSONString(unescaped);
+    }
+
+    /**
+     * Trim the leading and ending spaces and replace '\b', '\n', '\r', and '\t' with "".
+     * @param rawString JSON String including leading and ending Quotes to be trimmed.
+     * @return          Trimmed String also get illegal chars removed.
+     */
+    public static String trimJSONString(String rawString){
+        String trimmed = illegalCharsPattern.matcher(rawString.trim()).replaceAll( ""); //get r of all illegal chars
+        return trimmed;
     }
 
     /**
@@ -51,7 +77,7 @@ public class JSONString extends JSONValue<String> {
         return _unescapeJson(jsonContext, range.getStartInclusive(), range.getEndExclusive());
     }
 
-    protected static String _unescapeJson(String jsonContext, int start, int end) {
+    protected static String _unescapeJson(CharSequence jsonContext, int start, int end) {
         StringBuilder sb = new StringBuilder();
 
         int copyFrom = start;
@@ -65,11 +91,11 @@ public class JSONString extends JSONValue<String> {
 
             copyTo = i;
             if(copyTo > copyFrom) {
-                sb.append(jsonContext.substring(copyFrom, copyTo));
+                sb.append(jsonContext.subSequence(copyFrom, copyTo));
             }
 
             //Assume the valid BACK_SLASH is not the last char of the range
-            char next = jsonContext.charAt(i++);
+            char next = jsonContext.charAt(++i);
             switch (next){
                 case '"':
                 case '\\':
@@ -109,7 +135,8 @@ public class JSONString extends JSONValue<String> {
                             case 'd': charCode+=13; break;
                             case 'e': charCode+=14; break;
                             case 'f': charCode+=15; break;
-                            default: throw new IllegalArgumentException("Illegal escaped unicode char: " + jsonContext.substring(next-1, next+4));
+                            default:
+                                throw new IllegalArgumentException("Illegal escaped unicode char: " + jsonContext.subSequence(next-1, next+4));
                         }
                     }
                     sb.append(Character.toChars(charCode));
@@ -119,13 +146,13 @@ public class JSONString extends JSONValue<String> {
             copyFrom = i+1;
         }
         if(copyFrom < end){
-            sb.append(jsonContext.substring(copyFrom, end));
+            sb.append(jsonContext.subSequence(copyFrom, end));
         }
         return sb.toString();
     }
 
-    protected JSONString(String s) {
-        super(s);
+    protected JSONString(String value) {
+        super(value);
     }
 
     @Override
