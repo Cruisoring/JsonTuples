@@ -165,6 +165,18 @@ public class Range extends Tuple2<Integer, Integer> {
     }
 
     /**
+     * Get subSequence of the concerned CharSequence with its Range.
+     * @param charSequence  CharSequence to get the subCharSequence from.
+     * @param range     Range of the subSequence within the given CharSequence.
+     * @return          subSequence specified by the given Range.
+     */
+    public static CharSequence subSequence(CharSequence charSequence, Range range) {
+        checkNotNull(charSequence, range);
+
+        return charSequence.subSequence(range.getStartInclusive(), range.getEndExclusive());
+    }
+
+    /**
      * Extract content of a JSON String object.
      * @param jsonText      All JSON Text to be parsed.
      * @param stringRange   Range of the JSON String object including leading and ending quotation marks '"".

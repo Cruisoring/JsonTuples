@@ -18,7 +18,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue> {
 
-    public static boolean isElementOrderMatter = true;
+    public static boolean isElementOrderMatter = false;
 
     public static final JSONArray EMPTY = new JSONArray();
 
@@ -151,8 +151,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     @Override
     public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
-        checkState(nameComparator == comparator);
-
         if(other == null){
             return new JSONArray(this, JSONObject.MISSING);
         }else if(other == this){

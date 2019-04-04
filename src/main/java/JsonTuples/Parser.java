@@ -21,10 +21,42 @@ public final class Parser {
      * @param jsonText JSON text to be parsed.
      * @return An IJSONValue that is either JSONObject or JSONArray.
      */
-    public static IJSONValue parse(String jsonText) {
+    public static IJSONValue parse(CharSequence jsonText) {
         Parser parser = new Parser(jsonText);
 
         return parser.parse();
+    }
+
+    public static IJSONValue parse(CharSequence jsonText, Range range) {
+        Parser parser = new Parser(jsonText, range, null);
+
+        return parser.parse();
+    }
+
+    public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonContext, Range range){
+        final String trimmed = checkNotNull(Range.subSequence(jsonContext, range).toString()).trim();
+        switch (trimmed) {
+            case JSON_TRUE:
+                return JSONValue.True;
+            case JSON_FALSE:
+                return JSONValue.False;
+            case JSON_NULL:
+                return JSONValue.Null;
+            default:
+                //Switch based on the first character, leave the corresponding methods to validate and parse
+                switch (trimmed.charAt(0)) {
+                    case QUOTE:
+                        return JSONString.parseString(trimmed);
+                    case LEFT_BRACE:
+                        return JSONObject.parse(trimmed);
+                    case LEFT_BRACKET:
+                        return JSONArray.parseArray(trimmed);
+                    default:
+                        //The valueString can only stand for a number or get Exception thrown there
+                        return JSONNumber.parseNumber(trimmed);
+                }
+        }
+
     }
 
     //region static variables
@@ -51,53 +83,10 @@ public final class Parser {
     final static Character MAX_CONTROL = Collections.max(CONTROLS);
     //endregion
 
-    //region Static methods
-
-    protected static JSONObject createObject(IJSONable[] children) {
-        NamedValue[] namedValues = Arrays.stream(children)
-                .map(c -> (NamedValue) c).toArray(size -> new NamedValue[size]);
-        JSONObject object = new JSONObject(namedValues);
-        return object;
-    }
-
-    protected static JSONArray createArray(IJSONable[] children) {
-        IJSONValue[] values = Arrays.stream(children)
-                .map(c -> (IJSONValue) c).toArray(size -> new IJSONValue[size]);
-
-        JSONArray array = new JSONArray(values);
-        return array;
-    }
-
-    protected static IJSONValue asJSONValue(String valueString) {
-        final String trimmed = checkNotNull(valueString).trim();
-        switch (trimmed) {
-            case JSON_TRUE:
-                return JSONValue.True;
-            case JSON_FALSE:
-                return JSONValue.False;
-            case JSON_NULL:
-                return JSONValue.Null;
-            default:
-                //Switch based on the first character, leave the corresponding methods to validate and parse
-                switch (trimmed.charAt(0)) {
-                    case QUOTE:
-                        return JSONString.parseString(trimmed);
-                    case LEFT_BRACE:
-                        return JSONObject.parse(trimmed);
-                    case LEFT_BRACKET:
-                        return JSONArray.parseArray(trimmed);
-                    default:
-                        //The valueString can only stand for a number or get Exception thrown there
-                        return JSONNumber.parseNumber(trimmed);
-                }
-        }
-
-    }
-    //endregion
-
     //region instance variables
     public final CharSequence jsonContext;
     public final int length;
+    public final Comparator<String> nameComparator;
 
     char lastControl = START_JSON_SIGN;
     int lastPosition = -1;
@@ -110,11 +99,18 @@ public final class Parser {
     Stack<Tuple4<Boolean, IJSONable[], JSONString, Boolean>> contextStack = new Stack<>();
     //endregion
 
-    public Parser(String jsonText) {
-        checkState(StringUtils.isNoneBlank(jsonText));
+    public Parser(CharSequence jsonText, Range range, Comparator<String> comparator){
+        this(Range.subSequence(jsonText, range), comparator);
+    }
 
+    public Parser(CharSequence jsonText, Comparator<String> comparator) {
+        this.nameComparator = comparator;
         this.jsonContext = jsonText;
         length = jsonContext.length();
+    }
+
+    public Parser(CharSequence jsonText){
+        this(jsonText, null);
     }
 
     /**
@@ -130,10 +126,39 @@ public final class Parser {
         return jsonContext.subSequence(range.getStartInclusive(), end > length ? length : end).toString();
     }
 
-    protected IJSONValue asJSONValue(Range range) {
-        String valueString = subString(range).trim();
-        return asJSONValue(valueString);
+
+    protected JSONObject createObject(IJSONable[] children) {
+        NamedValue[] namedValues = Arrays.stream(children)
+                .map(c -> (NamedValue) c).toArray(size -> new NamedValue[size]);
+        JSONObject object = new JSONObject(nameComparator, namedValues);
+        return object;
     }
+
+    protected JSONArray createArray(IJSONable[] children) {
+        IJSONValue[] values = Arrays.stream(children)
+                .map(c -> (IJSONValue) c).toArray(size -> new IJSONValue[size]);
+
+        JSONArray array = new JSONArray(nameComparator, values);
+        return array;
+    }
+
+    protected IJSONValue asSimpleValue(Range range) {
+        final String trimmed = subString(range).trim();
+        switch (trimmed) {
+            case JSON_TRUE:
+                return JSONValue.True;
+            case JSON_FALSE:
+                return JSONValue.False;
+            case JSON_NULL:
+                return JSONValue.Null;
+            default:
+                //The valueString can only stand for a number or get Exception thrown there
+                return JSONNumber.parseNumber(trimmed);
+        }
+
+    }
+    //endregion
+
 
     Tuple2<Boolean, IJSONValue> processControl(Boolean isObject, List<IJSONable> children, char control, int position) {
 
@@ -155,10 +180,10 @@ public final class Parser {
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
-//                checkState(isObject);
+                checkState(isObject);
                 switch (lastControl) {
                     case COLON:
-                        valueElement = asJSONValue(Range.open(lastPosition, position));
+                        valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
                         nameElement = lastName;
                         namedValueElement = new NamedValue(nameElement, valueElement);
                         lastName = null;
@@ -187,25 +212,25 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-//                    checkNotNull(name);
+                    checkNotNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-//                    checkState(state.getThird() == null);
+                    checkState(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
 
             case RIGHT_BRACKET: //Close of current JSONArray
-//                checkState(!isObject);
+                checkState(!isObject);
                 switch (lastControl) {
                     case COMMA:
-                        valueElement = asJSONValue(Range.open(lastPosition, position));
+                        valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         children.add(valueElement);
                         break;
-                    case LEFT_BRACKET:
+                    case LEFT_BRACKET:  //Empty Array or with only one simple value
                         String valueString = subString(Range.open(lastPosition, position));
                         if (!StringUtils.isBlank(valueString)) {
-                            valueElement = asJSONValue(valueString);
+                            valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
                             children.add(valueElement);
                         }
                         break;
@@ -225,10 +250,10 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-//                    checkNotNull(name);
+                    checkNotNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-//                    checkState(state.getThird() == null);
+                    checkState(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
@@ -237,11 +262,11 @@ public final class Parser {
                 switch (lastControl) {
                     case LEFT_BRACKET:
                     case COMMA:
-                        valueElement = asJSONValue(Range.open(lastPosition, position));
+                        valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         children.add(valueElement);
                         break;
                     case COLON:
-                        valueElement = asJSONValue(Range.open(lastPosition, position));
+                        valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         namedValueElement = new NamedValue(lastName, valueElement);
                         children.add(namedValueElement);
                         break;

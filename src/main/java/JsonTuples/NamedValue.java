@@ -31,7 +31,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONa
         }
 
         String name = matcher.group(1);
-        IJSONValue value = Parser.asJSONValue(matcher.group(2));
+        IJSONValue value = Parser.parse(matcher.group(2));
         return new NamedValue(name, value);
     }
 

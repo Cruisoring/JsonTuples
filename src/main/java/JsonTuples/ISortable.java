@@ -12,7 +12,7 @@ public interface ISortable {
 
     default ISortable getSorted(Collection<String> orderedNames){
         checkNotNull(orderedNames);
-        Comparator<String> comparator = new JSONObject.OrdinalComparator<>(orderedNames);
+        Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
     }
 

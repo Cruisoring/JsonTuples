@@ -28,6 +28,8 @@ public class JSONArrayTest {
 
         JSONArray sorted = array.getSorted(Comparator.naturalOrder());
         Logger.D(sorted.toString());
+
+        assertEquals(JSONArray.EMPTY, array.deltaWith(sorted));
     }
 
     @Test

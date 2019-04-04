@@ -26,57 +26,12 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
 
-
-    //region OrdinalComparator Definition
-
-    /**
-     * Comparator with given list of values, when new key is evaluated, it would be assigned a larger integer value.
-     * @param <T>   Type of the keys to be compared.
-     */
-    public static class OrdinalComparator<T> implements Comparator<T> {
-
-        Map<T, Integer> orders = new HashMap<>();
-        List<T> orderedKeys = new ArrayList<>();
-
-        Integer putIfAbsent(T key, Integer order){
-            if(!orders.containsKey(key)){
-                orders.put(key, order);
-                orderedKeys.add(key);
-                return order;
-            }else{
-                return orders.get(key);
-            }
-        }
-
-        public OrdinalComparator(Collection<T> options){
-            for (T option : checkNotNull(options)) {
-                putIfAbsent(option, orders.size() + 1);
-            }
-        }
-
-        @Override
-        public int compare(T o1, T o2) {
-            Integer order1 = putIfAbsent(o1, orders.size() + 1);
-            Integer order2 = putIfAbsent(o2, orders.size() + 1);
-            return order1.compareTo(order2);
-        }
-
-        @Override
-        public String toString() {
-            String string = orderedKeys.stream()
-                    .map(k -> k.toString())
-                    .collect(Collectors.joining(","));
-            return string;
-        }
-    }
-    //endregion
-
     //region Parse given text as a JSONObject
-    public static IJSONValue parse(String jsonContext, Range range) {
+    public static IJSONValue parse(CharSequence jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
-        String valueString = jsonContext.substring(range.getStartInclusive(), range.getEndExclusive()).trim();
+        String valueString = jsonContext.subSequence(range.getStartInclusive(), range.getEndExclusive()).toString().trim();
         return parse(valueString);
     }
 
@@ -305,6 +260,8 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         }else if(!(other instanceof JSONObject)){
             return new JSONArray(this, other);
         }
+
+
 
         JSONObject otherObject = (JSONObject)other;
         if(otherObject.hashCode()==this.hashCode() && other.toString() == toString()){

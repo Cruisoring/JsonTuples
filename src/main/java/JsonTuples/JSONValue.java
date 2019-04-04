@@ -44,8 +44,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
-        String valueString = jsonContext.substring(range.getStartInclusive(), range.getEndExclusive()).trim();
-        return Parser.asJSONValue(valueString);
+        return Parser.parse(jsonContext, range);
     }
 
     protected JSONValue(T t) {

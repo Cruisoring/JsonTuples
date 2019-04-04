@@ -21,7 +21,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
     @Override
     default IJSONValue<T> getSorted(Collection<String> orderedNames){
         checkNotNull(orderedNames);
-        Comparator<String> comparator = new JSONObject.OrdinalComparator<>(orderedNames);
+        Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
     }
 
