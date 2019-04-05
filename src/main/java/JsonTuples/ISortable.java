@@ -15,6 +15,4 @@ public interface ISortable {
         Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
     }
-
-
 }

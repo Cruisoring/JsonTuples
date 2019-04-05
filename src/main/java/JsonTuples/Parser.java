@@ -34,7 +34,7 @@ public final class Parser {
     }
 
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonContext, Range range){
-        final String trimmed = checkNotNull(Range.subSequence(jsonContext, range).toString()).trim();
+        final String trimmed = checkNotNull(Range.subString(jsonContext, range)).trim();
         switch (trimmed) {
             case JSON_TRUE:
                 return JSONValue.True;
@@ -100,7 +100,7 @@ public final class Parser {
     //endregion
 
     public Parser(CharSequence jsonText, Range range, Comparator<String> comparator){
-        this(Range.subSequence(jsonText, range), comparator);
+        this(Range.subString(jsonText, range), comparator);
     }
 
     public Parser(CharSequence jsonText, Comparator<String> comparator) {
@@ -155,7 +155,6 @@ public final class Parser {
                 //The valueString can only stand for a number or get Exception thrown there
                 return JSONNumber.parseNumber(trimmed);
         }
-
     }
     //endregion
 

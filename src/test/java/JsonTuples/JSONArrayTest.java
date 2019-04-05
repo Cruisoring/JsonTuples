@@ -2,6 +2,7 @@ package JsonTuples;
 
 import Utilities.ResourceHelper;
 import io.github.cruisoring.logger.Logger;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Comparator;
@@ -24,12 +25,13 @@ public class JSONArrayTest {
     public void parseArray() {
         JSONArray array = JSONArray.parseArray(steps);
         assertEquals(10, array.getLength());
-        Logger.D(array.toString());
+//        Logger.V(array.toString());
 
         JSONArray sorted = array.getSorted(Comparator.naturalOrder());
-        Logger.D(sorted.toString());
+//        Logger.V(sorted.toString());
 
-        assertEquals(JSONArray.EMPTY, array.deltaWith(sorted));
+        IJSONValue delta = array.deltaWith(sorted);
+        assertEquals(JSONArray.EMPTY, delta);
     }
 
     @Test

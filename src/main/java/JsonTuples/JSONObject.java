@@ -261,8 +261,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             return new JSONArray(this, other);
         }
 
-
-
         JSONObject otherObject = (JSONObject)other;
         if(otherObject.hashCode()==this.hashCode() && other.toString() == toString()){
             return EMPTY;
@@ -301,6 +299,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return values.length == 0;
     }
 }

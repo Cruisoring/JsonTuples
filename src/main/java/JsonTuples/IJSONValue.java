@@ -14,9 +14,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
     IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator);
 
     @Override
-    default IJSONValue<T> getSorted(Comparator<String> comparator){
-        return this;
-    }
+    IJSONValue<T> getSorted(Comparator<String> comparator);
 
     @Override
     default IJSONValue<T> getSorted(Collection<String> orderedNames){

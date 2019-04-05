@@ -40,12 +40,23 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     public static final JSONValue Null = new JSONValue(null);
     //endregion
 
-    public static IJSONValue parse(String jsonContext, Range range) {
+    public static JSONValue parse(String jsonContext, Range range) {
         checkNotNull(jsonContext);
         checkNotNull(range);
 
-        return Parser.parse(jsonContext, range);
+        final String trimmed = Range.subString(jsonContext, range).trim();
+        switch (trimmed) {
+            case JSON_TRUE:
+                return JSONValue.True;
+            case JSON_FALSE:
+                return JSONValue.False;
+            case JSON_NULL:
+                return JSONValue.Null;
+            default:
+                return trimmed.charAt(0)==QUOTE ? JSONString.parseString(trimmed) : JSONNumber.parseNumber(trimmed);
+        }
     }
+
 
     protected JSONValue(T t) {
         super(t);
@@ -54,6 +65,11 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     @Override
     public Object getObject() {
         return getFirst();
+    }
+
+    @Override
+    public JSONValue getSorted(Comparator comparator) {
+        return this;
     }
 
     @Override

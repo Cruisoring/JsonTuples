@@ -157,39 +157,27 @@ public class Range extends Tuple2<Integer, Integer> {
      * @param range     Range of the subString within the jsonText.
      * @return          SubString specified by the given Range.
      */
-    public static String subString(String jsonText, Range range) {
+    public static String subString(CharSequence jsonText, Range range) {
         checkState(StringUtils.isNotBlank(jsonText));
         checkState(Range.isValidOfLength(range, jsonText.length()));
 
-        return jsonText.substring(range.getStartInclusive(), range.getEndExclusive());
+        return jsonText.subSequence(range.getStartInclusive(), range.getEndExclusive()).toString();
     }
 
-    /**
-     * Get subSequence of the concerned CharSequence with its Range.
-     * @param charSequence  CharSequence to get the subCharSequence from.
-     * @param range     Range of the subSequence within the given CharSequence.
-     * @return          subSequence specified by the given Range.
-     */
-    public static CharSequence subSequence(CharSequence charSequence, Range range) {
-        checkNotNull(charSequence, range);
-
-        return charSequence.subSequence(range.getStartInclusive(), range.getEndExclusive());
-    }
-
-    /**
-     * Extract content of a JSON String object.
-     * @param jsonText      All JSON Text to be parsed.
-     * @param stringRange   Range of the JSON String object including leading and ending quotation marks '"".
-     * @return              Unescaped content of the JSON String object returned as a String.
-     */
-    public static String getStringContent(String jsonText, Range stringRange) {
-        checkState(StringUtils.isNotBlank(jsonText));
-        checkNotNull(stringRange);
-        checkState('"'== jsonText.charAt(stringRange.getStartInclusive()) && '"'== jsonText.charAt(stringRange.getEndInclusive()));
-
-        String enclosedText = jsonText.substring(stringRange.getStartInclusive()+1, stringRange.getEndInclusive());
-        return StringEscapeUtils.unescapeJson(enclosedText);
-    }
+//    /**
+//     * Extract content of a JSON String object.
+//     * @param jsonText      All JSON Text to be parsed.
+//     * @param stringRange   Range of the JSON String object including leading and ending quotation marks '"".
+//     * @return              Unescaped content of the JSON String object returned as a String.
+//     */
+//    public static String getString(String jsonText, Range stringRange) {
+//        checkState(StringUtils.isNotBlank(jsonText));
+//        checkNotNull(stringRange);
+//        checkState('"'== jsonText.charAt(stringRange.getStartInclusive()) && '"'== jsonText.charAt(stringRange.getEndInclusive()));
+//
+//        String enclosedText = jsonText.substring(stringRange.getStartInclusive()+1, stringRange.getEndInclusive());
+//        return StringEscapeUtils.unescapeJson(enclosedText);
+//    }
 
     /**
      * Converting the indexes of wrapping characters in pairs as unmodifiable Range list.
