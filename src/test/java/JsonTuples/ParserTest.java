@@ -1,7 +1,9 @@
 package JsonTuples;
 
 import Utilities.ResourceHelper;
+import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.logger.Measurement;
 import org.junit.Test;
 
 import java.util.Comparator;
@@ -20,9 +22,9 @@ public class ParserTest {
                 .replaceAll("\r\n", "\n");
         Parser parser = new Parser(jsonText);
 
-        IJSONValue value = Logger.M(() ->(IJSONValue) parser.parse());
+        IJSONValue value = Logger.M(Measurement.start("parse()"), parser.parse(), LogLevel.info);
         assertTrue(value instanceof JSONObject);
-        String actual = Logger.M(() ->value.toString());
+        String actual = Logger.M(Measurement.start("value.toString()"), value.toString(), LogLevel.info);
         Logger.D(actual);
 
         assertEquals(expectedParsedJson, actual);
@@ -58,10 +60,10 @@ public class ParserTest {
         String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
         Parser parser = new Parser(jsonText);
 
-        JSONObject value = Logger.M(()-> (JSONObject) parser.parse(), "parse()");
+        JSONObject value = Logger.M(Measurement.start("parse()"), ()-> (JSONObject) parser.parse(), LogLevel.info);
         assertTrue(value != null);
-        JSONObject natualValue = Logger.M(()-> value.getSorted(Comparator.naturalOrder()), "getSorted()");
-        String sortedString = Logger.M(() -> natualValue.toString(), "toString()");
+        JSONObject natualValue = Logger.M(Measurement.start("getSorted()"), value.getSorted(Comparator.naturalOrder()), LogLevel.debug);
+        String sortedString = Logger.M(Measurement.start("toString()"), () -> natualValue.toString(), LogLevel.debug);
 //        Logger.V(sortedString);
     }
 
