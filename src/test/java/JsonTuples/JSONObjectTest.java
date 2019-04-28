@@ -6,7 +6,7 @@ import org.junit.Test;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static io.github.cruisoring.Asserts.*;
 
 public class JSONObjectTest {
 
@@ -186,7 +186,7 @@ public class JSONObjectTest {
         String string1 = object1.toString();
         assertEquals(hashCode, object1.hashCode());
         assertEquals(hashCode, string1.hashCode());
-        assertNotEquals(hashCode, superHashCode);
+        assertTrue(hashCode != superHashCode);
     }
 
     @Test

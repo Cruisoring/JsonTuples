@@ -4,7 +4,7 @@ import io.github.cruisoring.logger.Logger;
 import org.apache.commons.text.StringEscapeUtils;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static io.github.cruisoring.Asserts.*;
 
 public class JSONStringTest {
 

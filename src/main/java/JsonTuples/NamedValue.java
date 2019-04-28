@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 /**
  * Name value pair contained by JSONObject. Each name is followed by : (colon) and the name/value pairs are separated by , (comma)
+ * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONable, ISortable {
 
@@ -46,20 +47,22 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONa
         return getFirst().getFirst();
     }
 
-    public Object getValue() { return getSecond().getObject(); }
-
-    @Override
-    public String toJSONString(String indent) {
-        if("".equals(indent)){
-            return toString();
-        }
-
-        return indent+getFirst() + ": " + getSecond().toJSONString(indent);
+    public Object getValue() {
+        return getSecond().getObject();
     }
 
     @Override
-    public String toString(){
-        if(_toString == null){
+    public String toJSONString(String indent) {
+        if ("".equals(indent)) {
+            return toString();
+        }
+
+        return indent + getFirst() + ": " + getSecond().toJSONString(indent);
+    }
+
+    @Override
+    public String toString() {
+        if (_toString == null) {
             _toString = getFirst().toString() + ": " + getSecond().toString();
         }
         return _toString;
@@ -67,7 +70,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONa
 
     @Override
     public int hashCode() {
-        if(_hashCode == null){
+        if (_hashCode == null) {
             _hashCode = toString().hashCode();
         }
         return _hashCode;
@@ -76,9 +79,9 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue> implements IJSONa
     @Override
     public NamedValue getSorted(Comparator<String> comparator) {
         IJSONValue sortedValue = getSecond().getSorted(comparator);
-        if(sortedValue == getSecond()){
+        if (sortedValue == getSecond()) {
             return this;
-        }else{
+        } else {
             return new NamedValue(getFirst(), sortedValue);
         }
     }

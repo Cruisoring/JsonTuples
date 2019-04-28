@@ -5,29 +5,38 @@ import com.google.common.base.Strings;
 public interface IJSONable {
 
     //region static variables
-    public static final String JSON_NULL = "null";
-    public static final String JSON_TRUE = "true";
-    public static final String JSON_FALSE = "false";
+    String JSON_NULL = "null";
+    String JSON_TRUE = "true";
+    String JSON_FALSE = "false";
 
     //Special keys to mark the value boundary or escaped sequences
-    final static char LEFT_BRACE = '{';
-    final static char RIGHT_BRACE = '}';
-    final static char LEFT_BRACKET = '[';
-    final static char RIGHT_BRACKET = ']';
-    final static char COMMA = ',';
-    final static char COLON = ':';
-    final static char QUOTE = '"';
-    final static char BACK_SLASH = '\\';
+    char LEFT_BRACE = '{';
+    char RIGHT_BRACE = '}';
+    char LEFT_BRACKET = '[';
+    char RIGHT_BRACKET = ']';
+    char COMMA = ',';
+    char COLON = ':';
+    char QUOTE = '"';
+    char BACK_SLASH = '\\';
 
-    static final String SPACE = "  ";
-    static final String NEW_LINE = "\n";
+    String SPACE = "  ";
+    String NEW_LINE = "\n";
     //endregion
 
+    /**
+     * Get the filling spaces of lines of JSON string.
+     * @param indentFactor  level to be indented, 0 means no indent.
+     * @return      spaces of the concerned indent level.
+     */
+    static String getIndent(int indentFactor) {
+        return Strings.repeat(SPACE, indentFactor);
+    }
 
     /**
      * The <code>toJSONString</code> method allows a class to produce its own JSON
      * serialization.
-     * @param indent    The spaces added to each lines.
+     *
+     * @param indent The spaces added to each lines.
      * @return A strictly syntactically correct JSON text.
      */
     String toJSONString(String indent);
@@ -40,10 +49,6 @@ public interface IJSONable {
      */
     default String toJSONString() {
         return toJSONString("");
-    }
-
-    static String getIndent(int indentFactor){
-        return Strings.repeat(SPACE, indentFactor);
     }
 
 }

@@ -1,6 +1,6 @@
 package JsonTuples;
 
-import org.junit.Assert;
+import static io.github.cruisoring.Asserts.*;
 import org.junit.Test;
 
 import java.math.BigInteger;

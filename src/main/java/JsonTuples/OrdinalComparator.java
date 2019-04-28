@@ -1,10 +1,9 @@
 package JsonTuples;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkWithoutNull;
 
 /**
  * Comparator with given list of values, when new key is evaluated, it would be assigned a larger integer value.
@@ -16,6 +15,12 @@ public class OrdinalComparator<T> implements Comparator<T> {
     final Map<T, Integer> orders = new HashMap<>();
     final List<T> orderedKeys = new ArrayList<>();
 
+    public OrdinalComparator(Collection<T> options) {
+        for (T option : checkWithoutNull(options)) {
+            putIfAbsent(option, orders.size() + 1);
+        }
+    }
+
     Integer putIfAbsent(T key, Integer order) {
         if (!orders.containsKey(key)) {
             orders.put(key, order);
@@ -23,14 +28,6 @@ public class OrdinalComparator<T> implements Comparator<T> {
             return order;
         } else {
             return orders.get(key);
-        }
-    }
-
-    public OrdinalComparator(){}
-
-    public OrdinalComparator(Collection<T> options) {
-        for (T option : checkNotNull(options)) {
-            putIfAbsent(option, orders.size() + 1);
         }
     }
 

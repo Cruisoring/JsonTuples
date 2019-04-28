@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple1;
 
 import java.util.Arrays;
@@ -8,11 +9,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkWithoutNull;
 
 /**
- * <a href="http://www.json.org">http://www.json.org</a>
- * <br>
  * Represent the value of JSON strings of following types:
  * <ul>
  * <li>true</li>
@@ -23,6 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </ul>
  *
  * @param <T> JAVA type used to represent the type of the JSON value strings.
+ * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
@@ -40,9 +40,13 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     public static final JSONValue Null = new JSONValue(null);
     //endregion
 
+    protected JSONValue(T t) {
+        super(t);
+    }
+
     public static JSONValue parse(String jsonContext, Range range) {
-        checkNotNull(jsonContext);
-        checkNotNull(range);
+        checkWithoutNull(jsonContext);
+        checkWithoutNull(range);
 
         final String trimmed = Range.subString(jsonContext, range).trim();
         switch (trimmed) {
@@ -53,13 +57,8 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
             case JSON_NULL:
                 return JSONValue.Null;
             default:
-                return trimmed.charAt(0)==QUOTE ? JSONString.parseString(trimmed) : JSONNumber.parseNumber(trimmed);
+                return trimmed.charAt(0) == QUOTE ? JSONString.parseString(trimmed) : JSONNumber.parseNumber(trimmed);
         }
-    }
-
-
-    protected JSONValue(T t) {
-        super(t);
     }
 
     @Override
@@ -93,7 +92,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     @Override
     public int hashCode() {
-        if(_hashCode == null){
+        if (_hashCode == null) {
             _hashCode = toString().hashCode();
         }
         return _hashCode;
@@ -114,8 +113,8 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
         }
 
         //*///JSONValues must have identical toString() and thus identical hashCode()?
-        if(getFirst()==null){
-            return ((JSONValue)obj).getFirst()==null;
+        if (getFirst() == null) {
+            return ((JSONValue) obj).getFirst() == null;
         } else {
             return (hashCode() == obj.hashCode() && toString().equals(obj.toString()));
         }
@@ -139,7 +138,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     @Override
     public IJSONValue deltaWith(IJSONValue other, Comparator comparator) {
-        checkNotNull(other);
+        checkWithoutNull(other);
 
         if (equals(other)) {
             return JSONArray.EMPTY;

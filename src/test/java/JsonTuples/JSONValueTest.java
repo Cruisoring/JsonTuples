@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import com.google.common.primitives.UnsignedInteger;
+import io.github.cruisoring.Range;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
@@ -14,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 
-import static org.junit.Assert.*;
+import static io.github.cruisoring.Asserts.*;
 
 public class JSONValueTest {
 

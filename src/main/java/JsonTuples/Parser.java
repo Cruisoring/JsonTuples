@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple4;
@@ -7,13 +8,57 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static io.github.cruisoring.Asserts.checkStatess;
+import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
  * Utility to parse JSON text based on information disclosed on <a href="http://www.json.org/">json.org</a>
  */
 public final class Parser {
+
+    //region static variables
+    public static final char START_JSON_SIGN = '^';
+    public static final String JSON_NULL = "null";
+    public static final String JSON_TRUE = "true";
+    public static final String JSON_FALSE = "false";
+    //Special keys to mark the value boundary or escaped sequences
+    final static char LEFT_BRACE = '{';
+    final static char RIGHT_BRACE = '}';
+    final static char LEFT_BRACKET = '[';
+    final static char RIGHT_BRACKET = ']';
+    final static char COMMA = ',';
+    final static char COLON = ':';
+    final static char QUOTE = '"';
+    final static char BACK_SLASH = '\\';
+    final static Set<Character> CONTROLS = new HashSet<Character>(
+            Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON));
+    final static Character MIN_CONTROL = Collections.min(CONTROLS);
+    final static Character MAX_CONTROL = Collections.max(CONTROLS);
+    //region instance variables
+    public final CharSequence jsonContext;
+    public final int length;
+    public final Comparator<String> nameComparator;
+    //endregion
+    char lastControl = START_JSON_SIGN;
+    int lastPosition = -1;
+    int currentStringStart = Integer.MAX_VALUE;
+    int currentStringEnd = -1;
+    JSONString lastName = null, lastStringValue;
+    Stack<Tuple4<Boolean, IJSONable[], JSONString, Boolean>> contextStack = new Stack<>();
+    public Parser(CharSequence jsonText, Range range, Comparator<String> comparator) {
+        this(Range.subString(jsonText, range), comparator);
+    }
+
+    public Parser(CharSequence jsonText, Comparator<String> comparator) {
+        this.nameComparator = comparator;
+        this.jsonContext = jsonText;
+        length = jsonContext.length();
+    }
+
+    public Parser(CharSequence jsonText) {
+        this(jsonText, null);
+    }
+    //endregion
 
     /**
      * Unique method to parse the given qualified JSON text to an IJSONValue.
@@ -33,8 +78,8 @@ public final class Parser {
         return parser.parse();
     }
 
-    public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonContext, Range range){
-        final String trimmed = checkNotNull(Range.subString(jsonContext, range)).trim();
+    public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonContext, Range range) {
+        final String trimmed = checkWithoutNull(Range.subString(jsonContext, range)).trim();
         switch (trimmed) {
             case JSON_TRUE:
                 return JSONValue.True;
@@ -59,60 +104,6 @@ public final class Parser {
 
     }
 
-    //region static variables
-    public static final char START_JSON_SIGN = '^';
-
-    public static final String JSON_NULL = "null";
-    public static final String JSON_TRUE = "true";
-    public static final String JSON_FALSE = "false";
-
-    //Special keys to mark the value boundary or escaped sequences
-    final static char LEFT_BRACE = '{';
-    final static char RIGHT_BRACE = '}';
-    final static char LEFT_BRACKET = '[';
-    final static char RIGHT_BRACKET = ']';
-    final static char COMMA = ',';
-    final static char COLON = ':';
-    final static char QUOTE = '"';
-    final static char BACK_SLASH = '\\';
-
-    final static Set<Character> CONTROLS = new HashSet<Character>(
-            Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON));
-
-    final static Character MIN_CONTROL = Collections.min(CONTROLS);
-    final static Character MAX_CONTROL = Collections.max(CONTROLS);
-    //endregion
-
-    //region instance variables
-    public final CharSequence jsonContext;
-    public final int length;
-    public final Comparator<String> nameComparator;
-
-    char lastControl = START_JSON_SIGN;
-    int lastPosition = -1;
-
-    int currentStringStart = Integer.MAX_VALUE;
-    int currentStringEnd = -1;
-
-    JSONString lastName = null, lastStringValue;
-
-    Stack<Tuple4<Boolean, IJSONable[], JSONString, Boolean>> contextStack = new Stack<>();
-    //endregion
-
-    public Parser(CharSequence jsonText, Range range, Comparator<String> comparator){
-        this(Range.subString(jsonText, range), comparator);
-    }
-
-    public Parser(CharSequence jsonText, Comparator<String> comparator) {
-        this.nameComparator = comparator;
-        this.jsonContext = jsonText;
-        length = jsonContext.length();
-    }
-
-    public Parser(CharSequence jsonText){
-        this(jsonText, null);
-    }
-
     /**
      * Extract the content of the specified Range as a String.
      *
@@ -120,7 +111,7 @@ public final class Parser {
      * @return SubString of the content relative to the saved jsonContext.
      */
     String subString(Range range) {
-        checkNotNull(range);
+        checkWithoutNull(range);
 
         int end = range.getEndExclusive();
         return jsonContext.subSequence(range.getStartInclusive(), end > length ? length : end).toString();
@@ -179,7 +170,7 @@ public final class Parser {
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
-                checkState(isObject);
+                checkStatess(isObject);
                 switch (lastControl) {
                     case COLON:
                         valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
@@ -211,16 +202,16 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-                    checkNotNull(name);
+                    checkWithoutNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkState(state.getThird() == null);
+                    checkStatess(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
 
             case RIGHT_BRACKET: //Close of current JSONArray
-                checkState(!isObject);
+                checkStatess(!isObject);
                 switch (lastControl) {
                     case COMMA:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
@@ -249,10 +240,10 @@ public final class Parser {
                 isObject = state.getFirst();
                 if (isObject) {
                     final JSONString name = state.getThird();
-                    checkNotNull(name);
+                    checkWithoutNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkState(state.getThird() == null);
+                    checkStatess(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
@@ -285,7 +276,7 @@ public final class Parser {
             case QUOTE:
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
-                    lastStringValue = new JSONString(JSONString._unescapeJson(jsonContext, currentStringStart+1, currentStringEnd));
+                    lastStringValue = new JSONString(JSONString._unescapeJson(jsonContext, currentStringStart + 1, currentStringEnd));
                     if (!isObject) {
                         children.add(lastStringValue);
                     }

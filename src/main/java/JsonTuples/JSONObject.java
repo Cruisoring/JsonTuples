@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Lazy;
+import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -9,70 +10,25 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static io.github.cruisoring.Asserts.checkStates;
+import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
- * http://www.json.org
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
+ * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedValue>, Map<String, Object> {
 
     public static final JSONObject EMPTY = new JSONObject();
-    public static IJSONValue MISSING = JSONValue.Null;
-
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
-
     private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
-
-    //region Parse given text as a JSONObject
-    public static IJSONValue parse(CharSequence jsonContext, Range range) {
-        checkNotNull(jsonContext);
-        checkNotNull(range);
-
-        String valueString = jsonContext.subSequence(range.getStartInclusive(), range.getEndExclusive()).toString().trim();
-        return parse(valueString);
-    }
-
-
-    public static JSONObject parse(String valueString) {
-        return (JSONObject) Parser.parse(valueString);
-    }
-    //endregion
-
-    //region Use the given nameComparator to sort a NamedValue array by their names
-    protected static NamedValue[] sorted(Comparator<String> comparator, NamedValue[] namedValues){
-        checkNotNull(namedValues);
-
-        if(comparator != null) {
-            Arrays.sort(namedValues, (nv1, nv2)
-                    -> comparator.compare(nv1.getName(), nv2.getName()));
-        }
-        return namedValues;
-    }
-    //endregion
-
+    public static IJSONValue MISSING = JSONValue.Null;
     final Comparator<String> nameComparator;
     final Lazy<Map<String, NamedValue>> lazyJSONMap = new Lazy<>(this::getJsonMap);
-
-    private Map<String, NamedValue> getJsonMap(){
-        Map<String, NamedValue> map = new HashMap<>();
-        for (NamedValue nv : values) {
-            map.put(nv.getName(), nv);
-        };
-        return map;
-    }
-
+    //endregion
     final Lazy<Map<String, Object>> lazyMap = new Lazy<>(this::getObjectMap);
-    private Map<String, Object> getObjectMap() {
-        Map<String, Object> map = new HashMap<>();
-        for (NamedValue nv : values) {
-            map.put(nv.getName(), nv.getValue());
-        }
-        return map;
-    }
-
+    //endregion
     Set<String> _nameSet = null;
     Collection<Object> _valueSet = null;
     Set<Entry<String, Object>> _entrySet = null;
@@ -86,13 +42,52 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         nameComparator = comparator;
     }
 
+    //region Parse given text as a JSONObject
+    public static IJSONValue parse(CharSequence jsonContext, Range range) {
+        checkWithoutNull(jsonContext, range);
+
+        String valueString = jsonContext.subSequence(range.getStartInclusive(), range.getEndExclusive()).toString().trim();
+        return parse(valueString);
+    }
+
+    public static JSONObject parse(String valueString) {
+        return (JSONObject) Parser.parse(valueString);
+    }
+
+    //region Use the given nameComparator to sort a NamedValue array by their names
+    protected static NamedValue[] sorted(Comparator<String> comparator, NamedValue[] namedValues) {
+        checkWithoutNull(namedValues);
+
+        if (comparator != null) {
+            Arrays.sort(namedValues, (nv1, nv2)
+                    -> comparator.compare(nv1.getName(), nv2.getName()));
+        }
+        return namedValues;
+    }
+
+    private Map<String, NamedValue> getJsonMap() {
+        Map<String, NamedValue> map = new HashMap<>();
+        for (NamedValue nv : values) {
+            map.put(nv.getName(), nv);
+        }
+        return map;
+    }
+
+    private Map<String, Object> getObjectMap() {
+        Map<String, Object> map = new HashMap<>();
+        for (NamedValue nv : values) {
+            map.put(nv.getName(), nv.getValue());
+        }
+        return map;
+    }
+
     @Override
-    public JSONObject getSorted(Comparator<String> comparator){
-        if(comparator == null || comparator == nameComparator)
+    public JSONObject getSorted(Comparator<String> comparator) {
+        if (comparator == null || comparator == nameComparator)
             return this;
 
         Map<String, NamedValue> map = lazyJSONMap.getValue();
-        List<String> keyList = map.keySet().stream().sorted((Comparator<String>) comparator).collect(Collectors.toList());
+        List<String> keyList = map.keySet().stream().sorted(comparator).collect(Collectors.toList());
 
         NamedValue[] sortedNamedValues = keyList.stream()
                 .map(key -> map.get(key).getSorted(comparator))
@@ -108,23 +103,23 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public String toJSONString(String indent) {
-        checkState(StringUtils.isBlank(indent));
+        checkStates(StringUtils.isBlank(indent));
 
         String noIndent = toString();
-        if(values.length == 0 || "".equals(indent)){
+        if (values.length == 0 || "".equals(indent)) {
             return noIndent;
         }
 
-        String indented = indent==null ?
+        String indented = indent == null ?
                 noIndent.replaceAll("(?m)\\n\\s*", "")
-                : noIndent.replaceAll("(?m)\\n", NEW_LINE+indent);
+                : noIndent.replaceAll("(?m)\\n", NEW_LINE + indent);
         return indented;
     }
 
     @Override
     public String toString() {
-        if(_toString == null){
-            if(values.length == 0) {
+        if (_toString == null) {
+            if (values.length == 0) {
                 _toString = "{}";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
@@ -132,15 +127,15 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
                 List<String> valueStrings = Arrays.stream(values)
                         .map(nv -> nv.toJSONString(SPACE))
                         .collect(Collectors.toList());
-                sb.appendWithSeparators(valueStrings, COMMA+NEW_LINE);
-                sb.append(NEW_LINE+RIGHT_BRACE);
+                sb.appendWithSeparators(valueStrings, COMMA + NEW_LINE);
+                sb.append(NEW_LINE + RIGHT_BRACE);
                 _toString = sb.toString();
             }
         }
         return _toString;
     }
 
-    public JSONObject withDelta(Map<String, Object> delta){
+    public JSONObject withDelta(Map<String, Object> delta) {
         Map<String, Object> thisMap = lazyMap.getValue();
         thisMap.putAll(delta);
 
@@ -150,7 +145,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public int hashCode() {
-        if(_hashCode == null){
+        if (_hashCode == null) {
             _hashCode = toString().hashCode();
         }
         return _hashCode;
@@ -163,7 +158,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean containsKey(Object key) {
-        if(_nameSet == null){
+        if (_nameSet == null) {
             _nameSet = lazyJSONMap.getValue().keySet();
         }
         return _nameSet.contains(key);
@@ -171,7 +166,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean containsValue(Object value) {
-        if(_valueSet == null){
+        if (_valueSet == null) {
             _valueSet = lazyMap.getValue().values();
         }
         return _valueSet.contains(value);
@@ -204,7 +199,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Set<String> keySet() {
-        if(_nameSet == null){
+        if (_nameSet == null) {
             _nameSet = lazyJSONMap.getValue().keySet();
         }
         return _nameSet;
@@ -212,7 +207,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Collection<Object> values() {
-        if(_valueSet == null){
+        if (_valueSet == null) {
             _valueSet = lazyMap.getValue().values();
         }
         return _valueSet;
@@ -220,7 +215,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
-        if(_entrySet == null){
+        if (_entrySet == null) {
             _entrySet = lazyMap.getValue().entrySet();
         }
         return _entrySet;
@@ -228,18 +223,18 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean equals(Object obj) {
-        if(obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
+        if (obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
             return false;
         } else if (obj == this) {
             return true;
         }
 
         final JSONObject other = Converter.asJSONObject(nameComparator, obj);
-        if(this.isEmpty() && other.isEmpty()){
+        if (this.isEmpty() && other.isEmpty()) {
             return true;
-        }else if(!other.canEqual(this)) {
+        } else if (!other.canEqual(this)) {
             return false;
-        }else if(getLength()==other.getLength() && toString().equals(other.toString())){
+        } else if (getLength() == other.getLength() && toString().equals(other.toString())) {
             return true;
         }
 
@@ -253,25 +248,25 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
-        if(other == null){
+        if (other == null) {
             return new JSONArray(this, MISSING);
-        }else if(other == this){
+        } else if (other == this) {
             return EMPTY;
-        }else if(!(other instanceof JSONObject)){
+        } else if (!(other instanceof JSONObject)) {
             return new JSONArray(this, other);
         }
 
-        JSONObject otherObject = (JSONObject)other;
-        if(otherObject.hashCode()==this.hashCode() && other.toString() == toString()){
+        JSONObject otherObject = (JSONObject) other;
+        if (otherObject.hashCode() == this.hashCode() && other.toString() == toString()) {
             return EMPTY;
         }
 
-        Set<String> allKeys = new HashSet<String>(){{
+        Set<String> allKeys = new HashSet<String>() {{
             addAll(keySet());
             addAll(otherObject.keySet());
         }};
 
-        if(allKeys.isEmpty()){
+        if (allKeys.isEmpty()) {
             return EMPTY;
         }
 
@@ -283,13 +278,13 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key).getSecond() : MISSING;
             IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key).getSecond() : MISSING;
             IJSONValue valueDelta = thisValue.deltaWith(otherValue, comparator);
-            if(valueDelta.getLength() != 0){
+            if (valueDelta.getLength() != 0) {
                 NamedValue newDif = new NamedValue(key, valueDelta);
                 differences.add(newDif);
             }
-        };
+        }
 
-        if(differences.isEmpty()){
+        if (differences.isEmpty()) {
             return EMPTY;
         }
 

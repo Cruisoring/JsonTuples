@@ -7,8 +7,7 @@ import org.junit.Test;
 import java.math.BigInteger;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static io.github.cruisoring.Asserts.*;
 
 public class ConverterTest {
 

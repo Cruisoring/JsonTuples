@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.util.Comparator;
 
-import static org.junit.Assert.assertEquals;
+import static io.github.cruisoring.Asserts.*;
 
 public class JSONArrayTest {
 
