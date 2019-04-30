@@ -96,7 +96,7 @@ public class JSONObjectTest {
 
         JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
 
-        IJSONValue delta = obj1.deltaWith(obj2, Comparator.naturalOrder());
+        IJSONValue delta = obj1.deltaWith(obj2, false).getSorted(Comparator.naturalOrder());
         assertEquals("{\"age\": [123,24],\"name\": [null,\"Tom\"],\"other\": [null,\"OK\"]}", delta.toJSONString(null));
     }
 

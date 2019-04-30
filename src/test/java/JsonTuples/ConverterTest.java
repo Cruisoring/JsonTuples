@@ -1,7 +1,7 @@
 package JsonTuples;
 
-import Utilities.ResourceHelper;
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -90,13 +90,14 @@ public class ConverterTest {
                 new double[][]{new double[]{-1.2, 0}, new double[]{3.3}}, new Object[]{"OK", null}};
         JSONArray array2 = Converter.asJSONArrayFromArray(multiDimensional);
         Object object = array2.getObject();
-        assertTrue(Objects.deepEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
-                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object));
+        assertEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
+                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object);
 
         JSONArray steps = JSONArray.parseArray(ResourceHelper.getTextFromResourceFile("steps.json"));
         Object stepArray = steps.getSorted(Comparator.naturalOrder()).getObject();
         JSONArray converted = Converter.asJSONArrayFromArray(stepArray);
         Logger.I(converted.toString());
+//        assertEquals("Given I get some test data from  \"ABC Indroduction.xlsx\"", converted.getObject())
     }
 
     @Test

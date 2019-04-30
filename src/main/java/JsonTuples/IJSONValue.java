@@ -17,17 +17,26 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
 
     /**
      * Get the JAVA Object represented by this {@code IJSONValue}
-     * @return
+     * @return  A Java object represented by this {@code IJSONValue}
      */
     Object getObject();
 
     /**
-     * Find the differences with another IJSONValue other after sorting both with the given {@code Comparator<String>}
+     * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with orderMatters considered.
      * @param other         the other {@code IJSONValue} to be compared with.
-     * @param comparator    {@code Comparator<String>} used to sort both {@code IJSONValue} instances
+     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
      * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
      */
-    IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator);
+    IJSONValue deltaWith(IJSONValue other, boolean orderMatters);
+
+    /**
+     * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with default orderMatters.
+     * @param other         the other {@code IJSONValue} to be compared with.
+     * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
+     */
+    default IJSONValue deltaWith(IJSONValue other){
+        return deltaWith(other, JSONArray.defaultElementOrderMatters);
+    }
 
     /**
      * Use the given {@code Comparator<String>} to sort this {@code IJSONValue} deeply.
@@ -47,16 +56,6 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
         checkWithoutNull(orderedNames);
         Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
-    }
-
-
-    /**
-     * Find the differences with another IJSONValue other without sorting them first.
-     * @param other         the other {@code IJSONValue} to be compared with.
-     * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
-     */
-    default IJSONValue deltaWith(IJSONValue other) {
-        return deltaWith(other, null);
     }
 
     /**

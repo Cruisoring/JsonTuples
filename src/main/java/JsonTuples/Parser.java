@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
-import static io.github.cruisoring.Asserts.checkStatess;
+import static io.github.cruisoring.Asserts.checkStates;
 import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
@@ -170,7 +170,7 @@ public final class Parser {
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
-                checkStatess(isObject);
+                checkStates(isObject);
                 switch (lastControl) {
                     case COLON:
                         valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
@@ -205,13 +205,13 @@ public final class Parser {
                     checkWithoutNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkStatess(state.getThird() == null);
+                    checkStates(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
 
             case RIGHT_BRACKET: //Close of current JSONArray
-                checkStatess(!isObject);
+                checkStates(!isObject);
                 switch (lastControl) {
                     case COMMA:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
@@ -243,7 +243,7 @@ public final class Parser {
                     checkWithoutNull(name);
                     children.add(new NamedValue(name, closedValue));
                 } else {
-                    checkStatess(state.getThird() == null);
+                    checkStates(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;

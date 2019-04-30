@@ -5,7 +5,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkWithoutNull;
+import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
  * A string is a sequence of zero or more Unicode characters, wrapped in double quotes, using backslash escapes.

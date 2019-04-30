@@ -1,6 +1,5 @@
 package JsonTuples;
 
-import com.google.common.primitives.UnsignedInteger;
 import io.github.cruisoring.Range;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.tuple.Tuple;
@@ -150,7 +149,6 @@ public class JSONValueTest {
 //        assertEquals(new JSONString("ABC"), new JSONValue<>("ABC"));        //Shall never create new JSONValue<>("ABC")
         assertEquals(new JSONNumber(3.3f), new JSONNumber(3.3));
         assertEquals(new JSONNumber(25), new JSONNumber(25L));
-        assertEquals(new JSONNumber(25), new JSONNumber(UnsignedInteger.valueOf(25)));
         assertEquals(new JSONNumber(25L), new JSONNumber(Integer.valueOf(25).byteValue()));
         assertEquals(new JSONNumber(25), new JSONNumber(BigInteger.valueOf(25L)));
         assertEquals(new JSONNumber(25.0), new JSONNumber(25.0));

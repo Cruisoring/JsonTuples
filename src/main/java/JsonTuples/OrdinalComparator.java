@@ -3,7 +3,7 @@ package JsonTuples;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkWithoutNull;
+import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
  * Comparator with given list of values, when new key is evaluated, it would be assigned a larger integer value.

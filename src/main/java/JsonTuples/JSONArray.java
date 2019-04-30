@@ -1,8 +1,7 @@
 package JsonTuples;
 
-import io.github.cruisoring.Lazy;
 import io.github.cruisoring.tuple.Tuple;
-import io.github.cruisoring.tuple.Tuple3;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
 import java.util.*;
@@ -10,21 +9,36 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static io.github.cruisoring.Asserts.checkStates;
+
 /**
- * An array is an ordered collection of values. An array begins with [ (left bracket) and ends with ]
+ * An array is an ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]
  * (right bracket). Values are separated by , (comma).
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue> {
 
+    /**
+     * Parse the given String as a {@code JSONArray}
+     * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
+     * @return      a {@code JSONArray} instance from the given text.
+     */
+    public static JSONArray parseArray(String valueString) {
+        return (JSONArray) Parser.parse(valueString);
+    }
+
     public static final JSONArray EMPTY = new JSONArray();
+
     //Pattern of string to represent a solid JSON Array
     public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);
-    public static boolean isElementOrderMatter = false;
+
+    //Indicates if the order of the elements composing this JSONArray is matter, which has impact on how deltaWith() works
+    public static boolean defaultElementOrderMatters = false;
+
+    // the Comparator<String> used by this {@code JSONArray} to sort its children JSONObjects.
     final Comparator<String> nameComparator;
-    protected Lazy<Object[]> arrayLazy = new Lazy<>(() -> Arrays.stream(asArray())
-            .map(IJSONValue::getObject)
-            .toArray());
+    // the buffered Java array of {@code Object} represented by this {@code IJSONValue}
+    protected Object[] array = null;
 
     protected JSONArray(IJSONValue... values) {
         this(null, values);
@@ -35,18 +49,23 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         this.nameComparator = comparator;
     }
 
-    public static JSONArray parseArray(String valueString) {
-        return (JSONArray) Parser.parse(valueString);
-    }
-
+    /**
+     * Get the JAVA array represented by this {@code IJSONValue}
+     * @return  A Java array of {@code Object} represented by this {@code IJSONValue}
+     */
     @Override
     public Object getObject() {
-        return arrayLazy.getValue();
+        if(array == null){
+            array = Arrays.stream(asArray())
+                    .map(IJSONValue::getObject)
+                    .toArray();
+        }
+        return array;
     }
 
     @Override
     public String toJSONString(String indent) {
-//        checkStates(StringUtils.isBlank(indent));
+        checkStates(StringUtils.isBlank(indent));
 
         String noIndent = toString();
         if (values.length == 0 || "".equals(indent)) {
@@ -103,7 +122,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             return true;
         }
 
-        return deltaWith(other, nameComparator).getLength() == 0;
+        return deltaWith(other).getLength() == 0;
     }
 
     @Override
@@ -112,11 +131,15 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 (other instanceof JSONArray || other instanceof Collection || other.getClass().isArray());
     }
 
-    public JSONObject asIndexedObject(Comparator<String> comparator) {
+    /**
+     * Converted this {@code JSONArray} into a {@code JSONObject} by using indexes of its elements as keys, the elements as values.
+     * @return      A {@code JSONObject} with integer keys to indicating the sequences of the array elements.
+     */
+    public JSONObject asIndexedObject() {
         NamedValue[] namedValues = IntStream.range(0, getLength()).boxed()
                 .map(i -> new NamedValue(i.toString(), getValue(i)))
                 .toArray(size -> new NamedValue[size]);
-        return new JSONObject(comparator, namedValues);
+        return new JSONObject(namedValues);
     }
 
     protected Map<String, List<Integer>> getValueIndexes(Comparator<String> comparator) {
@@ -138,6 +161,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         if (nameComparator == comparator) {
             return this;
         }
+
         IJSONValue[] sorted = Arrays.stream(values)
                 .map(v -> v.getSorted(comparator))
                 .toArray(size -> new IJSONValue[size]);
@@ -146,7 +170,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other, Comparator<String> comparator) {
+    public IJSONValue deltaWith(IJSONValue other, boolean orderMatters) {
         if (other == null) {
             return new JSONArray(this, JSONObject.MISSING);
         } else if (other == this) {
@@ -157,8 +181,8 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
         final JSONArray otherArray = (JSONArray) other;
 
-        if (isElementOrderMatter) {
-            return asIndexedObject(comparator).deltaWith(otherArray.asIndexedObject(comparator), comparator);
+        if (orderMatters) {
+            return asIndexedObject().deltaWith(otherArray.asIndexedObject(), orderMatters);
         }
 
         return EMPTY;

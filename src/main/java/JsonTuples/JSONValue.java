@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkWithoutNull;
+import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
  * Represent the value of JSON strings of following types:
@@ -137,7 +137,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other, Comparator comparator) {
+    public IJSONValue deltaWith(IJSONValue other, boolean orderMatters) {
         checkWithoutNull(other);
 
         if (equals(other)) {

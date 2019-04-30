@@ -1,15 +1,29 @@
 package JsonTuples;
 
-import Utilities.ResourceHelper;
+import io.github.cruisoring.Revokable;
+import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.utility.ResourceHelper;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Comparator;
 
-import static io.github.cruisoring.Asserts.*;
+import static io.github.cruisoring.Asserts.assertEquals;
 
 public class JSONArrayTest {
+    private static Revokable<LogLevel> logLevelRevokable;
+
+    @BeforeClass
+    public static void setup(){
+        logLevelRevokable = Logger.setLevelInScope(LogLevel.debug);
+    }
+
+    @AfterClass
+    public static void cleandown(){
+        logLevelRevokable.close();
+    }
 
     @Test
     public void toJSONString() {
@@ -25,10 +39,10 @@ public class JSONArrayTest {
     public void parseArray() {
         JSONArray array = JSONArray.parseArray(steps);
         assertEquals(10, array.getLength());
-//        Logger.V(array.toString());
+        Logger.V(array.toString());
 
         JSONArray sorted = array.getSorted(Comparator.naturalOrder());
-//        Logger.V(sorted.toString());
+        Logger.V(sorted.toString());
 
         IJSONValue delta = array.deltaWith(sorted);
         assertEquals(JSONArray.EMPTY, delta);

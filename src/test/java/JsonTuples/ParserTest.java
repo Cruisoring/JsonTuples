@@ -1,9 +1,9 @@
 package JsonTuples;
 
-import Utilities.ResourceHelper;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
+import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.Test;
 
 import java.util.Comparator;
@@ -58,12 +58,15 @@ public class ParserTest {
 
     private void testPerformance(String jsonFilename) {
         String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
-        Parser parser = new Parser(jsonText);
+//        Parser parser = new Parser(jsonText);
 
-        JSONObject value = Logger.M(Measurement.start("parse()"), ()-> (JSONObject) parser.parse(), LogLevel.info);
+        IJSONValue value = Measurement.measure("Parsing JSON string length of " + jsonText.length(),
+                10, ()-> Parser.parse(jsonText), LogLevel.info);
         assertTrue(value != null);
-        JSONObject natualValue = Logger.M(Measurement.start("getSorted()"), value.getSorted(Comparator.naturalOrder()), LogLevel.debug);
-        String sortedString = Logger.M(Measurement.start("toString()"), () -> natualValue.toString(), LogLevel.debug);
+        IJSONValue natualValue = Measurement.measure("Sorting JSON string length of " + jsonText.length(),
+                10, () ->value.getSorted(Comparator.naturalOrder()));
+        String sortedString = Measurement.measure("toString() JSON string length of " + jsonText.length(),
+                10, () -> natualValue.toString(), LogLevel.debug);
 //        Logger.V(sortedString);
     }
 

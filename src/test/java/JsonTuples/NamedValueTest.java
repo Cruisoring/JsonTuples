@@ -1,10 +1,5 @@
 package JsonTuples;
 
-import static io.github.cruisoring.Asserts.*;
-import org.junit.Test;
-
-import java.math.BigInteger;
-
 public class NamedValueTest {
 
 //    @Test

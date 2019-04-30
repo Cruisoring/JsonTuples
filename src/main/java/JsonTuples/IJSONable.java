@@ -1,7 +1,10 @@
 package JsonTuples;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 
+/**
+ * Something that can be represented as JSON text.
+ */
 public interface IJSONable {
 
     //region static variables
@@ -29,7 +32,7 @@ public interface IJSONable {
      * @return      spaces of the concerned indent level.
      */
     static String getIndent(int indentFactor) {
-        return Strings.repeat(SPACE, indentFactor);
+        return StringUtils.repeat(SPACE, indentFactor);
     }
 
     /**
