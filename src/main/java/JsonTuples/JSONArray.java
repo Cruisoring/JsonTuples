@@ -1,6 +1,8 @@
 package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
+import io.github.cruisoring.tuple.Tuple3;
+import io.github.cruisoring.utility.ArrayHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -19,7 +21,7 @@ import static io.github.cruisoring.Asserts.checkStates;
 public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue> {
 
     /**
-     * Parse the given String as a {@code JSONArray}
+     * Assuming the concerned valueString is of array, parse it as a {@code JSONArray}
      * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
      * @return      a {@code JSONArray} instance from the given text.
      */
@@ -113,7 +115,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             return true;
         }
 
-        final JSONArray other = (JSONArray) Converter.jsonify(obj);
+        final JSONArray other = (JSONArray) Utilities.jsonify(obj);
         if (this.isEmpty() && other.isEmpty()) {
             return true;
         } else if (!other.canEqual(this)) {
@@ -122,7 +124,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             return true;
         }
 
-        return deltaWith(other).getLength() == 0;
+        return deltaWith(other, true).getLength() == 0;
     }
 
     @Override
@@ -185,80 +187,76 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             return asIndexedObject().deltaWith(otherArray.asIndexedObject(), orderMatters);
         }
 
-        return EMPTY;
-//        boolean thisAllObject = Arrays.stream(values).allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
-//        boolean otherAllObject = Arrays.stream(otherArray.values).allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
-//        if (!thisAllObject || !otherAllObject) {
-//            return asIndexedObject(comparator).deltaWith(otherArray.asIndexedObject(comparator), comparator);
-//        }
-//
-//        //Now both arrays are composed of either null or Objects, then their order is not concerned
-//        Map<String, List<Integer>> thisValueIndexes = getValueIndexes(comparator);
-//        Map<String, List<Integer>> otherValueIndexes = otherArray.getValueIndexes(comparator);
-//        Set<String> allKeys = new HashSet<String>() {{
-//            addAll(thisValueIndexes.keySet());
-//            addAll(otherValueIndexes.keySet());
-//        }};
-//
-//        //Get indexes of unequal JSONObjects of both array
-//        List<Integer> thisUncertained = new ArrayList<>();
-//        List<Integer> otherUncertained = new ArrayList<>();
-//        for (String key : allKeys) {
-//            if (!thisValueIndexes.containsKey(key)) {
-//                otherUncertained.addAll(otherValueIndexes.get(key));
-//            } else if (!otherValueIndexes.containsKey(key)) {
-//                thisUncertained.addAll(thisValueIndexes.get(key));
-//            } else {
-//                int countDif = thisValueIndexes.get(key).size() - otherValueIndexes.get(key).size();
-//                if (countDif < 0) {
-//                    otherUncertained.addAll(otherValueIndexes.get(key).subList(0, -countDif));
-//                } else if (countDif > 0) {
-//                    thisUncertained.addAll(thisValueIndexes.get(key).subList(0, countDif));
-//                }
-//            }
-//        }
-//
-//        Map<Integer, Set<Integer>> thisValueTokens = thisUncertained.stream()
-//                .collect(Collectors.toMap(
-//                        i -> i,
-//                        i -> values[i].getSignatures()
-//                ));
-//        Map<Integer, Set<Integer>> otherValueTokens = otherUncertained.stream()
-//                .collect(Collectors.toMap(
-//                        i -> i,
-//                        i -> values[i].getSignatures()
-//                ));
-//
-//        List<Tuple3<Integer, Integer, Integer>> similarities = new ArrayList<>();
-//        Comparator<Tuple3<Integer, Integer, Integer>> tuple3Comparator = Comparator.comparing(tuple -> tuple.getFirst());
-//        Comparator<Tuple3<Integer, Integer, Integer>> _comparator = tuple3Comparator.reversed();
-//        for (Integer thisIndex : thisValueTokens.keySet()) {
-//            for (Integer otherIndex : otherValueTokens.keySet()) {
-//                Set<Integer> set = new HashSet(thisValueTokens.get(thisIndex));
-//                set.retainAll(otherValueTokens.get(otherIndex));
-//                Integer similarity = set.size();
-//                similarities.add(Tuple.create(similarity, thisIndex, otherIndex));
-//            }
-//        }
-//        Collections.sort(similarities, _comparator);
-//
-//        List<IJSONValue> deltas = new ArrayList<>();
-//        for (Tuple3<Integer, Integer, Integer> tuple3 : similarities) {
-//            Integer index1 = tuple3.getSecond();
-//            Integer index2 = tuple3.getThird();
-//            if (!thisValueTokens.containsKey(index1) || !otherValueTokens.containsKey(index2)) {
-//                continue;
-//            }
-//            thisValueTokens.remove(index1);
-//            otherValueTokens.remove(index2);
-//
-//            IJSONValue delta = this.getValue(index1).deltaWith(otherArray.getValue(index2), comparator);
-//            if (!delta.isEmpty()) {
-//                deltas.add(delta);
-//            }
-//        }
-//
-//        return deltas.isEmpty() ? EMPTY : new JSONArray(comparator, deltas.toArray(new IJSONValue[deltas.size()]));
+        boolean thisAllObject = this.allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
+        boolean otherAllObject = otherArray.allMatch(v -> v instanceof JSONObject || v.equals(JSONValue.Null));
+        if (!thisAllObject || !otherAllObject) {
+            return asIndexedObject().deltaWith(otherArray.asIndexedObject(), false);
+        }
+
+        //Now both arrays are composed of either null or Objects, and their order is not concerned
+        Map<String, List<Integer>> thisValueIndexes = getValueIndexes(Comparator.naturalOrder());
+        Map<String, List<Integer>> otherValueIndexes = otherArray.getValueIndexes(Comparator.naturalOrder());
+        Set<String> allKeys = new HashSet<String>() {{
+            addAll(thisValueIndexes.keySet());
+            addAll(otherValueIndexes.keySet());
+        }};
+
+        //Get indexes of unequal JSONObjects of both array
+        Map<Integer, Set<Integer>> thisValueTokens = new HashMap();
+        Map<Integer, Set<Integer>> otherValueTokens = new HashMap();
+        for (String key : allKeys) {
+            if (!thisValueIndexes.containsKey(key)) {
+                otherValueIndexes.get(key).forEach(i -> otherValueTokens.put(i, values[i].getSignatures()));
+            } else if (!otherValueIndexes.containsKey(key)) {
+                thisValueIndexes.get(key).forEach(i -> thisValueTokens.put(i, values[i].getSignatures()));
+            } else {
+                int countDif = thisValueIndexes.get(key).size() - otherValueIndexes.get(key).size();
+                if (countDif < 0) {
+                    otherValueIndexes.get(key).subList(0, -countDif).forEach(i -> otherValueTokens.put(i, values[i].getSignatures()));
+                } else if (countDif > 0) {
+                    thisValueIndexes.get(key).subList(0, countDif).forEach(i -> thisValueTokens.put(i, values[i].getSignatures()));
+                }
+            }
+        }
+
+        List<Tuple3<Integer, Integer, Integer>> similarities = new ArrayList<>();
+        for (Integer thisIndex : thisValueTokens.keySet()) {
+            for (Integer otherIndex : otherValueTokens.keySet()) {
+                Set<Integer> set = new HashSet(thisValueTokens.get(thisIndex));
+                set.retainAll(otherValueTokens.get(otherIndex));
+                Integer similarity = set.size();
+                similarities.add(Tuple.create(similarity, thisIndex, otherIndex));
+            }
+        }
+        Comparator<Tuple3<Integer, Integer, Integer>> _comparator = Comparator.comparing(tuple -> tuple.getFirst());
+        _comparator = _comparator.reversed();
+        Collections.sort(similarities, _comparator);
+
+        List<IJSONValue> deltas = new ArrayList<>();
+        for (Tuple3<Integer, Integer, Integer> tuple3 : similarities) {
+            Integer index1 = tuple3.getSecond();
+            Integer index2 = tuple3.getThird();
+            if (!thisValueTokens.containsKey(index1) || !otherValueTokens.containsKey(index2)) {
+                continue;
+            }
+            thisValueTokens.remove(index1);
+            otherValueTokens.remove(index2);
+
+            IJSONValue delta = this.getValue(index1).deltaWith(otherArray.getValue(index2), false);
+            if (!delta.isEmpty()) {
+                deltas.add(delta);
+            }
+        }
+
+        return deltas.isEmpty() ? EMPTY : new JSONArray(nameComparator, deltas.toArray(new IJSONValue[deltas.size()]));
     }
 
+    /**
+     * Re-arrange the orders of the element {@code IJSONValue}s to compose another {@code JSONArray}
+     * @return  a new {@code JSONArray} composed with the shuffled elements.
+     */
+    public JSONArray shuffle(){
+        IJSONValue[] shuffledValues = (IJSONValue[])ArrayHelper.shuffle(values);
+        return new JSONArray(nameComparator, shuffledValues);
+    }
 }

@@ -26,11 +26,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     final Comparator<String> nameComparator;
     Map<String, NamedValue> jsonMap = null;
     Map<String, Object> objectMap = null;
-//    final Lazy<Map<String, NamedValue>> lazyJSONMap = new Lazy<>(this::getJsonMap);
-//    final Lazy<Map<String, Object>> lazyMap = new Lazy<>(this::getObjectMap);
-//    Set<String> _nameSet = null;
-//    Collection<Object> _valueSet = null;
-//    Set<Entry<String, Object>> _entrySet = null;
 
     protected JSONObject(NamedValue... namedValues) {
         this(null, namedValues);
@@ -66,20 +61,22 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     private Map<String, NamedValue> getJsonMap() {
         if(jsonMap == null) {
-            jsonMap = new HashMap<>();
+            Map<String, NamedValue> map = new LinkedHashMap<>();
             for (NamedValue nv : values) {
-                jsonMap.put(nv.getName(), nv);
+                map.put(nv.getName(), nv);
             }
+            jsonMap = Collections.unmodifiableMap(map);
         }
         return jsonMap;
     }
 
     private Map<String, Object> getObjectMap() {
         if(objectMap==null) {
-            objectMap = new HashMap<>();
+            Map<String, Object> map = new LinkedHashMap<>();
             for (NamedValue nv : values) {
-                objectMap.put(nv.getName(), nv.getValue());
+                map.put(nv.getName(), nv.getValue());
             }
+            objectMap = Collections.unmodifiableMap(map);
         }
         return objectMap;
     }
@@ -101,10 +98,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Object getObject() {
-        if(objectMap==null){
-            objectMap = getObjectMap();
-        }
-        return objectMap;
+        return getObjectMap();
     }
 
     @Override
@@ -142,10 +136,10 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     public JSONObject withDelta(Map<String, Object> delta) {
-        Map<String, Object> thisMap = getObjectMap();
+        Map<String, Object> thisMap = new LinkedHashMap(getObjectMap());
         thisMap.putAll(delta);
 
-        JSONObject newObject = Converter.asJSONObject(nameComparator, thisMap);
+        JSONObject newObject = Utilities.asJSONObject(nameComparator, thisMap);
         return newObject;
     }
 
@@ -220,7 +214,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             return true;
         }
 
-        final JSONObject other = Converter.asJSONObject(nameComparator, obj);
+        final JSONObject other = Utilities.asJSONObject(nameComparator, obj);
         if (this.isEmpty() && other.isEmpty()) {
             return true;
         } else if (!other.canEqual(this)) {
@@ -248,7 +242,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         }
 
         JSONObject otherObject = (JSONObject) other;
-        if (otherObject.hashCode() == this.hashCode() && other.toString() == toString()) {
+        if (otherObject.hashCode() == this.hashCode() && other.toString().equals(toString())) {
             return EMPTY;
         }
 
@@ -275,11 +269,12 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             }
         }
 
-        if (differences.isEmpty()) {
+        int differenceCount = differences.size();
+        if (differenceCount == 0) {
             return EMPTY;
         }
 
-        JSONObject delta = new JSONObject(differences.toArray(new NamedValue[differences.size()]));
+        JSONObject delta = new JSONObject(differences.toArray(new NamedValue[differenceCount]));
         return delta;
     }
 

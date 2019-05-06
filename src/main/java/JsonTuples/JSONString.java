@@ -5,6 +5,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.regex.Pattern;
 
+import static io.github.cruisoring.Asserts.checkState;
 import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
@@ -13,6 +14,10 @@ import static io.github.cruisoring.Asserts.checkWithoutNull;
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONString extends JSONValue<String> {
+    //Determine if the String shall be enclosed by Quotes ('"'), so it can be parsed as a JSONString
+    public static boolean validateJSONString = false;
+
+
     //A string is a sequence of Unicode code points wrapped with quotation marks (U+0022). All code points may
     //be placed within the quotation marks except for the code points that must be escaped: quotation mark
     //(U+0022), reverse solidus (U+005C), and the control characters U+0000 to U+001F. There are two-character
@@ -39,18 +44,13 @@ public class JSONString extends JSONValue<String> {
         wrappedValueString = forbidUnescapedControls ? JSONString.trimJSONString(wrappedValueString) : wrappedValueString.trim();
         int length = wrappedValueString.length();
 
-        if (QUOTE != wrappedValueString.charAt(0) || QUOTE != wrappedValueString.charAt(wrappedValueString.length() - 1)) {
-            throw new IllegalArgumentException("The given valueString is not enclosed by quotes:" + wrappedValueString);
+        if(validateJSONString) {
+            //Enforce the validation by setting validateJSONString to true
+            checkState(QUOTE != wrappedValueString.charAt(0) || QUOTE != wrappedValueString.charAt(wrappedValueString.length() - 1),
+                    "The given valueString is not enclosed by quotes: %s", wrappedValueString);
         }
 
         String unescaped = StringEscapeUtils.unescapeJson(wrappedValueString.substring(1, length - 1));
-        return new JSONString(unescaped);
-    }
-
-    //
-    protected static JSONString _parseString(String valueStringOnly) {
-        String unescaped = StringEscapeUtils.unescapeJson(forbidUnescapedControls ?
-                illegalCharsPattern.matcher(valueStringOnly).replaceAll("") : valueStringOnly);
         return new JSONString(unescaped);
     }
 
@@ -61,7 +61,7 @@ public class JSONString extends JSONValue<String> {
      * @return Trimmed String also get illegal chars removed.
      */
     public static String trimJSONString(String rawString) {
-        String trimmed = illegalCharsPattern.matcher(rawString.trim()).replaceAll(""); //get r of all illegal chars
+        String trimmed = illegalCharsPattern.matcher(rawString.trim()).replaceAll(""); //get trid of all illegal chars
         return trimmed;
     }
 

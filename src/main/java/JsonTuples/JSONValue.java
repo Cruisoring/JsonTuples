@@ -44,7 +44,13 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
         super(t);
     }
 
-    public static JSONValue parse(String jsonContext, Range range) {
+    /**
+     * By assuming the concerned text represent simple JSON values, thus parse it as corresponding {@code JSONValue}
+     * @param jsonContext   {@code CharSequence} to be parsed, it denotes the valueString along with the given {@code Range}
+     * @param range         {@code Range} to denote the valueString within the given context of {@code CharSequence}
+     * @return      parsed {@code JSONValue} of the concerned valueString, could be true, false, null, JSON string or number.
+     */
+    public static JSONValue parse(CharSequence jsonContext, Range range) {
         checkWithoutNull(jsonContext);
         checkWithoutNull(range);
 

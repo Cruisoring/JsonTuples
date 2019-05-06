@@ -10,9 +10,9 @@ import static io.github.cruisoring.Asserts.checkStates;
 import static io.github.cruisoring.Asserts.checkWithoutNull;
 
 /**
- * Methods to convert JAVA values to/from {@code ISONValue}s.
+ * Utility methods to convert JAVA Objects to/from {@code ISONValue}s, or compare any two JAVA objects.
  */
-public class Converter {
+public class Utilities {
 
     //TODO: implemented as Repository once reflection method is ready
     public static final Map<Class, Tuple2<FunctionThrowable<Object, IJSONValue>, FunctionThrowable<IJSONValue, Object>>> classConverters =
@@ -104,7 +104,7 @@ public class Converter {
         }
 
         //Let the casting throw exception if the object is not a map of String keys
-        Map<Object, Object> map = checkWithoutNull((Map) object);
+        Map<Object, Object> map = (Map) object;
 
         //Assume the entry.getKey().toString() can get unique string keys
         NamedValue[] namedValues = map.entrySet().stream()
@@ -156,5 +156,28 @@ public class Converter {
     }
     //endregion
 
+    /**
+     * Compare any two JAVA objects and return their differences as an {@code IJSONValue}.
+     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
+     * @param obj1      the first Object to be compared.
+     * @param obj2      the second Object to be compared.
+     * @return  the differences of the above two Objects.
+     */
+    public static IJSONValue deltaWith(boolean orderMatters, Object obj1, Object obj2){
+        IJSONValue json1 = jsonify(obj1);
+        IJSONValue json2 = jsonify(obj2);
+
+        return json1.deltaWith(json2, orderMatters);
+    }
+
+    /**
+     * Compare any two JAVA objects and return their differences as an {@code IJSONValue} with default value of JSONArray.defaultElementOrderMatters.
+     * @param obj1      the first Object to be compared.
+     * @param obj2      the second Object to be compared.
+     * @return  the differences of the above two Objects.
+     */
+    public static IJSONValue deltaWith(Object obj1, Object obj2){
+        return deltaWith(JSONArray.defaultElementOrderMatters, obj1, obj2);
+    }
 
 }
