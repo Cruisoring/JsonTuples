@@ -4,7 +4,7 @@ import io.github.cruisoring.logger.Logger;
 import org.apache.commons.text.StringEscapeUtils;
 import org.junit.Test;
 
-import static io.github.cruisoring.Asserts.*;
+import static io.github.cruisoring.Asserts.assertEquals;
 
 public class JSONStringTest {
 
@@ -16,15 +16,11 @@ public class JSONStringTest {
         Logger.V("%s    ->    %s", unescaped, StringEscapeUtils.escapeJson(unescaped));
     }
 
-
-    //TODO: see how others handle control chars within quotes
-//    @Test
-//    public void fromJSONRaw() {
-//        String json = "\t  \"\b\n\rAb\tc\u2077  \\t\" \n";
-//        JSONString string = JSONString.parseString(json);
-//        assertEquals("|b\n\n" +
-//                "Ab\tc⁷  \t", string.getObject());
-//        assertEquals("\"Abc\\u2077  \\t\"", string.toJSONString());
-//    }
-
+    @Test
+    public void parseString_withControlChars_getControls() {
+        String json = "\\\"\\\\\\b\\/\\n\\r\\t";
+        JSONString string = JSONString.parseString(json);
+        assertEquals("\"\\\"\\\\\\b\\/\\n\\r\"", string.toString());
+        assertEquals("\"\\\b/\n\r", string.getObject());
+    }
 }

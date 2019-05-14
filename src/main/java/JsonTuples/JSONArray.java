@@ -58,11 +58,19 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     @Override
     public Object getObject() {
         if(array == null){
-            array = Arrays.stream(asArray())
+            array = Arrays.stream(values)
                     .map(IJSONValue::getObject)
                     .toArray();
         }
         return array;
+    }
+
+    @Override
+    public Object asMutableObject() {
+        List<Object> list = Arrays.stream(values)
+                .map(IJSONValue::asMutableObject)
+                .collect(Collectors.toList());
+        return list;
     }
 
     @Override

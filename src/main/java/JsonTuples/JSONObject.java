@@ -70,17 +70,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         return jsonMap;
     }
 
-    private Map<String, Object> getObjectMap() {
-        if(objectMap==null) {
-            Map<String, Object> map = new LinkedHashMap<>();
-            for (NamedValue nv : values) {
-                map.put(nv.getName(), nv.getValue());
-            }
-            objectMap = Collections.unmodifiableMap(map);
-        }
-        return objectMap;
-    }
-
     @Override
     public JSONObject getSorted(Comparator<String> comparator) {
         if (comparator == null || comparator == nameComparator)
@@ -98,7 +87,23 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Object getObject() {
-        return getObjectMap();
+        if(objectMap==null) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (NamedValue nv : values) {
+                map.put(nv.getName(), nv.getValue());
+            }
+            objectMap = Collections.unmodifiableMap(map);
+        }
+        return objectMap;
+    }
+
+    @Override
+    public Object asMutableObject(){
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (NamedValue nv : values) {
+            map.put(nv.getName(), nv.getSecond().asMutableObject());
+        }
+        return map;
     }
 
     @Override
@@ -110,10 +115,28 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             return noIndent;
         }
 
-        String indented = indent == null ?
-                noIndent.replaceAll("(?m)\\n\\s*", "")
-                : noIndent.replaceAll("(?m)\\n", NEW_LINE + indent);
-        return indented;
+        String[] lines = noIndent.split(NEW_LINE);
+        int len = lines.length;
+        StringBuilder sb = new StringBuilder();
+        sb.append(lines[0]);
+        int spaceSize = SPACE.length();
+        if(indent==null){
+            for (int i = 1; i < len-1; i++) {
+                sb.append(lines[i].substring(spaceSize));
+            }
+        } else {
+
+            for (int i = 1; i < len-1; i++) {
+                sb.append(NEW_LINE+indent+lines[i].substring(spaceSize));
+            }
+        }
+        sb.append(lines[len-1]);
+        return sb.toString();
+
+//        String indented = indent == null ?
+//                noIndent.replaceAll("(?m)\\n\\s*", "")
+//                : noIndent.replaceAll("(?m)\\n", NEW_LINE + indent);
+//        return indented;
     }
 
     @Override
@@ -136,7 +159,8 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     public JSONObject withDelta(Map<String, Object> delta) {
-        Map<String, Object> thisMap = new LinkedHashMap(getObjectMap());
+        checkWithoutNull(delta);
+        Map<String, Object> thisMap = (Map<String, Object>) asMutableObject();
         thisMap.putAll(delta);
 
         JSONObject newObject = Utilities.asJSONObject(nameComparator, thisMap);
@@ -163,12 +187,14 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean containsValue(Object value) {
-        return getObjectMap().containsValue(value);
+        getObject();
+        return objectMap.containsValue(value);
     }
 
     @Override
     public Object get(Object key) {
-        return getObjectMap().get(key);
+        getObject();
+        return objectMap.get(key);
     }
 
     @Override
@@ -198,12 +224,14 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Collection<Object> values() {
-        return getObjectMap().values();
+        getObject();
+        return objectMap.values();
     }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
-        return getObjectMap().entrySet();
+        getObject();
+        return objectMap.entrySet();
     }
 
     @Override

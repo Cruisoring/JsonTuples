@@ -16,10 +16,16 @@ import static io.github.cruisoring.Asserts.checkWithoutNull;
 public interface IJSONValue<T extends Object> extends IJSONable, ISortable, WithValues<T> {
 
     /**
-     * Get the JAVA Object represented by this {@code IJSONValue}
+     * Get the immutable JAVA Object represented by this {@code IJSONValue}
      * @return  A Java object represented by this {@code IJSONValue}
      */
     Object getObject();
+
+    /**
+     * Get the mutable JAVA Object represented by this {@code IJSONValue} that can be manipulated easily.
+     * @return  A Java object represented by this {@code IJSONValue}
+     */
+    Object asMutableObject();
 
     /**
      * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with orderMatters considered.

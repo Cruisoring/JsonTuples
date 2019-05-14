@@ -66,7 +66,7 @@ public class ParserTest {
         IJSONValue natualValue = Measurement.measure("Sorting JSON string length of " + jsonText.length(),
                 10, () ->value.getSorted(Comparator.naturalOrder()));
         String sortedString = Measurement.measure("toString() JSON string length of " + jsonText.length(),
-                10, () -> natualValue.toString(), LogLevel.debug);
+                5, () -> natualValue.toJSONString(null), LogLevel.debug);
 //        Logger.V(sortedString);
     }
 

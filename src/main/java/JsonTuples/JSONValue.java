@@ -73,6 +73,11 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
+    public Object asMutableObject() {
+        return getFirst();
+    }
+
+    @Override
     public JSONValue getSorted(Comparator comparator) {
         return this;
     }

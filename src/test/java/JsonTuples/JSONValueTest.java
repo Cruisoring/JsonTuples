@@ -1,7 +1,6 @@
 package JsonTuples;
 
 import io.github.cruisoring.Range;
-import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 import org.junit.Assert;
@@ -223,6 +222,65 @@ public class JSONValueTest {
         assertTrue(signatures.contains("-2.0E-4".hashCode()) && signatures.size()==1);
         signatures = JSONNumber.parseNumber("-20.0000000000000000000000002").getSignatures();
         assertTrue(signatures.contains("-20.0000000000000000000000002".hashCode()) && signatures.size()==1);
+    }
 
+    @Test
+    public void testGetObject() {
+        assertEquals(null, JSONValue.Null.getObject());
+        assertEquals(true, JSONValue.True.getObject());
+        assertEquals(false, JSONValue.False.getObject());
+        assertEquals("string", new JSONString("string").getObject());
+        assertEquals(0L, new JSONNumber(-0L).getObject());
+    }
+
+    @Test
+    public void testAsMutableObject() {
+        assertEquals(null, JSONValue.Null.asMutableObject());
+        assertEquals(true, JSONValue.True.asMutableObject());
+        assertEquals(false, JSONValue.False.asMutableObject());
+        assertEquals("string", new JSONString("string").asMutableObject());
+        assertEquals(22f, new JSONNumber(22f).asMutableObject());
+    }
+
+    @Test
+    public void testEquals_ObjectAndJSONValue_notEquals(){
+        assertNotEquals(null, JSONValue.Null);
+        assertNotEquals(true, JSONValue.True);
+        assertNotEquals(false, JSONValue.False);
+        assertNotEquals("string", new JSONString("string"));
+        assertNotEquals(22f, new JSONNumber(22f));
+    }
+
+    @Test
+    public void testEquals_betweenDifferentJSONValues_notEquals(){
+        assertNotEquals(JSONValue.True, JSONValue.Null);
+        assertNotEquals(JSONValue.False, JSONValue.True);
+        assertNotEquals(JSONValue.False, new JSONString("string"));
+        assertNotEquals(new JSONString(null), new JSONString("string"));
+        assertNotEquals(new JSONString(""), new JSONString(" "));
+        assertNotEquals(JSONValue.False, new JSONNumber(22f));
+        assertNotEquals(new JSONNumber(22), new JSONNumber(22f));
+    }
+
+    @Test
+    public void testEquals_JSONValuesOfIdenticalToString_equals(){
+        assertEquals(new JSONValue(null), JSONValue.Null);
+        assertEquals(new JSONString(null), JSONValue.Null);
+        assertEquals(new JSONNumber(null), JSONValue.Null);
+        assertEquals(new JSONValue(true), JSONValue.True);
+        assertEquals(new JSONString(""), new JSONString(""));
+        assertEquals(new JSONString("string"), new JSONString("string"));
+        assertEquals(new JSONNumber(22.0), new JSONNumber(22f));
+        assertEquals(new JSONNumber(3), new JSONNumber(3L));
+    }
+
+    @Test
+    public void testParse() {
+        String context = "null   true   false  9988   \"\"   ";
+        assertEquals(JSONValue.Null, JSONValue.parse(context, Range.closed(0, 5)));
+        assertEquals(JSONValue.True, JSONValue.parse(context, Range.closed(7, 13)));
+        assertEquals(JSONValue.False, JSONValue.parse(context, Range.closed(14, 20)));
+        assertEquals(new JSONNumber(9988), JSONValue.parse(context, Range.closed(21, 25)));
+        assertEquals("", JSONValue.parse(context, Range.closed(28, 30)).getObject());
     }
 }
