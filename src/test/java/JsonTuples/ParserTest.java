@@ -61,12 +61,12 @@ public class ParserTest {
 //        Parser parser = new Parser(jsonText);
 
         IJSONValue value = Measurement.measure("Parsing JSON string length of " + jsonText.length(),
-                10, ()-> Parser.parse(jsonText), LogLevel.info);
+                1, ()-> Parser.parse(jsonText), LogLevel.info);
         assertTrue(value != null);
         IJSONValue natualValue = Measurement.measure("Sorting JSON string length of " + jsonText.length(),
-                10, () ->value.getSorted(Comparator.naturalOrder()));
+                1, () ->value.getSorted(Comparator.naturalOrder()));
         String sortedString = Measurement.measure("toString() JSON string length of " + jsonText.length(),
-                5, () -> natualValue.toJSONString(null), LogLevel.debug);
+                10, () -> natualValue.toJSONString(null), LogLevel.debug);
 //        Logger.V(sortedString);
     }
 

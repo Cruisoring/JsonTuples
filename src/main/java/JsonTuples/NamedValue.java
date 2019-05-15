@@ -14,6 +14,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
 
     //TODO: check if name can contain escaped quotes?
     public static final Pattern SIMPLIFIED_NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":(.*)", Pattern.MULTILINE);
+    public static final Pattern DEFAULT_NAMED_VALUE_PATTERN = Pattern.compile("(\\\".*?(?!\\\\)\\\"): (.*)$");
 
     //Regex to match simple JSON name-value pair in form of "NAME": VALUE
     //Where VALUE could be: true, false, null, "STRING", number
@@ -39,9 +40,11 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     public String toJSONString(String indent) {
         if ("".equals(indent)) {
             return toString();
+        } else if (indent == null) {
+            return getFirst() + ": " + getSecond().toJSONString(null);
+        } else {
+            return indent + getFirst() + ": " + getSecond().toJSONString(indent);
         }
-
-        return indent + getFirst() + ": " + getSecond().toJSONString(indent);
     }
 
     @Override

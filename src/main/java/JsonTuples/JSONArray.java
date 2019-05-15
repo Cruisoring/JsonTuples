@@ -77,30 +77,49 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     public String toJSONString(String indent) {
         checkStates(StringUtils.isBlank(indent));
 
-        String noIndent = toString();
         if (values.length == 0 || "".equals(indent)) {
-            return noIndent;
+            return toString();
         }
 
-        String indented = indent == null ?
-                noIndent.replaceAll("(?m)\\n\\s*", "")
-                : noIndent.replaceAll("(?m)\\n", NEW_LINE + indent);
-        return indented;
+        //*/
+        TextStringBuilder sb = new TextStringBuilder();
+        String[] lines = toString().split(NEW_LINE);
+        int length = lines.length;
+        sb.append(LEFT_BRACKET);
+        if(indent == null) {
+            for (int i = 1; i < length; i++) {
+                sb.append(lines[i].trim());
+            }
+        } else {
+            for (int i = 1; i < length; i++) {
+                sb.append(NEW_LINE + indent + lines[i]);
+            }
+        }
+        return sb.toString();
+        /*/
+        if(indent == null){
+            String indented = toString().replaceAll("(?m)\\n\\s*", "");
+            return indented;
+        } else {
+            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
+            return indented;
+        }
+        //*/
     }
 
     @Override
     public String toString() {
         if (_toString == null) {
-            if (values.length == 0) {
+            int length = values.length;
+            if (length == 0) {
                 _toString = "[]";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
                 sb.append(LEFT_BRACKET + NEW_LINE + SPACE);
-                List<String> valueStrings = Arrays.stream(values)
-                        .map(v -> v.toJSONString(SPACE))
-                        .collect(Collectors.toList());
-                sb.appendWithSeparators(valueStrings, COMMA + NEW_LINE + SPACE);
-                sb.append(NEW_LINE + RIGHT_BRACKET);
+                for (int i = 0; i < length - 1; i++) {
+                    sb.append(values[i].toJSONString(SPACE) + COMMA_NEWLINE_SPACE);
+                }
+                sb.append(values[length-1].toJSONString(SPACE) + NEW_LINE + RIGHT_BRACKET);
                 _toString = sb.toString();
             }
         }

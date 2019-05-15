@@ -187,6 +187,18 @@ public class JSONObjectTest {
 
     @Test
     public void testToString() {
+        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", true], \"name\": {\"first\":\"Tom\", \"last\":\"Clarks\"} }");
+        assertEquals("{\n" +
+                "  \"age\": 123,\n" +
+                "  \"other\": [\n" +
+                "    \"none\",\n" +
+                "    true\n" +
+                "  ],\n" +
+                "  \"name\": {\n" +
+                "    \"first\": \"Tom\",\n" +
+                "    \"last\": \"Clarks\"\n" +
+                "  }\n" +
+                "}", obj.toString());
     }
 
     @Test

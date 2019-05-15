@@ -3,7 +3,6 @@ package JsonTuples;
 import io.github.cruisoring.Revokable;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
-import io.github.cruisoring.utility.ArrayHelper;
 import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -25,6 +24,24 @@ public class JSONArrayTest {
     @AfterClass
     public static void cleandown(){
         logLevelRevokable.close();
+    }
+
+    @Test
+    public void testToString() {
+        JSONArray array = JSONArray.parseArray("[123, \"abc\", null, {\"id\": 32, \"note\": \"none\"}, [false, \"x\"]]");
+        assertEquals("[\n" +
+                "  123,\n" +
+                "  \"abc\",\n" +
+                "  null,\n" +
+                "  {\n" +
+                "    \"id\": 32,\n" +
+                "    \"note\": \"none\"\n" +
+                "  },\n" +
+                "  [\n" +
+                "    false,\n" +
+                "    \"x\"\n" +
+                "  ]\n" +
+                "]", array.toString());
     }
 
     @Test
