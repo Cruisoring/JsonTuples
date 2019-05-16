@@ -1,6 +1,5 @@
 package JsonTuples;
 
-import java.util.Collection;
 import java.util.Comparator;
 
 import static io.github.cruisoring.Asserts.checkWithoutNull;
@@ -21,10 +20,10 @@ public interface ISortable {
 
     /**
      * Used the given collection of JSON names to sort this {@code ISortable} deeply.
-     * @param orderedNames  Collection of Strings used to sort this {@code ISortable} deeply.
+     * @param orderedNames  Array of Strings used to sort this {@code ISortable} deeply.
      * @returnthis  a {@code ISortable} instance sorted accordingly.
      */
-    default ISortable getSorted(Collection<String> orderedNames) {
+    default ISortable getSorted(String... orderedNames) {
         checkWithoutNull(orderedNames);
         Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);

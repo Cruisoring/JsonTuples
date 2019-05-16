@@ -57,7 +57,7 @@ public class UtilitiesTest {
         }};
 
         JSONObject jsonObject = Utilities.asJSONObject(map);
-        JSONObject withOrdered = (JSONObject) jsonObject.getSorted(Arrays.asList("id", "name", "class", "isActive", "address", "scores", "English", "Science", "Math"));
+        JSONObject withOrdered = (JSONObject) jsonObject.getSorted("id", "name", "class", "isActive", "address", "scores", "English", "Science", "Math");
         assertEquals("{\"id\": 123456,\"name\": \"test name\",\"class\": \"7L\",\"isActive\": true,\"address\": null,\"scores\": {\"English\": 80,\"Science\": 88,\"Math\": 90}}",
                 withOrdered.toJSONString(null));
         Logger.V(jsonObject.toString());

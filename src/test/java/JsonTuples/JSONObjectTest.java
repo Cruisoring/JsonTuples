@@ -79,7 +79,7 @@ public class JSONObjectTest {
     @Test
     public void getSortedWithOrderedNames() {
         JSONObject obj = JSONObject.parse("{ \"age\": 123, \"name\": null, \"other\": \"none\" }");
-        JSONObject naturalOrdered = (JSONObject) obj.getSorted(Arrays.asList("name", "other"));
+        JSONObject naturalOrdered = (JSONObject) obj.getSorted("name", "other");
         String string = naturalOrdered.toString();
         assertEquals("{\n" +
                 "  \"name\": null,\n" +

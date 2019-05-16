@@ -58,9 +58,9 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
      * @returnthis  a {@code IJSONValue} instance sorted accordingly.
      */
     @Override
-    default IJSONValue<T> getSorted(Collection<String> orderedNames) {
+    default IJSONValue<T> getSorted(String... orderedNames) {
         checkWithoutNull(orderedNames);
-        Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
+        Comparator<String> comparator = new OrdinalComparator<String>(orderedNames);
         return getSorted(comparator);
     }
 

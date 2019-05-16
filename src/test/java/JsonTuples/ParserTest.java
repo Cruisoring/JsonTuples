@@ -105,4 +105,23 @@ public class ParserTest {
         testPerformance("catalog.json");
     }
 
+    @Test
+    public void parseWithNameComparator_withExpectedOrders() {
+        assertEquals("{\"age\": 12,\"id\": \"111\",\"name\": \"Grace\"}",
+                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}", Comparator.naturalOrder()).toJSONString(null));
+        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"age\": 12}",
+                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}", new OrdinalComparator<>(new String[]{"id","name","age"})).toJSONString(null));
+        //'id' always as first, 'score' present before 'name' since it is processed first
+        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"classes\": [{\"id\": 11,\"name\": \"english\",\"score\": 77},{\"id\": 33,\"name\": \"math\",\"score\": 88},{\"id\": 22,\"name\": \"science\",\"score\": 99}]}",
+                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
+                        new OrdinalComparator<>(new String[]{"id"})).toJSONString(null));
+        //'id' and 'name' would always be listed in order
+        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"classes\": [{\"id\": 11,\"name\": \"english\",\"score\": 77},{\"id\": 33,\"name\": \"math\",\"score\": 88},{\"id\": 22,\"name\": \"science\",\"score\": 99}]}",
+                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
+                        new OrdinalComparator<>(new String[]{"id", "name"})).toJSONString(null));
+        //"id", "name" "classes" and "score" would be recorded based on their original orders
+        assertEquals("{\"name\": \"Grace\",\"id\": \"111\",\"classes\": [{\"name\": \"english\",\"id\": 11,\"score\": 77},{\"name\": \"math\",\"id\": 33,\"score\": 88},{\"name\": \"science\",\"id\": 22,\"score\": 99}]}",
+                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
+                        new OrdinalComparator<>()).toJSONString(null));
+    }
 }
