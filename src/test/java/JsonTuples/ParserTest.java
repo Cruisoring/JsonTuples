@@ -7,6 +7,7 @@ import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.Test;
 
 import java.util.Comparator;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -58,16 +59,19 @@ public class ParserTest {
 
     private void testPerformance(String jsonFilename) {
         String jsonText = ResourceHelper.getTextFromResourceFile(jsonFilename);
-//        Parser parser = new Parser(jsonText);
+        int jsonTextLength = jsonText.length();
 
-        IJSONValue value = Measurement.measure("Parsing JSON string length of " + jsonText.length(),
-                1, ()-> Parser.parse(jsonText), LogLevel.info);
-        assertTrue(value != null);
-        IJSONValue natualValue = Measurement.measure("Sorting JSON string length of " + jsonText.length(),
-                1, () ->value.getSorted(Comparator.naturalOrder()));
-        String sortedString = Measurement.measure("toString() JSON string length of " + jsonText.length(),
-                10, () -> natualValue.toJSONString(null), LogLevel.debug);
+        String sortedString = null;
+        for (int i = 0; i < 10; i++) {
+            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %d", jsonTextLength),
+                    () -> JSONObject.parse(jsonText));
+            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject of size %d", result.size()),
+                    () -> result.getSorted(Comparator.naturalOrder()));
+            sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
+        }
 //        Logger.V(sortedString);
+        Map<String, String> performanceSummary = Measurement.getAllSummary();
+        performanceSummary.entrySet().forEach(entry -> Logger.I("%s--> %s", entry.getKey(), entry.getValue()));
     }
 
     @Test

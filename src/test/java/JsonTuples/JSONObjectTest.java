@@ -139,7 +139,6 @@ public class JSONObjectTest {
                 "  \"isActive\": true,\n" +
                 "  \"class\": \"7A\"\n" +
                 "}");
-//        Logger.D(object.toString());
 
         Map<String, Object> map = new HashMap<String, Object>(){{
             put("name", "another");

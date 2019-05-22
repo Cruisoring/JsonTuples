@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Revokable;
+import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.utility.ResourceHelper;
@@ -70,6 +71,7 @@ public class JSONArrayTest {
     @Test
     public void getObject() {
         Object[] obj = (Object[])JSONArray.parseArray(steps).getObject();
+        assertEquals(10, obj.length);
     }
 
     @Test
@@ -111,6 +113,8 @@ public class JSONArrayTest {
     @Test
     public void deltaWith_shuffledArrayOfMaps_withDifferencesIfOrderMatters() {
         JSONArray array = new JSONArray(alice, bob, carl, dave, ellen);
+        Logger.D(TypeHelper.deepToString(array.getDeepIndexes()));
+
         JSONArray shuffled = array.shuffle();
 
         IJSONValue delta = array.deltaWith(shuffled, true);

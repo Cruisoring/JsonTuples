@@ -192,7 +192,8 @@ public class JSONString extends JSONValue<String> {
     @Override
     public String toString() {
         if (_toString == null) {
-            _toString = String.format("\"%s\"", StringEscapeUtils.escapeJson(getFirst()));
+            String content = getFirst();
+            _toString = content==null ? JSON_NULL : String.format("\"%s\"", StringEscapeUtils.escapeJson(content));
         }
         return _toString;
     }

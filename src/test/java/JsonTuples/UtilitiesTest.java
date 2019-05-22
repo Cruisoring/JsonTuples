@@ -27,6 +27,9 @@ public class UtilitiesTest {
         assertEquals("test", string.getObject());
         string = Utilities.asJSONString("");
         assertEquals("", string.getObject());
+
+        assertEquals(JSONValue.Null, Utilities.asJSONString(null));
+        assertEquals("null", Utilities.asJSONString(null).toString());
     }
 
     @Test
@@ -39,6 +42,9 @@ public class UtilitiesTest {
 
         IJSONValue dbl = Utilities.asJSONNumber(33.4);
         assertEquals(33.4, dbl.getObject());
+
+        assertEquals(JSONValue.Null, Utilities.asJSONNumber(null));
+        assertEquals(IJSONValue.JSON_NULL, Utilities.asJSONNumber(null).toString());
     }
 
     @Test

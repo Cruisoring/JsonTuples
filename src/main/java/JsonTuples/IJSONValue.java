@@ -2,7 +2,6 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.WithValues;
 
-import java.util.Collection;
 import java.util.Comparator;
 
 import static io.github.cruisoring.Asserts.checkWithoutNull;
