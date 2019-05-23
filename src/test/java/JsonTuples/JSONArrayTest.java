@@ -9,8 +9,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Comparator;
-import java.util.Map;
+import java.util.*;
 
 import static io.github.cruisoring.Asserts.*;
 
@@ -69,9 +68,56 @@ public class JSONArrayTest {
     }
 
     @Test
+    public void testMutability_tryUpdate_throwException(){
+        JSONArray array = JSONArray.parseArray("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        assertException(() -> array.remove(null), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+        assertException(() -> array.removeAll(Arrays.asList(true, 3456)), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+        assertException(() -> array.clear(), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+        assertException(() -> array.retainAll(new ArrayList<>()), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+        assertException(() -> array.add(array.getValue(0)), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+        assertException(() -> array.addAll(new ArrayList<>()), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
+    }
+
+    @Test
     public void getObject() {
-        Object[] obj = (Object[])JSONArray.parseArray(steps).getObject();
-        assertEquals(10, obj.length);
+        JSONArray array = JSONArray.parseArray("[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
+        Object[] objArray = (Object[])array.getObject();
+        assertEquals(5, objArray.length);
+        assertEquals(null, objArray[1]);
+        assertEquals(false, objArray[2]);
+        assertEquals(new Object[]{null, "ok", 123}, objArray[3]);
+        Map<String, Object> map = (Map)objArray[4];
+        assertTrue(map.size() == 1, map.get("result").equals("good"), map.get("else")==null);
+        assertException(() -> map.put("ok", true), UnsupportedOperationException.class);
+
+        //Updating the Object[] would not affect the JSONArray.
+        objArray[0] = null;
+        Object[] obj1 = (Object[])array.getObject();
+        assertNotEquals(objArray, obj1);
+        checkStates(obj1[0] != null);
+    }
+
+    @Test
+    public void testAsMutableObject() {
+        JSONArray array = JSONArray.parseArray("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        List list = (List)array.asMutableObject();
+        assertEquals(6, list.size());
+        //Update the List
+        list.add(2, false);
+        list.remove(3);
+        List subList = (List)list.get(3);
+        Map<String, Object> mapOfSubList = (Map<String, Object>)subList.get(1);
+        assertTrue(mapOfSubList.get("id").equals(111), mapOfSubList.get("notes")==null);
+        mapOfSubList.remove("notes");
+        mapOfSubList.put("id", 222);
+        mapOfSubList.put("name", "Bill");
+        Map<String, Object> map4 = (Map)list.get(4);
+        map4.put("value", "something");
+        list.remove(Integer.valueOf(1));
+        list.add(33);
+
+        JSONArray newArray = Utilities.asJSONArrayFromCollection(list);
+        assertEquals("[null,false,[\"abc\",{\"id\": 222,\"name\": \"Bill\"}],{\"value\": \"something\"},3456,33]", newArray.toJSONString(null));
     }
 
     @Test

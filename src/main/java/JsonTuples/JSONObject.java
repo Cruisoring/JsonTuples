@@ -18,6 +18,8 @@ import static io.github.cruisoring.Asserts.checkWithoutNull;
  */
 public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedValue>, Map<String, Object> {
 
+    static final String JSONObject_UNMODIFIABLE = "JSONObject instance is unmodifiable, asMutableObject() would return a modifiable LinkedHashMap containing underlying values that can be modified and then convert back to another JSONObject instance.";
+
     public static final JSONObject EMPTY = new JSONObject();
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
@@ -200,22 +202,22 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public Object put(String key, Object value) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(JSONObject_UNMODIFIABLE);
     }
 
     @Override
     public Object remove(Object key) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(JSONObject_UNMODIFIABLE);
     }
 
     @Override
     public void putAll(Map<? extends String, ?> m) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(JSONObject_UNMODIFIABLE);
     }
 
     @Override
     public void clear() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException(JSONObject_UNMODIFIABLE);
     }
 
     @Override

@@ -8,17 +8,18 @@ import org.apache.commons.text.TextStringBuilder;
 
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static io.github.cruisoring.Asserts.checkStates;
 
 /**
- * An array is an ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]
+ * An ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]
  * (right bracket). Values are separated by , (comma).
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
-public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue> {
+public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue>, Collection<IJSONValue> {
+
+    static final String JSONArray_UNMODIFIABLE = "JSONArray instance is not modifiable, asMutableObject() would return a modifiable List of the underlying values that can be modified and then convert back to another JSONArray instance.";
 
     /**
      * Assuming the concerned valueString is of array, parse it as a {@code JSONArray}
@@ -39,8 +40,9 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     // the Comparator<String> used by this {@code JSONArray} to sort its children JSONObjects.
     final Comparator<String> nameComparator;
-    // the buffered Java array of {@code Object} represented by this {@code IJSONValue}
-    protected Object[] array = null;
+
+    // the buffered list of {@code Object} represented by this {@code IJSONValue}
+    protected List<Object> objects = null;
 
     protected JSONArray(IJSONValue... values) {
         this(null, values);
@@ -57,19 +59,22 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
      */
     @Override
     public Object getObject() {
-        if(array == null){
-            array = Arrays.stream(values)
-                    .map(IJSONValue::getObject)
-                    .toArray();
+        if(objects == null){
+            List<Object> objs = new ArrayList<>();
+            for (int i = 0; i < values.length; i++) {
+                objs.add(values[i].getObject());
+            }
+            objects = Collections.unmodifiableList(objs);
         }
-        return array;
+        return objects.toArray();
     }
 
     @Override
     public Object asMutableObject() {
-        List<Object> list = Arrays.stream(values)
-                .map(IJSONValue::asMutableObject)
-                .collect(Collectors.toList());
+        List<Object> list = new ArrayList<>();
+        for (int i = 0; i < values.length; i++) {
+            list.add(values[i].asMutableObject());
+        }
         return list;
     }
 
@@ -286,4 +291,89 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         IJSONValue[] shuffledValues = (IJSONValue[])ArrayHelper.shuffle(values);
         return new JSONArray(nameComparator, shuffledValues);
     }
+
+    //region Implementation of Collection<IJSONValue>
+    @Override
+    public int size() {
+        return values.length;
+    }
+
+    @Override
+    public Iterator<IJSONValue> iterator() {
+        return Arrays.stream(values).iterator();
+    }
+
+    @Override
+    public Object[] toArray() {
+        return Arrays.stream(values)
+                .map(IJSONValue::getObject)
+                .toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(T[] a) {
+        int size = values.length;
+        if(a == null) {
+            return (T[])  ArrayHelper.create(IJSONValue.class, size, i -> values[i]);
+        }else if (a.length < size) {
+            return (T[]) ArrayHelper.create(a.getClass().getComponentType(), size, i -> values[i]);
+        } else {
+            //When the given array is bigger, then implements as ArrayList.toArray(T[] a) by setting remaining elments to be nulls
+            //Is that reasonable?
+            ArrayHelper.setAll(a, i -> a[i] = (i<size) ? (T) values[i] : null);
+            return a;
+        }
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        if(objects == null) {
+            objects = Arrays.asList(values);
+        }
+        return objects.contains(o);
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        if(objects == null) {
+            objects = Arrays.asList(values);
+        }
+        return objects.containsAll(c);
+    }
+
+    @Override
+    public boolean add(IJSONValue ijsonValue) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends IJSONValue> c) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public void clear() {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return values.length == 0;
+    }
+    //endregion
 }

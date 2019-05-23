@@ -11,46 +11,57 @@ import static io.github.cruisoring.Asserts.*;
 public class JSONObjectTest {
 
     @Test
-    public void parse() {
-        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
+    public void parse_getImmutableMap() {
+        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": null, \"name\": [\"Alex\", \"Tedd\"] }");
         String string = obj.toString();
         assertEquals("{\n" +
                 "  \"age\": 123,\n" +
-                "  \"other\": \"none\",\n" +
-                "  \"name\": null\n" +
+                "  \"other\": null,\n" +
+                "  \"name\": [\n" +
+                "    \"Alex\",\n" +
+                "    \"Tedd\"\n" +
+                "  ]\n" +
                 "}", string);
+        assertEquals(3, obj.size());
+        assertTrue(obj.containsKey("age"), obj.containsValue(null), obj.containsValue(123));
+        assertFalse(obj.containsKey("Age"), obj.containsKey(null), obj.containsValue("Alex"));
+        assertEquals(123, obj.get("age"));
+        assertEquals(null, obj.get("other"));
+        assertEquals(null, obj.get(null));
+        assertEquals(new Object[]{"Alex", "Tedd"}, obj.get("name"));
+        assertException(() -> obj.put("age", 23), UnsupportedOperationException.class, JSONObject.JSONObject_UNMODIFIABLE);
+        assertException(() -> obj.putAll(new HashMap<>()), UnsupportedOperationException.class, JSONObject.JSONObject_UNMODIFIABLE);
+        assertException(() -> obj.remove("age"), UnsupportedOperationException.class, JSONObject.JSONObject_UNMODIFIABLE);
+        assertException(() -> obj.clear(), UnsupportedOperationException.class, JSONObject.JSONObject_UNMODIFIABLE);
     }
 
     @Test
-    public void testJSONObject_getImmutableMap() {
-        JSONObject map = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
-        assertEquals(123, map.get("age"));
-        assertEquals(null, map.get("name"));
-        assertException(() -> map.put("age", 23), UnsupportedOperationException.class);
-        assertException(() -> map.remove("age"), UnsupportedOperationException.class);
-    }
-
-    @Test
-    public void getObject_getImmutableMap() {
+    public void testGetObject_getImmutableMap() {
         JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
         Map<String, Object> map = (Map<String, Object>)obj.getObject();
         assertEquals(123, map.get("age"));
         assertEquals(null, map.get("name"));
-        assertException(() -> map.put("age", 23), UnsupportedOperationException.class);
+        assertException(() -> map.put("",""), UnsupportedOperationException.class);
         assertException(() -> map.remove("age"), UnsupportedOperationException.class);
+        assertException(() -> map.putAll(new HashMap<>()), UnsupportedOperationException.class);
+        assertException(() -> map.clear(), UnsupportedOperationException.class);
     }
 
     @Test
-    public void asMutableObject_canBeUpdated() {
-        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
+    public void testAsMutableObject_canBeUpdated() {
+        JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null, \"members\":[\"Alice\", \"Bob\"] }");
         Map<String, Object> map = (Map<String, Object>)obj.asMutableObject();
         assertEquals(123, map.get("age"));
         assertEquals(null, map.get("name"));
         map.put("age", 23);
         map.remove("name");
+        List members = (List)map.get("members");
+        members.remove("Alice");
+        members.add(0, "Alan");
+        members.add("Carter");
 
         JSONObject updated = Utilities.asJSONObject(map);
-        assertEquals("{\"age\": 23,\"other\": \"none\"}", updated.toJSONString(null));
+        assertEquals("{\"age\": 23,\"other\": \"none\",\"members\": [\"Alan\",\"Bob\",\"Carter\"]}", updated.toJSONString(null));
     }
 
     @Test
