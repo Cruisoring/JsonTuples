@@ -28,7 +28,7 @@ public class JSONArrayTest {
 
     @Test
     public void testToString() {
-        JSONArray array = JSONArray.parseArray("[123, \"abc\", null, {\"id\": 32, \"note\": \"none\"}, [false, \"x\"]]");
+        JSONArray array = JSONArray.parse("[123, \"abc\", null, {\"id\": 32, \"note\": \"none\"}, [false, \"x\"]]");
         assertEquals("[\n" +
                 "  123,\n" +
                 "  \"abc\",\n" +
@@ -46,7 +46,7 @@ public class JSONArrayTest {
 
     @Test
     public void toJSONString() {
-        JSONArray array = JSONArray.parseArray("[123, \"abc\"]");
+        JSONArray array = JSONArray.parse("[123, \"abc\"]");
         assertEquals("[\n  123,\n  \"abc\"\n]", array.toString());
         assertEquals("[123,\"abc\"]", array.toJSONString(null));
         assertEquals("[\n    123,\n    \"abc\"\n  ]", array.toJSONString("  "));
@@ -56,7 +56,7 @@ public class JSONArrayTest {
     String steps = ResourceHelper.getTextFromResourceFile("steps.json");
     @Test
     public void parseArray() {
-        JSONArray array = JSONArray.parseArray(steps);
+        JSONArray array = JSONArray.parse(steps);
         assertEquals(10, array.getLength());
         Logger.V(array.toString());
 
@@ -69,7 +69,7 @@ public class JSONArrayTest {
 
     @Test
     public void testMutability_tryUpdate_throwException(){
-        JSONArray array = JSONArray.parseArray("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        JSONArray array = JSONArray.parse("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
         assertException(() -> array.remove(null), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
         assertException(() -> array.removeAll(Arrays.asList(true, 3456)), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
         assertException(() -> array.clear(), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
@@ -80,7 +80,7 @@ public class JSONArrayTest {
 
     @Test
     public void getObject() {
-        JSONArray array = JSONArray.parseArray("[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
+        JSONArray array = JSONArray.parse("[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
         Object[] objArray = (Object[])array.getObject();
         assertEquals(5, objArray.length);
         assertEquals(null, objArray[1]);
@@ -99,7 +99,7 @@ public class JSONArrayTest {
 
     @Test
     public void testAsMutableObject() {
-        JSONArray array = JSONArray.parseArray("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        JSONArray array = JSONArray.parse("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
         List list = (List)array.asMutableObject();
         assertEquals(6, list.size());
         //Update the List

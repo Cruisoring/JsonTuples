@@ -85,7 +85,7 @@ public class UtilitiesTest {
         assertEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
                 new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object);
 
-        JSONArray steps = JSONArray.parseArray(ResourceHelper.getTextFromResourceFile("steps.json"));
+        JSONArray steps = JSONArray.parse(ResourceHelper.getTextFromResourceFile("steps.json"));
         assertEquals("skipped",
                 ((JSONObject)steps.getValue(9)).get("status").toString());
         Object[] stepArray = (Object[])steps.getObject();

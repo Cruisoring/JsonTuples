@@ -26,7 +26,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
      * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
      * @return      a {@code JSONArray} instance from the given text.
      */
-    public static JSONArray parseArray(String valueString) {
+    public static JSONArray parse(String valueString) {
         return (JSONArray) Parser.parse(valueString);
     }
 
@@ -305,9 +305,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     @Override
     public Object[] toArray() {
-        return Arrays.stream(values)
-                .map(IJSONValue::getObject)
-                .toArray();
+        return (Object[]) ArrayHelper.create(Object.class, values.length, i -> values[i]);
     }
 
     @Override

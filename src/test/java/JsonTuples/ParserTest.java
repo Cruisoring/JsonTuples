@@ -1,5 +1,6 @@
 package JsonTuples;
 
+import io.github.cruisoring.Revokable;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
@@ -9,8 +10,7 @@ import org.junit.Test;
 import java.util.Comparator;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static io.github.cruisoring.Asserts.*;
 
 public class ParserTest {
 
@@ -106,7 +106,19 @@ public class ParserTest {
 
     @Test
     public void test6257KJson() {
-        testPerformance("catalog.json");
+        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
+        int jsonTextLength = jsonText.length();
+
+        String sortedString = null;
+        for (int i = 0; i < 10; i++) {
+            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %d", jsonTextLength),
+                    () -> JSONObject.parse(jsonText));
+            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject of size %d", result.size()),
+                    () -> result.getSorted(Comparator.naturalOrder()));
+            sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
+        }
+        Map<String, String> performanceSummary = Measurement.getAllSummary();
+        performanceSummary.entrySet().forEach(entry -> Logger.I("%s--> %s", entry.getKey(), entry.getValue()));
     }
 
     @Test
@@ -127,5 +139,50 @@ public class ParserTest {
         assertEquals("{\"name\": \"Grace\",\"id\": \"111\",\"classes\": [{\"name\": \"english\",\"id\": 11,\"score\": 77},{\"name\": \"math\",\"id\": 33,\"score\": 88},{\"name\": \"science\",\"id\": 22,\"score\": 99}]}",
                 Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
                         new OrdinalComparator<>()).toJSONString(null));
+    }
+
+    @Test
+    public void parseText_getRightIJSONValue() {
+        //parse texts of null, true or false
+        assertTrue(JSONValue.Null == Parser.parse("null"));
+        assertTrue(JSONValue.True == Parser.parse("true"));
+        assertTrue(JSONValue.False == Parser.parse("false"));
+
+        //text of a number to JSONNumber
+        JSONNumber number = (JSONNumber) Parser.parse(" 12.345  ");
+        assertEquals(12.345, number.getObject());
+
+        //text enclosed by '""s would be parsed as JSONString
+        JSONString string = (JSONString) Parser.parse("  \" abc \n \t\"\r");
+        assertEquals(" abc  ", string.getObject());
+
+        //If JSONString.forbidUnescapedControls is set to false, then special characters like \n, \r would not be removed
+        try {
+            Revokable.register(() -> JSONString.forbidUnescapedControls, v -> JSONString.forbidUnescapedControls = v, false);
+            string = (JSONString) Parser.parse("  \" abc \n \t\"\r");
+            assertEquals(" abc \n \t", string.getObject());
+        }finally {
+            Revokable.revokeAll();
+        }
+
+        //Map alike text would be parsed as JSONObject
+//        JSONObject object = JSONObject.parse("{\"id\":123,\"name\":null,\"courses\":[\"English\", \"Math\", \"Science\"]}");
+        JSONObject object = (JSONObject) Parser.parse("{\"id\":123,\"name\":null,\"courses\":[\"English\", \"Math\", \"Science\"]}");
+        assertEquals(123, object.get("id"));
+        assertNull(object.get("name"));
+        assertEquals(new Object[]{"English", "Math", "Science"}, object.get("courses"));
+
+        //Array alike text would be parsed as JSONArray
+//        JSONArray array = JSONArray.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
+        JSONArray array = (JSONArray) Parser.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
+        Object[] values = (Object[]) array.getObject();
+        assertTrue(array.size() == 6,
+                values[0].equals(1),
+                values[1]==null,
+                values[2].equals(true),
+                values[3].equals("abc"));
+        assertEquals(new Object[]{false, null}, values[4]);
+        Map mapAt5 = (Map)values[5];
+        assertEquals(123, mapAt5.get("id"));
     }
 }

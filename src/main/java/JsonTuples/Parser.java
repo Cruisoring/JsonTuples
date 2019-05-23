@@ -165,7 +165,13 @@ public final class Parser {
                 isObject = tuple.getFirst();
             }
         }
-        return tuple.getSecond();
+
+        //If there is no single control character to get tuple, it must be a JSONValue
+        if(tuple == null || tuple.getFirst() == null) {
+            return JSONValue.parse(jsonContext, Range.ofLength(jsonContext.length()));
+        } else {
+            return tuple.getSecond();
+        }
     }
 
     Tuple2<Boolean, IJSONValue> processControl(Boolean isObject, List<IJSONable> children, char control, int position) {
@@ -296,7 +302,7 @@ public final class Parser {
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
                     lastStringValue = new JSONString(JSONString._unescapeJson(jsonContext, currentStringStart + 1, currentStringEnd));
-                    if (!isObject) {
+                    if (isObject != null && !isObject) {
                         children.add(lastStringValue);
                     }
                 } else {

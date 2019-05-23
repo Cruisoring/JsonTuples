@@ -25,8 +25,9 @@ public class JSONString extends JSONValue<String> {
 
     //Regex to match potential String value wrapped by Quotes
     public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
+
     //The forbidUnescapedControls would screen out controls that have not been escaped '\r' or '\n'
-    public static boolean forbidUnescapedControls = false;
+    public static boolean forbidUnescapedControls = true;
     static Pattern illegalCharsPattern = Pattern.compile("\\r|\\n|\\t|[\b]", Pattern.MULTILINE);
 
     protected JSONString(String value) {
