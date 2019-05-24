@@ -17,7 +17,7 @@ import static io.github.cruisoring.Asserts.checkStates;
  * (right bracket). Values are separated by , (comma).
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
-public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue>, Collection<IJSONValue> {
+public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue>, List<Object> {
 
     static final String JSONArray_UNMODIFIABLE = "JSONArray instance is not modifiable, asMutableObject() would return a modifiable List of the underlying values that can be modified and then convert back to another JSONArray instance.";
 
@@ -59,6 +59,10 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
      */
     @Override
     public Object getObject() {
+        return _getObjects().toArray();
+    }
+
+    private List<Object> _getObjects(){
         if(objects == null){
             List<Object> objs = new ArrayList<>();
             for (int i = 0; i < values.length; i++) {
@@ -66,7 +70,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             }
             objects = Collections.unmodifiableList(objs);
         }
-        return objects.toArray();
+        return objects;
     }
 
     @Override
@@ -87,18 +91,17 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         }
 
         //*/
+        if(indent == null) {
+            String[] elementStrings = Arrays.stream(values).parallel().map(v -> v.toJSONString(null)).toArray(size -> new String[size]);
+            return "[" + String.join(",", elementStrings) + "]";
+        }
+
         TextStringBuilder sb = new TextStringBuilder();
-        String[] lines = toString().split(NEW_LINE);
+        String[] lines = toString().split(JSONValue.NEW_LINE);
         int length = lines.length;
         sb.append(LEFT_BRACKET);
-        if(indent == null) {
-            for (int i = 1; i < length; i++) {
-                sb.append(lines[i].trim());
-            }
-        } else {
-            for (int i = 1; i < length; i++) {
-                sb.append(NEW_LINE + indent + lines[i]);
-            }
+        for (int i = 1; i < length; i++) {
+            sb.append(JSONValue.NEW_LINE + indent + lines[i]);
         }
         return sb.toString();
         /*/
@@ -106,7 +109,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             String indented = toString().replaceAll("(?m)\\n\\s*", "");
             return indented;
         } else {
-            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
+            String indented = toString().replaceAll("(?m)\\n", JSONValue.NEW_LINE + indent);
             return indented;
         }
         //*/
@@ -120,11 +123,11 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 _toString = "[]";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
-                sb.append(LEFT_BRACKET + NEW_LINE + SPACE);
+                sb.append(LEFT_BRACKET + JSONValue.NEW_LINE + JSONValue.SPACE);
                 for (int i = 0; i < length - 1; i++) {
-                    sb.append(values[i].toJSONString(SPACE) + COMMA_NEWLINE_SPACE);
+                    sb.append(values[i].toJSONString(JSONValue.SPACE) + JSONValue.COMMA_NEWLINE_SPACE);
                 }
-                sb.append(values[length-1].toJSONString(SPACE) + NEW_LINE + RIGHT_BRACKET);
+                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + JSONValue.NEW_LINE + RIGHT_BRACKET);
                 _toString = sb.toString();
             }
         }
@@ -138,7 +141,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         }
         return _hashCode;
     }
-
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof JSONArray || obj instanceof Collection || obj.getClass().isArray())) {
@@ -292,29 +294,71 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         return new JSONArray(nameComparator, shuffledValues);
     }
 
-    //region Implementation of Collection<IJSONValue>
+    @Override
+    public boolean isEmpty() {
+        return values.length == 0;
+    }
+
+    //region Implementation of List<Object>
+
+    @Override
+    public Object get(int index) {
+        if (index > values.length || index < 0)
+            throw new IndexOutOfBoundsException("index: "+index + ", size: " + values.length);
+        return values[index].getObject();
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        return _getObjects().indexOf(o);
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        return _getObjects().lastIndexOf(o);
+    }
+
+    @Override
+    public ListIterator<Object> listIterator() {
+        return _getObjects().listIterator();
+    }
+
+    @Override
+    public ListIterator<Object> listIterator(int index) {
+        return _getObjects().listIterator(index);
+    }
+
+    @Override
+    public List<Object> subList(int fromIndex, int toIndex) {
+        return _getObjects().subList(fromIndex,toIndex);
+    }
+
     @Override
     public int size() {
         return values.length;
     }
 
     @Override
-    public Iterator<IJSONValue> iterator() {
-        return Arrays.stream(values).iterator();
+    public boolean contains(Object o) {
+        return _getObjects().contains(o);
+    }
+
+    @Override
+    public Iterator<Object> iterator() {
+        return _getObjects().iterator();
     }
 
     @Override
     public Object[] toArray() {
-        return (Object[]) ArrayHelper.create(Object.class, values.length, i -> values[i]);
+        return _getObjects().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        int size = values.length;
-        if(a == null) {
-            return (T[])  ArrayHelper.create(IJSONValue.class, size, i -> values[i]);
-        }else if (a.length < size) {
-            return (T[]) ArrayHelper.create(a.getClass().getComponentType(), size, i -> values[i]);
+        List<Object> objects = _getObjects();
+        int size = objects.size();
+        if(a == null || a.length < size) {
+            return (T[]) ArrayHelper.create(a.getClass().getComponentType(), size, i -> objects.get(i));
         } else {
             //When the given array is bigger, then implements as ArrayList.toArray(T[] a) by setting remaining elments to be nulls
             //Is that reasonable?
@@ -324,23 +368,27 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     }
 
     @Override
-    public boolean contains(Object o) {
-        if(objects == null) {
-            objects = Arrays.asList(values);
-        }
-        return objects.contains(o);
-    }
-
-    @Override
     public boolean containsAll(Collection<?> c) {
-        if(objects == null) {
-            objects = Arrays.asList(values);
-        }
-        return objects.containsAll(c);
+        return _getObjects().containsAll(c);
     }
 
     @Override
-    public boolean add(IJSONValue ijsonValue) {
+    public Object set(int index, Object element) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public void add(int index, Object element) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public Object remove(int index) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean add(Object object) {
         throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
     }
 
@@ -350,7 +398,12 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     }
 
     @Override
-    public boolean addAll(Collection<? extends IJSONValue> c) {
+    public boolean addAll(Collection<?> c) {
+        throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<?> c) {
         throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
     }
 
@@ -367,11 +420,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     @Override
     public void clear() {
         throw new UnsupportedOperationException(JSONArray_UNMODIFIABLE);
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return values.length == 0;
     }
     //endregion
 }

@@ -7,6 +7,7 @@ import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -123,22 +124,25 @@ public class ParserTest {
 
     @Test
     public void parseWithNameComparator_withExpectedOrders() {
-        assertEquals("{\"age\": 12,\"id\": \"111\",\"name\": \"Grace\"}",
-                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}", Comparator.naturalOrder()).toJSONString(null));
-        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"age\": 12}",
-                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}", new OrdinalComparator<>(new String[]{"id","name","age"})).toJSONString(null));
+        assertEquals("{\"age\":12,\"id\":\"111\",\"name\":\"Grace\"}",
+                Parser.parse(Comparator.naturalOrder(),"{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}").toJSONString(null));
+        assertEquals("{\"id\":\"111\",\"name\":\"Grace\",\"age\":12}",
+                Parser.parse(new OrdinalComparator("id","name","age"), "{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}").toJSONString(null));
         //'id' always as first, 'score' present before 'name' since it is processed first
-        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"classes\": [{\"id\": 11,\"name\": \"english\",\"score\": 77},{\"id\": 33,\"name\": \"math\",\"score\": 88},{\"id\": 22,\"name\": \"science\",\"score\": 99}]}",
-                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
-                        new OrdinalComparator<>(new String[]{"id"})).toJSONString(null));
+        assertEquals("{\"id\":\"111\",\"name\":\"Grace\",\"classes\":[{\"id\":11,\"name\":\"english\",\"score\":77},{\"id\":33,\"name\":\"math\",\"score\":88},{\"id\":22,\"name\":\"science\",\"score\":99}]}",
+                Parser.parse(new OrdinalComparator("id"),
+                        "{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}"
+                        ).toJSONString(null));
         //'id' and 'name' would always be listed in order
-        assertEquals("{\"id\": \"111\",\"name\": \"Grace\",\"classes\": [{\"id\": 11,\"name\": \"english\",\"score\": 77},{\"id\": 33,\"name\": \"math\",\"score\": 88},{\"id\": 22,\"name\": \"science\",\"score\": 99}]}",
-                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
-                        new OrdinalComparator<>(new String[]{"id", "name"})).toJSONString(null));
+        assertEquals("{\"id\":\"111\",\"name\":\"Grace\",\"classes\":[{\"id\":11,\"name\":\"english\",\"score\":77},{\"id\":33,\"name\":\"math\",\"score\":88},{\"id\":22,\"name\":\"science\",\"score\":99}]}",
+                Parser.parse(new OrdinalComparator("id", "name"),
+                        "{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}"
+                        ).toJSONString(null));
         //"id", "name" "classes" and "score" would be recorded based on their original orders
-        assertEquals("{\"name\": \"Grace\",\"id\": \"111\",\"classes\": [{\"name\": \"english\",\"id\": 11,\"score\": 77},{\"name\": \"math\",\"id\": 33,\"score\": 88},{\"name\": \"science\",\"id\": 22,\"score\": 99}]}",
-                Parser.parse("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}",
-                        new OrdinalComparator<>()).toJSONString(null));
+        assertEquals("{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"name\":\"english\",\"id\":11,\"score\":77},{\"name\":\"math\",\"id\":33,\"score\":88},{\"name\":\"science\",\"id\":22,\"score\":99}]}",
+                Parser.parse(new OrdinalComparator<>(),
+                        "{\"name\":\"Grace\",\"id\":\"111\",\"classes\":[{\"score\":77,\"id\":11,\"name\":\"english\"},{\"name\":\"math\",\"score\":88,\"id\":33},{\"score\":99,\"id\":22,\"name\":\"science\"}]}"
+                        ).toJSONString(null));
     }
 
     @Test
@@ -175,14 +179,14 @@ public class ParserTest {
         //Array alike text would be parsed as JSONArray
 //        JSONArray array = JSONArray.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
         JSONArray array = (JSONArray) Parser.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
-        Object[] values = (Object[]) array.getObject();
-        assertTrue(array.size() == 6,
-                values[0].equals(1),
-                values[1]==null,
-                values[2].equals(true),
-                values[3].equals("abc"));
-        assertEquals(new Object[]{false, null}, values[4]);
-        Map mapAt5 = (Map)values[5];
+        assertEquals(1, array.get(0));
+        assertTrue(
+                array.size() == 6,
+                array.contains(null),
+                array.containsAll(Arrays.asList(true, "abc"))
+        );
+        assertEquals(new Object[]{false, null}, array.get(4));
+        Map mapAt5 = (Map)array.get(5);
         assertEquals(123, mapAt5.get("id"));
     }
 }

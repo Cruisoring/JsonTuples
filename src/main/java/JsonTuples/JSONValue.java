@@ -3,10 +3,7 @@ package JsonTuples;
 import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple1;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static io.github.cruisoring.Asserts.checkWithoutNull;
@@ -38,6 +35,35 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
+
+    public static final String SPACE = "  ";
+    public static final String NEW_LINE = "\n";
+    public static final String COMMA_NEWLINE = COMMA + NEW_LINE;
+    public static final String COMMA_NEWLINE_SPACE = COMMA + NEW_LINE + SPACE;
+
+    private static final Map<Integer, String> indentsMap = new HashMap(){{
+        put(0, "");
+        put(1, SPACE);
+        put(2, SPACE + SPACE);
+    }};
+    /**
+     * Get the filling spaces of lines of JSON string.
+     * @param indentFactor  level to be indented, 0 means no indent.
+     * @return      spaces of the concerned indent level.
+     */
+    static String getIndent(int indentFactor) {
+        if(indentsMap.containsKey(indentFactor)){
+            return indentsMap.get(indentFactor);
+        }
+
+        if(indentFactor < 0){
+            return "";
+        }
+        String indent = getIndent(indentFactor-1) + SPACE;
+        indentsMap.put(indentFactor, indent);
+        return indent;
+    }
+
     //endregion
 
     protected JSONValue(T t) {

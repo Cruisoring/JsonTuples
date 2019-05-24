@@ -41,7 +41,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
         if ("".equals(indent)) {
             return toString();
         } else if (indent == null) {
-            return getFirst() + ": " + getSecond().toJSONString(null);
+            return getFirst() + ":" + getSecond().toJSONString(null);
         } else {
             return indent + getFirst() + ": " + getSecond().toJSONString(indent);
         }

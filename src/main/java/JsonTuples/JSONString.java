@@ -17,17 +17,17 @@ public class JSONString extends JSONValue<String> {
     //Determine if the String shall be enclosed by Quotes ('"'), so it can be parsed as a JSONString
     public static boolean validateJSONString = false;
 
-
     //A string is a sequence of Unicode code points wrapped with quotation marks (U+0022). All code points may
     //be placed within the quotation marks except for the code points that must be escaped: quotation mark
     //(U+0022), reverse solidus (U+005C), and the control characters U+0000 to U+001F. There are two-character
     //escape sequence representations of some characters.
 
+    //The forbidUnescapedControls would screen out controls that have not been escaped '\r' or '\n'
+    public static boolean forbidUnescapedControls = true;
+
     //Regex to match potential String value wrapped by Quotes
     public static final Pattern JSON_STRING_PATTERN = Pattern.compile("^\\\".*?\\\"$", Pattern.MULTILINE);
 
-    //The forbidUnescapedControls would screen out controls that have not been escaped '\r' or '\n'
-    public static boolean forbidUnescapedControls = true;
     static Pattern illegalCharsPattern = Pattern.compile("\\r|\\n|\\t|[\b]", Pattern.MULTILINE);
 
     protected JSONString(String value) {

@@ -55,11 +55,11 @@ public final class Parser {
     /**
      * To parse the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order.
      *
-     * @param jsonText the whole JSON text to be parsed.
      * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
+     * @param jsonText the whole JSON text to be parsed.
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
-    public static IJSONValue parse(CharSequence jsonText, Comparator<String> comparator) {
+    public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText) {
         assertNotNull(jsonText, comparator);
 
         Parser parser = new Parser(jsonText, Range.ofLength(jsonText.length()), comparator);
@@ -69,12 +69,12 @@ public final class Parser {
     /**
      * To parse a part of the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order.
      *
-     * @param jsonText the whole JSON text to be parsed.
      * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
+     * @param jsonText the whole JSON text to be parsed.
      * @param range the {@code Range} of the concerned portion to be parsed
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
-    public static IJSONValue parse(CharSequence jsonText, Comparator<String> comparator, Range range) {
+    public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText, Range range) {
         assertNotNull(comparator, jsonText, range);
 
         Parser parser = new Parser(jsonText, range, comparator);

@@ -1,7 +1,5 @@
 package JsonTuples;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
  * Something that can be represented as JSON text.
  */
@@ -21,21 +19,7 @@ public interface IJSONable {
     char COLON = ':';
     char QUOTE = '"';
     char BACK_SLASH = '\\';
-
-    String SPACE = "  ";
-    String NEW_LINE = "\n";
-    String COMMA_NEWLINE = COMMA + NEW_LINE;
-    String COMMA_NEWLINE_SPACE = COMMA + NEW_LINE + SPACE;
     //endregion
-
-    /**
-     * Get the filling spaces of lines of JSON string.
-     * @param indentFactor  level to be indented, 0 means no indent.
-     * @return      spaces of the concerned indent level.
-     */
-    static String getIndent(int indentFactor) {
-        return StringUtils.repeat(SPACE, indentFactor);
-    }
 
     /**
      * The <code>toJSONString</code> method allows a class to produce its own JSON

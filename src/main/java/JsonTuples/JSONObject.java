@@ -23,7 +23,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     public static final JSONObject EMPTY = new JSONObject();
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
-    private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
+    private static final Pattern LINE_STARTS = Pattern.compile("^" + JSONValue.SPACE, Pattern.MULTILINE);
     public static IJSONValue MISSING = JSONValue.Null;
     final Comparator<String> nameComparator;
     Map<String, NamedValue> jsonMap = null;
@@ -117,18 +117,17 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         }
 
         //*/
-        TextStringBuilder sb = new TextStringBuilder();
-        String[] lines = toString().split(NEW_LINE);
-        int length = lines.length;
-        sb.append(LEFT_BRACE);
         if(indent == null) {
-            for (int i = 1; i < length; i++) {
-                sb.append(lines[i].trim());
-            }
-        } else {
-            for (int i = 1; i < length; i++) {
-                sb.append(NEW_LINE + indent + lines[i]);
-            }
+            String[] elementStrings = Arrays.stream(values).parallel().map(v -> v.toJSONString(null)).toArray(size -> new String[size]);
+            return "{" + String.join(",", elementStrings) + "}";
+        }
+
+        TextStringBuilder sb = new TextStringBuilder();
+        sb.append(LEFT_BRACE);
+        String[] lines = toString().split(JSONValue.NEW_LINE);
+        int length = lines.length;
+        for (int i = 1; i < length; i++) {
+            sb.append(JSONValue.NEW_LINE + indent + lines[i]);
         }
         return sb.toString();
         /*/
@@ -136,7 +135,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             String indented = toString().replaceAll("(?m)\\n\\s*", "");
             return indented;
         } else {
-            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
+            String indented = toString().replaceAll("(?m)\\n", JSONValue.NEW_LINE + indent);
             return indented;
         }
         //*/
@@ -150,11 +149,11 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
                 _toString = "{}";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
-                sb.append(LEFT_BRACE + NEW_LINE);
+                sb.append(LEFT_BRACE + JSONValue.NEW_LINE);
                 for (int i = 0; i < length - 1; i++) {
-                    sb.append(values[i].toJSONString(SPACE) + COMMA_NEWLINE);
+                    sb.append(values[i].toJSONString(JSONValue.SPACE) + JSONValue.COMMA_NEWLINE);
                 }
-                sb.append(values[length-1].toJSONString(SPACE) + NEW_LINE + RIGHT_BRACE);
+                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + JSONValue.NEW_LINE + RIGHT_BRACE);
                 _toString = sb.toString();
             }
         }

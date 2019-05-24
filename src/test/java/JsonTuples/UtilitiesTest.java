@@ -64,7 +64,7 @@ public class UtilitiesTest {
 
         JSONObject jsonObject = Utilities.asJSONObject(map);
         JSONObject withOrdered = (JSONObject) jsonObject.getSorted("id", "name", "class", "isActive", "address", "scores", "English", "Science", "Math");
-        assertEquals("{\"id\": 123456,\"name\": \"test name\",\"class\": \"7L\",\"isActive\": true,\"address\": null,\"scores\": {\"English\": 80,\"Science\": 88,\"Math\": 90}}",
+        assertEquals("{\"id\":123456,\"name\":\"test name\",\"class\":\"7L\",\"isActive\":true,\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90}}",
                 withOrdered.toJSONString(null));
         Logger.V(jsonObject.toString());
     }
@@ -110,8 +110,8 @@ public class UtilitiesTest {
                 new double[][]{new double[]{-1.2, 0}, new double[]{3.3}}, new Object[]{"OK", null}));
         JSONArray array2 = Utilities.asJSONArrayFromCollection(complexSet);
         Object object = array2.getObject();
-        assertTrue(Objects.deepEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
-                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object));
+        assertEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
+                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object);
 
     }
 
@@ -164,6 +164,28 @@ public class UtilitiesTest {
                 Utilities.deltaWith(true, new HashMap()).toJSONString(null));
         assertEquals("[{},123]",
                 Utilities.deltaWith(new HashMap(), 123).toJSONString(null));
+    }
 
+    @Test
+    public void testJsonify_withDifferentObjects_getRightIJSONValues(){
+        assertEquals(JSONValue.Null, Utilities.jsonify(null));
+        assertEquals(JSONValue.False, Utilities.jsonify(false));
+        assertEquals(new JSONString("string"), Utilities.jsonify("string"));
+        assertEquals(33.4, Utilities.jsonify(33.4).getObject());
+
+        Set<Object> complexSet = new LinkedHashSet<>(Arrays.asList( new Character[]{'a', 'b'}, true, new int[]{1, 2},
+                new double[][]{new double[]{-1.2, 0}, new double[]{3.3}}, new Object[]{"OK", null}));
+        JSONArray array = (JSONArray) Utilities.jsonify(complexSet);
+        Object object = array.getObject();
+        assertEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
+                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object);
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("purpose", "test");
+        map.put("array", array);
+        map.put("other", null);
+        JSONObject jsonObject = (JSONObject)Utilities.jsonify(map);
+        assertEquals("{\"purpose\":\"test\",\"array\":[[\"a\",\"b\"],true,[1,2],[[-1.2,0.0],[3.3]],[\"OK\",null]],\"other\":null}",
+                jsonObject.toJSONString(null));
     }
 }

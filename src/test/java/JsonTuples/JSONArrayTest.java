@@ -117,7 +117,7 @@ public class JSONArrayTest {
         list.add(33);
 
         JSONArray newArray = Utilities.asJSONArrayFromCollection(list);
-        assertEquals("[null,false,[\"abc\",{\"id\": 222,\"name\": \"Bill\"}],{\"value\": \"something\"},3456,33]", newArray.toJSONString(null));
+        assertEquals("[null,false,[\"abc\",{\"id\":222,\"name\":\"Bill\"}],{\"value\":\"something\"},3456,33]", newArray.toJSONString(null));
     }
 
     @Test
@@ -178,15 +178,33 @@ public class JSONArrayTest {
         JSONArray other = new JSONArray(carl, alice, bob, ellen, tom);
 
         IJSONValue delta = array.deltaWith(other, false).getSorted(Comparator.naturalOrder());
-        assertEquals("[{\"class\": [\"7C\",\"7B\"],\"name\": [\"Dave\",\"Tom\"],\"scores\": {\"math\": [76,80],\"science\": [71,87]}}]",
+        assertEquals("[{\"class\":[\"7C\",\"7B\"],\"name\":[\"Dave\",\"Tom\"],\"scores\":{\"math\":[76,80],\"science\":[71,87]}}]",
                 delta.toJSONString(null));
 
         Map<String, Object> alterAlice = JSONObject.parse("{\"class\":\"7F\",\"scores\":{\"science\":76,\"humanity\":80}}");
         JSONObject alice2 = alice.withDelta(alterAlice);
         JSONArray other2 = new JSONArray(bob, alice2, ellen, tom, carl);
         delta = array.deltaWith(other2, false).getSorted(Comparator.naturalOrder());
-        assertEquals("[{\"class\": [\"7C\",\"7B\"],\"name\": [\"Dave\",\"Tom\"],\"scores\": {\"math\": [76,80],\"science\": [71,87]}}"+
-                        ",{\"class\": [\"7N\",\"7F\"],\"scores\": {\"english\": [89,null],\"humanity\": [85,80],\"math\": [90,null],\"science\": [77,76]}}]",
+        assertEquals("[{\"class\":[\"7C\",\"7B\"],\"name\":[\"Dave\",\"Tom\"],\"scores\":{\"math\":[76,80],\"science\":[71,87]}}"+
+                        ",{\"class\":[\"7N\",\"7F\"],\"scores\":{\"english\":[89,null],\"humanity\":[85,80],\"math\":[90,null],\"science\":[77,76]}}]",
                 delta.toJSONString(null));
+    }
+
+    @Test
+    public void testSorting() {
+        String text = "[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"}," +
+                "{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]";
+        JSONArray array1 = JSONArray.parse(text);
+        Logger.D("array1: %s", array1.toString());
+
+        JSONArray array2 = (JSONArray) Parser.parse(Comparator.naturalOrder(), text);
+        Logger.I("array2: %s", array2);
+
+        JSONArray array3 = array1.getSorted(new OrdinalComparator("id", "name"));
+        Logger.D("array3: %s", array3.toJSONString(""));
+        Logger.D("array3 compact: %s", array3.toJSONString(null));
+
+        assertEquals(array1, array2);
+        assertEquals(array3, array2);
     }
 }

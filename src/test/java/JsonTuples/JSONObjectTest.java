@@ -61,7 +61,7 @@ public class JSONObjectTest {
         members.add("Carter");
 
         JSONObject updated = Utilities.asJSONObject(map);
-        assertEquals("{\"age\": 23,\"other\": \"none\",\"members\": [\"Alan\",\"Bob\",\"Carter\"]}", updated.toJSONString(null));
+        assertEquals("{\"age\":23,\"other\":\"none\",\"members\":[\"Alan\",\"Bob\",\"Carter\"]}", updated.toJSONString(null));
     }
 
     @Test
@@ -116,24 +116,24 @@ public class JSONObjectTest {
         JSONObject obj1 = JSONObject.parse("{ \"age\": 123, \"name\": null }");
         assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj1));
         //TODO: if MISSING shall be treated as equal with null?
-        assertEquals("{\"age\": [123,null]}", obj1.deltaWith(JSONObject.EMPTY).toJSONString(null));
-        assertEquals("{\"age\": [null,123]}", JSONObject.EMPTY.deltaWith(obj1).toJSONString(null));
+        assertEquals("{\"age\":[123,null]}", obj1.deltaWith(JSONObject.EMPTY).toJSONString(null));
+        assertEquals("{\"age\":[null,123]}", JSONObject.EMPTY.deltaWith(obj1).toJSONString(null));
 
         JSONObject obj11 = JSONObject.parse("{\"name\": null,  \"age\": 123, }");
         assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj11));
 
         //TODO: to differentiate null or MISSING from JSONValue.Null?
-        assertEquals("[{\"age\": 123,\"name\": null},null]", obj1.deltaWith(null).toJSONString(null));
-        assertEquals("[{\"age\": 123,\"name\": null},null]", obj1.deltaWith(JSONValue.Null).toJSONString(null));
+        assertEquals("[{\"age\":123,\"name\":null},null]", obj1.deltaWith(null).toJSONString(null));
+        assertEquals("[{\"age\":123,\"name\":null},null]", obj1.deltaWith(JSONValue.Null).toJSONString(null));
 
-        assertEquals("[true,{\"age\": 123,\"name\": null}]", JSONValue.True.deltaWith(obj1).toJSONString(null));
-        assertEquals("[{\"age\": 123,\"name\": null},[null,1]]", obj1.deltaWith(new JSONArray(JSONValue.Null, new JSONNumber(1))).toJSONString(null));
+        assertEquals("[true,{\"age\":123,\"name\":null}]", JSONValue.True.deltaWith(obj1).toJSONString(null));
+        assertEquals("[{\"age\":123,\"name\":null},[null,1]]", obj1.deltaWith(new JSONArray(JSONValue.Null, new JSONNumber(1))).toJSONString(null));
 
 
         JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
 
         IJSONValue delta = obj1.deltaWith(obj2, false).getSorted(Comparator.naturalOrder());
-        assertEquals("{\"age\": [123,24],\"name\": [null,\"Tom\"],\"other\": [null,\"OK\"]}", delta.toJSONString(null));
+        assertEquals("{\"age\":[123,24],\"name\":[null,\"Tom\"],\"other\":[null,\"OK\"]}", delta.toJSONString(null));
     }
 
     @Test
@@ -183,13 +183,13 @@ public class JSONObjectTest {
     @Test
     public void toJSONString() {
         JSONObject obj = JSONObject.parse("{ \"age\": 123, \"other\": \"none\", \"name\": null }");
-        assertEquals("{\"age\": 123,\"other\": \"none\",\"name\": null}", obj.toJSONString(null));
+        assertEquals("{\"age\":123,\"other\":\"none\",\"name\":null}", obj.toJSONString(null));
         assertEquals("{\n  \"age\": 123,\n  \"other\": \"none\",\n  \"name\": null\n}", obj.toJSONString(""));
         assertEquals("{\n    \"age\": 123,\n    \"other\": \"none\",\n    \"name\": null\n  }", obj.toJSONString("  "));
         assertEquals("{\n      \"age\": 123,\n      \"other\": \"none\",\n      \"name\": null\n    }", obj.toJSONString("    "));
 
         obj = JSONObject.parse("{ \"age\": 123, \"other\": [123, \"abc\"], \"name\": null }");
-        assertEquals("{\"age\": 123,\"other\": [123,\"abc\"],\"name\": null}", obj.toJSONString(null));
+        assertEquals("{\"age\":123,\"other\":[123,\"abc\"],\"name\":null}", obj.toJSONString(null));
         assertEquals("{\n  \"age\": 123,\n  \"other\": [\n    123,\n    \"abc\"\n  ],\n  \"name\": null\n}", obj.toJSONString(""));
         assertEquals("{\n    \"age\": 123,\n    \"other\": [\n      123,\n      \"abc\"\n    ],\n    \"name\": null\n  }", obj.toJSONString("  "));
         assertEquals("{\n      \"age\": 123,\n      \"other\": [\n        123,\n        \"abc\"\n      ],\n      \"name\": null\n    }", obj.toJSONString("    "));
