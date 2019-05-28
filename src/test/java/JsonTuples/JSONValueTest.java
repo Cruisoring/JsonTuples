@@ -54,7 +54,7 @@ public class JSONValueTest {
     static final Map<String, Range> namedRanges = new HashMap<>();
 
     static {
-        Matcher matcher = NamedValue.NAME_VALUE_PATTERN.matcher(jsonContext);
+        Matcher matcher = NamedValue.SIMPLIFIED_NAME_PATTERN.matcher(jsonContext);
         while (matcher.find()) {
             String name = matcher.group(1);
             String value = matcher.group(2);

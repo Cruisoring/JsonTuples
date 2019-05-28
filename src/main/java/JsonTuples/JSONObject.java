@@ -169,6 +169,11 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         return newObject;
     }
 
+    public JSONObject withDelta(String jsonDeltas){
+        JSONObject delta = JSONObject.parse(jsonDeltas);
+        return withDelta(delta);
+    }
+
     @Override
     public int hashCode() {
         if (_hashCode == null) {
@@ -262,7 +267,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other, boolean orderMatters) {
+    public IJSONValue deltaWith(IJSONValue other, String indexName) {
         if (other == null) {
             return new JSONArray(this, MISSING);
         } else if (other == this) {
@@ -292,7 +297,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         for (String key : allKeys) {
             IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key).getSecond() : MISSING;
             IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key).getSecond() : MISSING;
-            IJSONValue valueDelta = thisValue.deltaWith(otherValue, orderMatters);
+            IJSONValue valueDelta = thisValue.deltaWith(otherValue, indexName);
             if (valueDelta.getLength() != 0) {
                 NamedValue newDif = new NamedValue(key, valueDelta);
                 differences.add(newDif);

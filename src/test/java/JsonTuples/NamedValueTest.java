@@ -1,61 +1,84 @@
 package JsonTuples;
 
-public class NamedValueTest {
+import io.github.cruisoring.TypeHelper;
+import io.github.cruisoring.logger.Logger;
+import org.junit.Test;
 
-//    @Test
-//    public void fromJSONRaw_withInteger_getValueMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": 200");
-//        Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-//        Assert.assertEquals(Integer.valueOf(200), namedValue.getValue());
-//    }
-//
-//    @Test
-//    public void fromJSONRaw_withDouble_getValueMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": -20.0");
-//        Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-//        Assert.assertEquals(-20.0, namedValue.getValue());
-//    }
-//
-//    @Test
-//    public void fromJSONRaw_withBigInteger_getValueMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"cachePackageTagsTrack\": 20000000000000000000000000000");
-//        Assert.assertEquals("cachePackageTagsTrack", namedValue.getName());
-//        Assert.assertEquals(new BigInteger("20000000000000000000000000000"), namedValue.getValue());
-//    }
-//
-//    @Test
-//    public void fromJSONRaw_withStringValue_getStringMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"servlet-name\": \"cofaxCDS\"");
-//        Assert.assertEquals("servlet-name", namedValue.getName());
-//        Assert.assertEquals("cofaxCDS", namedValue.getValue());
-//    }
-//
-//    @Test
-//    public void fromJSONRaw_withBooleanValue_getStringMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"servlet-name\": true");
-//        Assert.assertEquals("servlet-name", namedValue.getName());
-//        Assert.assertEquals(Boolean.TRUE, namedValue.getValue());
-//    }
-//
-//    @Test
-//    public void fromJSONRaw_withNullValue_getStringMatched() {
-//        NamedValue namedValue = NamedValue.parse("\"servlet-name\": null");
-//        Assert.assertEquals("servlet-name", namedValue.getName());
-//        Assert.assertEquals(null, namedValue.getValue());
-//    }
-//
-//
-//    @Test
-//    public void fromJSONRaw_nameWithColon_getParsed() {
-//        NamedValue namedValue = NamedValue.parse("\"configGlossary:poweredByIcon\": \"/images/cofax.gif\"");
-//        Assert.assertEquals("configGlossary:poweredByIcon", namedValue.getName());
-//        Assert.assertEquals("/images/cofax.gif", namedValue.getValue());
-//    }
-//
-//    //TODO: Following tests are not passed
-//    @Test
-//    public void fromJSONRaw_withQuoteInName_getNameContainsQuote() {
-//        NamedValue namedValue = NamedValue.parse("\"cachePackage\"TagsTrack\": 11");
-//        Assert.assertEquals("cachePackage\"TagsTrack", namedValue.getName());
-//    }
+import java.math.BigInteger;
+
+import static io.github.cruisoring.Asserts.assertEquals;
+
+public class NamedValueTest {
+    @Test
+    public void getName() {
+        NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
+        assertEquals("name", namedValue.getName());
+    }
+
+    @Test
+    public void getValue() {
+        NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
+        assertEquals("Alice", namedValue.getValue());
+    }
+
+    @Test
+    public void toJSONString() {
+        NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
+        assertEquals("\"name\":\"Alice\"", namedValue.toJSONString(null));
+        assertEquals("   \"name\": \"Alice\"", namedValue.toJSONString("   "));
+    }
+
+    @Test
+    public void testToString() {
+        NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
+        assertEquals("\"name\": \"Alice\"", namedValue.toString());
+    }
+
+    @Test
+    public void testHashCode() {
+        NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
+        assertEquals("\"name\": \"Alice\"".hashCode(), namedValue.hashCode());
+        Logger.D("hashCode(): %s, signatures: %s", namedValue.hashCode(), TypeHelper.deepToString(namedValue.getSignatures()));
+    }
+
+    @Test
+    public void getSorted() {
+        NamedValue namedValue = NamedValue.parse("\"name\": [\"Tom\", \"Cruise\"]");
+        assertEquals(namedValue, namedValue.getSorted(new OrdinalComparator<>()));
+
+        namedValue = NamedValue.parse("\"member\":{\"id\":111, \"name\": \"Tom\", \"vip\": false}");
+        assertEquals("\"member\":{\"id\":111,\"name\":\"Tom\",\"vip\":false}", namedValue.toJSONString(null));
+        assertEquals("\"member\":{\"name\":\"Tom\",\"id\":111,\"vip\":false}", namedValue.getSorted(new OrdinalComparator<>("name")).toJSONString(null));
+    }
+
+    @Test
+    public void testGetSignatures() {
+        NamedValue namedValue = NamedValue.parse("\"name\": 12345");
+        assertEquals(TypeHelper.asSet("\"name\": 12345".hashCode(), "\"name\"".hashCode(), "12345".hashCode()),
+                namedValue.getSignatures());
+
+        String raw = "\"member\": {\n  \"id\": 111,\n  \"name\": \"Tom\",\n  \"vip\": false\n}";
+        namedValue = NamedValue.parse(raw);
+        String objectString = Parser.parse("{\"id\":111,\"name\": \"Tom\",\"vip\": false}").toString();
+        assertEquals(TypeHelper.asSet(raw.hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+                namedValue.getSignatures());
+
+        NamedValue sorted = namedValue.getSorted(new OrdinalComparator<>("name"));
+        objectString = Parser.parse("{\"name\": \"Tom\",\"id\":111,\"vip\": false}").toString();
+        assertEquals(TypeHelper.asSet(sorted.toString().hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+                sorted.getSignatures());
+    }
+
+    @Test
+    public void testParse() {
+        assertEquals(Integer.valueOf(200), NamedValue.parse("\"cachePackageTagsTrack\": 200").getValue());
+        assertEquals(-20.0, NamedValue.parse("\"cachePackageTagsTrack\": -20.0").getValue());
+        assertEquals(new BigInteger("20000000000000000000000000000"),
+                NamedValue.parse("\"cachePackageTagsTrack\": 20000000000000000000000000000").getValue());
+        assertEquals("cofaxCDS", NamedValue.parse("\"servlet-name\": \"cofaxCDS\"").getValue());
+        assertEquals(Boolean.TRUE, NamedValue.parse("\"servlet-name\": true").getValue());
+        assertEquals(null, NamedValue.parse("\"servlet-name\": null").getValue());
+        assertEquals("/images/cofax.gif", NamedValue.parse("\"configGlossary:poweredByIcon\": \"/images/cofax.gif\"").getValue());
+        assertEquals("cachePackage\"TagsTrack", NamedValue.parse("\"cachePackage\"TagsTrack\": 11").getName());
+    }
 }

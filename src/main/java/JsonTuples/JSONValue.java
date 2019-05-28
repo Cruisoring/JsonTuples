@@ -41,6 +41,29 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     public static final String COMMA_NEWLINE = COMMA + NEW_LINE;
     public static final String COMMA_NEWLINE_SPACE = COMMA + NEW_LINE + SPACE;
 
+    private static final Map<Integer, String> indentsMap = new HashMap(){{
+        put(0, "");
+        put(1, SPACE);
+        put(2, SPACE + SPACE);
+    }};
+    /**
+     * Get the filling spaces of lines of JSON string.
+     * @param indentFactor  level to be indented, 0 means no indent.
+     * @return      spaces of the concerned indent level.
+     */
+    static String getIndent(int indentFactor) {
+        if(indentsMap.containsKey(indentFactor)){
+            return indentsMap.get(indentFactor);
+        }
+
+        if(indentFactor < 0){
+            return "";
+        }
+        String indent = getIndent(indentFactor-1) + SPACE;
+        indentsMap.put(indentFactor, indent);
+        return indent;
+    }
+
     //endregion
 
     protected JSONValue(T t) {
@@ -87,7 +110,9 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     @Override
     public Set<Integer> getSignatures() {
-        return new HashSet<Integer>(Arrays.asList(hashCode()));
+        Set<Integer> signatures = new HashSet<>();
+        signatures.add(hashCode());
+        return signatures;
     }
 
     @Override
@@ -151,7 +176,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public IJSONValue deltaWith(IJSONValue other, boolean orderMatters) {
+    public IJSONValue deltaWith(IJSONValue other, String indexName) {
         checkWithoutNull(other);
 
         if (equals(other)) {

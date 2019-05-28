@@ -27,12 +27,18 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
     Object asMutableObject();
 
     /**
-     * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with orderMatters considered.
+     * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with indexName
+     * indicating if the element orders matter and matched indexes shall be included.
+     *
      * @param other         the other {@code IJSONValue} to be compared with.
-     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
+     * @param indexName     indicating how delta shall be composed:
+     *                      <tt>null</tt> means elements indexes shall always be considered;
+     *                      <tt>String.Empty</tt> means orders matter but no index pair included;
+     *                      names including special character '+' like "+index" would always include index pairs of two matched elements if they are different with only their positions;
+     *                      otherwise the index pair of two elements would be displayed if they have different values.
      * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
      */
-    IJSONValue deltaWith(IJSONValue other, boolean orderMatters);
+    IJSONValue deltaWith(IJSONValue other, String indexName);
 
     /**
      * Compare with another {@code IJSONValue} to find out their differences as an {code IJSONValue} with default orderMatters.
@@ -40,7 +46,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
      * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
      */
     default IJSONValue deltaWith(IJSONValue other){
-        return deltaWith(other, JSONArray.defaultElementOrderMatters);
+        return deltaWith(other, JSONArray.indexName);
     }
 
     /**

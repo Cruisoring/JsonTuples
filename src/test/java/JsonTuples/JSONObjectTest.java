@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.util.*;
 
 import static io.github.cruisoring.Asserts.*;
+import static io.github.cruisoring.TypeHelper.deepToString;
 
 public class JSONObjectTest {
 
@@ -132,7 +133,7 @@ public class JSONObjectTest {
 
         JSONObject obj2 = JSONObject.parse("{ \"age\": 24, \"name\": \"Tom\", \"other\": \"OK\" }");
 
-        IJSONValue delta = obj1.deltaWith(obj2, false).getSorted(Comparator.naturalOrder());
+        IJSONValue delta = obj1.deltaWith(obj2, null).getSorted(Comparator.naturalOrder());
         assertEquals("{\"age\":[123,24],\"name\":[null,\"Tom\"],\"other\":[null,\"OK\"]}", delta.toJSONString(null));
     }
 
@@ -251,20 +252,27 @@ public class JSONObjectTest {
                 "  \"class\": \"7A\"\n" +
                 "}";
         JSONObject object1 = JSONObject.parse(text);
-        Set<Integer> signature1 = new HashSet<>(object1.getSignatures());
+        NamedValue address = object1.getValue(0);
+        NamedValue scores = object1.getValue(1);
+        NamedValue name = object1.getValue(2);
+        NamedValue id = object1.getValue(3);
+        NamedValue isActive = object1.getValue(4);
+        NamedValue classNamedValue = object1.getValue(5);
+
+        Set<Integer> signature1 = object1.getSignatures();
+        Logger.D("object1: %s\n\taddress: %s\n\tscores: %s\n\tname: %s\n\tid: %s\n\tisActive: %s\n\tclass: %s",
+                deepToString(signature1), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode());
+//                deepToString(address.getSignatures()), deepToString(scores.getSignatures()), deepToString(name.getSignatures()),
+//                deepToString(id.getSignatures()), deepToString(isActive.getSignatures()), deepToString(classNamedValue.getSignatures()));
+        assertTrue(signature1.size() == 7,
+                signature1.containsAll(Arrays.asList(object1.hashCode(), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())));
 
         JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
         Set<Integer> signature2 = new HashSet<>(object2.getSignatures());
-
-        Set<Integer> common = new HashSet(Arrays.asList("\"address\": null".hashCode(), "\"name\": \"test name\"".hashCode(),
-                "\"id\": 123456".hashCode(), "\"isActive\": true".hashCode(), "\"class\": \"7A\"".hashCode()));
-        assertTrue(signature1.containsAll(common));
-        assertTrue(signature2.containsAll(common));
-
-        signature1.removeAll(signature2);
-        signature2.removeAll(common);
-        signature1.addAll(signature2);
-        assertEquals(4, signature1.size());
+        NamedValue sortedScores = NamedValue.parse("\"scores\": {\"English\":80,\"Math\": 90,\"Science\": 88}");
+        assertTrue(signature2.size() == 7,
+                signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
+                signature2.contains(sortedScores.hashCode()));
     }
 
 }

@@ -16,8 +16,8 @@ The original intention of this project is to use given set of JSON texts as temp
  *  The JSON Objects can be used as media to compare two big datasets to get their minimum differences as another JSON Object. For example, find out the differences between an Array and a Set whose elements may or may not be consistent.
 
 Due to the light-weight nature of this project, following functionalities are not supported:
- *  Serialize/De-serialize complex JAVA Objects by supposing POJOs can always be replaced with Map/Collection.
- *  Converting JSONObject/JSONArray to customised Map or Collection.
+ *  Mapping JAVA Classes to / from JSON as [GSON](https://github.com/google/gson) or [Jackson](https://github.com/FasterXML/jackson) is not supported in current version.
+ *  Converting JSONObject/JSONArray to customised Map or Collection, they would be mapped to LinkedHashMap and ArrayList for modifications.
  *  Expressions to locate element of JSON, like [JsonPath](https://github.com/json-path/JsonPath) are not supported yet.
 
 ## Get Started
@@ -34,7 +34,7 @@ Add the following dependency to your pom.xml:
 Alternatively, get the packages directly from [Maven Central](http://repo1.maven.org/maven2/io/github/cruisoring/JsonTuples/1.0.0/)
 
 
-## Converter of Text/JAVA to/from JSON
+## Converting Text/JAVA to/from JSON
 
 The JSON objects refer to classes/interfaces defined in JsonTuples project, JAVA Objects means common JAVA types like primitive objects, as well as generic Map, Collection and Arrays. For the JSON texts to be processed, it is assumed they have followed the correct JSON syntax.
 
@@ -60,30 +60,23 @@ Constructors of all above JSON objects in bold (**Null, True, False, JSONString,
     * __*JSONValue.parse(CharSequence, Range)*__: expect and parse a part of the given JSON context as one of **Null, True, False, JSONString, JSONNumber**.
     * __*JSONObject.parse(String valueString)*__: expect the *valueString* is enclosed by '{' and '}', and cast the result of __*Parser.parse()*__ to be **JSONObject**.
     * __*JSONArray.parse(String valueString)*__: expect the *valueString* is enclosed by '[' and ']', and cast the result of __*Parser.parse()*__ to be **JSONArray**.
-  * Static methods of _Utilities.java_ to convert JAVA Objects to JSON Objects defined in JsonTuples:
-    * __*asJSONArrayFromArray(Object array)*__: convert a JAVA Array, of primitive or object elements, to a **JSONArray**.
-    * __*asJSONArrayFromCollection(Object collection)*__: convert a JAVA Collection (such as _List_, _Set_ or _Queue_) to a **JSONArray**.
-    * __*asJSONObject(Object object)*__: the given object must be a Map<Object, Object>
-    * __*asJSONNumber(Object object)*__: the given object must be a JAVA Number(like Integer, Float, Double, Short, BigInteger, BigDecimal), the constucted **JSONNumber** instances would be compared by their String forms. For example, JSONNumber instance from 1.1f would be equal to that from Double.valueOf(1.1). If the object is null, then the constructed JSONNumber would be equal to **JSONValue.Null**.
-    * __*asJSONString(Object object)*__: the given object must be a String or null, the latter would result in a JSONString instance equal with JSONValue.Null.
-    * __*asJSONStringFromOthers(Object object)*__: convert all other types of Non-null object to JSONString with their default toString().
-    * __*IJSONValue jsonify(Object object)*__: would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
+  * Static method __*IJSONValue jsonify(Object object)*__ of _Utilities.java_ is the only API used to convert JAVA Objects to JSON Objects defined in JsonTuples, it would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
     
 Usually, the above methods shall be enough to get most JSON to/from JAVA conversions done.
 
 ## Sort and Format Text from JSON
 
 To display the content held by JSONObject with a ordered manner, a **Comparator<String>** can be used in two ways:
-  * Supplied as argument of __*Parser.parse(CharSequence jsonText, Comparator<String> comparator)*__ or __*parse(CharSequence jsonText, Comparator<String> comparator, Range range)*__, then the parsed *JSONObject* and all its children would be saved with orders specified by the given **comparator**.
+  * Supplied as argument of __*Parser.parse(Comparator<String> comparator, CharSequence jsonText)*__ or __*parse(Comparator<String> comparator, CharSequence jsonText, Range range)*__, then the parsed *JSONObject* and all its children would be saved with orders specified by the given **comparator**.
   * the __*JSONObject.getSorted(Comparator<String> comparator)*__ or __*JSONArray.getSorted(Comparator<String> comparator)*__ would return a new JSONObject or JSONArray with their children elements sorted by names following rules specified by the given **comparator**.
   
 As a special case, the [OrdinalComparator](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/OrdinalComparator.java) would register all names of JSON Object in order and sort all names accordingly.
 
-The TAB of indent has been hard-coded as ```"  "``` in **IJSONable.SPACE**, the **toJSONString(String indent)** defined in **IJSONable** interface accepts a blank String that can be either _null_ or all white-spaces to get JSON text based on value of the given **indent**:
+The TAB of indent has been hard-coded as ```"  "``` in **JSONValue.SPACE**, the **toJSONString(String indent)** defined in **IJSONable** interface accepts a blank String that can be either _null_ or all white-spaces to get JSON text based on value of the given **indent**:
   *  If the JSONObject is empty, then it would always return ```{}```;
   *  If the JSONArray is empty, then it would always return ```[]```;
  Otherwise:
-  *  If **indent** is null, then the generated JSON text would be a compact single-line String;
+  *  If **indent** is null, then the generated JSON text would be a compact single-line String by removing all white-spaces;
   *  If **indent** is ```""```, then the generated JSON text would be a multi-line String with extra ```"  "``` for each indent level.
   *  If **indent** is not empty, then the generated JSON text would be a multi-line String with given **indent** appended ahead of each lines from above case.
 
@@ -122,21 +115,23 @@ The unit test below shows how __*IJSONValue Parser.parse(CharSequence)*__ can be
         //Array alike text would be parsed as JSONArray
 //        JSONArray array = JSONArray.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
         JSONArray array = (JSONArray) Parser.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
-        Object[] values = (Object[]) array.getObject();
-        assertTrue(array.size() == 6,
-                values[0].equals(1),
-                values[1]==null,
-                values[2].equals(true),
-                values[3].equals("abc"));
-        assertEquals(new Object[]{false, null}, values[4]);
-        Map mapAt5 = (Map)values[5];
+        assertEquals(1, array.get(0));
+        assertTrue(
+                array.size() == 6,
+                array.contains(null),
+                array.containsAll(Arrays.asList(true, "abc"))
+        );
+        assertEquals(new Object[]{false, null}, array.get(4));
+        Map mapAt5 = (Map)array.get(5);
         assertEquals(123, mapAt5.get("id"));
     }
 ```
 
 Notice: the *assertTrue()*, *assertEquals()* are helper methods defined in [Asserts.java of functionExtensions 2.0.0](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/Asserts.java) to assert multiple expressions or compare elements of two Arrays or Collections.
 
-Since JSON text shall usually be parsed as JSONObject or JSONArray, __*JSONObject.parse(String valueString)*__ and __*JSONArray.parse(String valueString)*__ act as syntactic sugar to cast the IJSONValue to JSONObject or JSONArray behind the scene.
+Since JSON texts representing Map or Array are used most, __*JSONObject.parse(String valueString)*__ and __*JSONArray.parse(String valueString)*__ act as syntactic sugar to cast the IJSONValue to JSONObject or JSONArray behind the scene.
+
+The above codes also show how to **JSONObject** can be referred as a **Map<String, Object>**, and **JSONArray** can be referred as a **List<Object>** to read the element values embedded directly. However, all WRITE operations on them would get __*UnsupportedOperationException*__ due to the immutable nature inherited from **Tuple**. 
 
 With layered filtering and simplified state machine to enable the parsing process, and avoid JSON syntax validation whenever possible, the JsonTuples achieves a quite good performance. For example:
 ```java
@@ -164,6 +159,197 @@ The above unit test loads text from [catalog.json](https://github.com/Cruisoring
 *  get the compact String form as String **sortedString**;
 *  and repeat the above 3 operations 10 times to get measurable performance figures.
 
-When running from my 4-cores i7-7700HQ @ 2.8G laptop, the screenshot below shows __*the average and max time to parse the 6.11M file are 216ms and 385ms*__ respectively.
-![test6257KJson outcome](/images/performance.png "Parsing 6M JSON text for 10 times")
+When running from my 4-cores i7-7700HQ @ 2.8G laptop, the screenshot below shows the average and max time to parse the 6.11M file are __*216ms and 385ms*__ respectively.
+
+![test6257KJson outcome](images/performance.png "Parsing 6M JSON text for 10 times")
+
+### Sorting and Printing
+
+Once the JSON text is parsed to **IJSONValue** that is usually **JSONObject** or **JSONArray**, their default *toString()* would show well-indented Strings. For example:
+```java
+    @Test
+    public void testSorting() {
+        String text = "[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"}," +
+                "{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]";
+        JSONArray array1 = JSONArray.parse(text);
+        Logger.D("array1: %s", array1.toString());
+
+        JSONArray array2 = (JSONArray) Parser.parse(Comparator.naturalOrder(), text);
+        Logger.I("array2: %s", array2);
+
+        JSONArray array3 = array1.getSorted(new OrdinalComparator("id", "name"));
+        Logger.D("array3: %s", array3.toJSONString(""));
+        Logger.D("array3 compact: %s", array3.toJSONString(null));
+
+        assertEquals(array1, array2);
+        assertEquals(array3, array2);
+    }
+```
+
+The above **array1** would be printed as:
+```text
+[
+  {
+    "name": "Alice",
+    "id": 111,
+    "level": "dolphin"
+  },
+  {
+    "level": "dolphin",
+    "name": "Bob",
+    "id": 222
+  },
+  {
+    "name": "Charlie",
+    "level": "shark",
+    "id": 333
+  }
+]
+``` 
+
+The name/value pairs would be listed with original order, that might hurt eyes if the original text doesn't get them sorted as above exampl. To get a unified order to display all these name/value pairs, a Comparator<String> can be used in the Parser.parse() to get **array2** shown as below:
+```text
+[
+  {
+    "id": 111,
+    "level": "dolphin",
+    "name": "Alice"
+  },
+  {
+    "id": 222,
+    "level": "dolphin",
+    "name": "Bob"
+  },
+  {
+    "id": 333,
+    "level": "shark",
+    "name": "Charlie"
+  }
+]
+```
+
+To ensure a preferred order to show the embedded **JSONObject**s, an __*OrdinalComparator*__ can be constructed easily and supplied to either *Parser.parse(...)* or *IJSONValue.getSorted(Comparator<String>)* to get **array3**, which would be shown as:
+```text
+[
+  {
+    "id": 111,
+    "name": "Alice",
+    "level": "dolphin"
+  },
+  {
+    "id": 222,
+    "name": "Bob",
+    "level": "dolphin"
+  },
+  {
+    "id": 333,
+    "name": "Charlie",
+    "level": "shark"
+  }
+]
+```
+
+You can see *IJSONValue.toString()* would show same text as *IJSONValue.toJSONString("")*. The *IJSONValue.toJSONString(null)* would present a compact String without any whitespaces, for **array3**, it would be:
+```[{"id":111,"name":"Alice","level":"dolphin"},{"id":222,"name":"Bob","level":"dolphin"},{"id":333,"name":"Charlie","level":"shark"}]```
+
+
+No matter how the name/value pairs are saved and printed, the equality evaluation of **JSONObject**s would return *true* if their name/value pairs are same, just as **array1**, **array2** and **array3** in above example are always equal.
+
+
+### Conversions between JAVA and JSON
+
+The JAVA objects can be converted are basic value types and composite types (Array, Collection and Map<String, Object>). For example, int[], Enum[][], Object[][], ArrayList, HashSet, HashMap<String, Object> or their combinations can be converted to / from JSON objects.
+
+The generic JAVA Object Mapping like [Jackson ObjectMapper](https://fasterxml.github.io/jackson-databind/javadoc/2.7/com/fasterxml/jackson/databind/ObjectMapper.html) is not included in current version, though there are two alternatives:
+*  Use external library like [GSON](https://github.com/google/gson) or [Jackson](https://github.com/FasterXML/jackson) to convert complex JAVA objects to / from JSON text that denote only simple values or composite entities of Map or Collection.
+*  Inject __*FunctionThrowable<Object, IJSONValue>*__ and __*FunctionThrowable<IJSONValue, Object>*__ pairs into [**Utilities.classConverters**](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/Utilities.java) to support converting concerned class instances to / from JSON text.
+
+The static method __*IJSONValue jsonify(Object object)*__ of [Utilities.java](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/Utilities.java) is the only API used to convert JAVA Objects to JSON Objects and following internal methods are implemented to enable such conversion:
+    * __*asJSONArrayFromArray(Object array)*__: convert a JAVA Array, of primitive or object elements, to a **JSONArray**.
+    * __*asJSONArrayFromCollection(Object collection)*__: convert a JAVA Collection (such as _List_, _Set_ or _Queue_) to a **JSONArray**.
+    * __*asJSONObject(Object object)*__: the given object must be a Map<Object, Object>
+    * __*asJSONNumber(Object object)*__: the given object must be a JAVA Number(like Integer, Float, Double, Short, BigInteger, BigDecimal), the constucted **JSONNumber** instances would be compared by their String forms. For example, JSONNumber instance from 1.1f would be equal to that from Double.valueOf(1.1). If the object is null, then the constructed JSONNumber would be equal to **JSONValue.Null**.
+    * __*asJSONString(Object object)*__: the given object must be a String or null, the latter would result in a JSONString instance equal with JSONValue.Null.
+    * __*asJSONStringFromOthers(Object object)*__: convert all other types of Non-null object to JSONString with their default toString().
+
+Exemple below shows how this __*IJSONValue jsonify(Object object)*__ can be used to convert JAVA objects to *IJSONValue*:
+```java
+    @Test
+    public void testJsonify_withDifferentObjects_getRightIJSONValues(){
+        assertEquals(JSONValue.Null, Utilities.jsonify(null));
+        assertEquals(JSONValue.False, Utilities.jsonify(false));
+        assertEquals(new JSONString("string"), Utilities.jsonify("string"));
+        assertEquals(33.4, Utilities.jsonify(33.4).getObject());
+
+        Set<Object> complexSet = new LinkedHashSet<>(Arrays.asList( new Character[]{'a', 'b'}, true, new int[]{1, 2},
+                new double[][]{new double[]{-1.2, 0}, new double[]{3.3}}, new Object[]{"OK", null}));
+        JSONArray array = (JSONArray) Utilities.jsonify(complexSet);
+        Object object = array.getObject();
+        assertEquals(new Object[] { new Object[]{"a", "b"}, true, new Object[]{1, 2},
+                new Object[]{new Object[]{-1.2, 0d}, new Object[]{3.3}}, new Object[]{"OK", null}}, object);
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("purpose", "test");
+        map.put("array", array);
+        map.put("other", null);
+        JSONObject jsonObject = (JSONObject)Utilities.jsonify(map);
+        assertEquals("{\"purpose\":\"test\",\"array\":[[\"a\",\"b\"],true,[1,2],[[-1.2,0.0],[3.3]],[\"OK\",null]],\"other\":null}",
+                jsonObject.toJSONString(null));
+    }
+```
+
+Basically, it means the JsonTuples bridges JAVA and JSON seamlessly to some extents. However, the **Map<String, Object>** or **List<Object>** exposed by **JSONObject** or **JSONArray** are immutable, so as to the JAVA object returned by **IJSONValue.getObject()** as proved with the WRITE operations with JSONArray.getObject():
+```java
+    @Test
+    public void getObject() {
+        JSONArray array = JSONArray.parse("[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
+        Object[] objArray = (Object[])array.getObject();
+        assertEquals(5, objArray.length);
+        assertEquals(null, objArray[1]);
+        assertEquals(false, objArray[2]);
+        assertEquals(new Object[]{null, "ok", 123}, objArray[3]);
+        Map<String, Object> map = (Map)objArray[4];
+        assertTrue(map.size() == 1, map.get("result").equals("good"), map.get("else")==null);
+        assertException(() -> map.put("ok", true), UnsupportedOperationException.class);
+
+        //Updating the Object[] would not affect the JSONArray.
+        objArray[0] = null;
+        Object[] obj1 = (Object[])array.getObject();
+        assertNotEquals(objArray, obj1);
+        checkStates(obj1[0] != null);
+    }
+```
+
+To updating values held by **IJSONValue**, the __*Object asMutableObject()*__ would be used to get **LinkedHashMap<String, Object>** or **ArrayList<Object>** would be returned to present values of **JSONObject** or **JSONArray**:
+
+```java
+    @Test
+    public void testAsMutableObject() {
+        JSONArray array = JSONArray.parse("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        List list = (List)array.asMutableObject();
+        assertEquals(6, list.size());
+        //Update the List
+        list.add(2, false);
+        list.remove(3);
+        List subList = (List)list.get(3);
+        Map<String, Object> mapOfSubList = (Map<String, Object>)subList.get(1);
+        assertTrue(mapOfSubList.get("id").equals(111), mapOfSubList.get("notes")==null);
+        mapOfSubList.remove("notes");
+        mapOfSubList.put("id", 222);
+        mapOfSubList.put("name", "Bill");
+        Map<String, Object> map4 = (Map)list.get(4);
+        map4.put("value", "something");
+        list.remove(Integer.valueOf(1));
+        list.add(33);
+
+        JSONArray newArray = Utilities.asJSONArrayFromCollection(list);
+        assertEquals("[null,false,[\"abc\",{\"id\":222,\"name\":\"Bill\"}],{\"value\":\"something\"},3456,33]", newArray.toJSONString(null));
+    }
+```
+
+The above example shows how an *ArrayList* is returned by **JSONArray.asMutableObject()**, then its elements would be added/deleted/udated, finally the updated List would be converted to a new **JSONArray** whose toString() can be send out as a new set of data.
+
+
+## Comparing between IJSONValues
+
 

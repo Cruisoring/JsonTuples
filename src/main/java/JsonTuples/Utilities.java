@@ -158,16 +158,16 @@ public class Utilities {
 
     /**
      * Compare any two JAVA objects and return their differences as an {@code IJSONValue}.
-     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
      * @param obj1      the first Object to be compared.
      * @param obj2      the second Object to be compared.
+     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
      * @return  the differences of the above two Objects.
      */
-    public static IJSONValue deltaWith(boolean orderMatters, Object obj1, Object obj2){
+    public static IJSONValue deltaWith(Object obj1, Object obj2, boolean orderMatters, String indexKey){
         IJSONValue json1 = jsonify(obj1);
         IJSONValue json2 = jsonify(obj2);
 
-        return json1.deltaWith(json2, orderMatters);
+        return json1.deltaWith(json2, indexKey);
     }
 
     /**
@@ -177,7 +177,10 @@ public class Utilities {
      * @return  the differences of the above two Objects.
      */
     public static IJSONValue deltaWith(Object obj1, Object obj2){
-        return deltaWith(JSONArray.defaultElementOrderMatters, obj1, obj2);
+        IJSONValue json1 = jsonify(obj1);
+        IJSONValue json2 = jsonify(obj2);
+
+        return json1.deltaWith(json2);
     }
 
 }
