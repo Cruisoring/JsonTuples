@@ -115,13 +115,13 @@ public class JSONObjectTest {
         assertEquals("[null,{}]", JSONValue.Null.deltaWith(JSONObject.EMPTY).toJSONString(null));
 
         JSONObject obj1 = JSONObject.parse("{ \"age\": 123, \"name\": null }");
-        assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj1));
+        assertEquals(JSONArray.EMPTY, obj1.deltaWith(obj1));
         //TODO: if MISSING shall be treated as equal with null?
         assertEquals("{\"age\":[123,null]}", obj1.deltaWith(JSONObject.EMPTY).toJSONString(null));
         assertEquals("{\"age\":[null,123]}", JSONObject.EMPTY.deltaWith(obj1).toJSONString(null));
 
         JSONObject obj11 = JSONObject.parse("{\"name\": null,  \"age\": 123, }");
-        assertEquals(JSONObject.EMPTY, obj1.deltaWith(obj11));
+        assertEquals(JSONArray.EMPTY, obj1.deltaWith(obj11));
 
         //TODO: to differentiate null or MISSING from JSONValue.Null?
         assertEquals("[{\"age\":123,\"name\":null},null]", obj1.deltaWith(null).toJSONString(null));

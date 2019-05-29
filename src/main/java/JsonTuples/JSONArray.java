@@ -4,6 +4,7 @@ import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple3;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.SetHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -27,7 +28,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     static final String JSONArray_UNMODIFIABLE = "JSONArray instance is not modifiable, asMutableObject() would return a modifiable List of the underlying values that can be modified and then convert back to another JSONArray instance.";
 
     //Name of the index pair of the elements to show their deltas
-    public static String indexName = null;
+    public static String defaultIndexName = null;
 
     //Predicate to evaluate the indexName of deltaWith()
     public final static Predicate<String> includeDifferentIndexesPredicate = name -> name != null && name.contains("+");
@@ -38,17 +39,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
      */
     public static JSONArray parse(String valueString) {
         return (JSONArray) Parser.parse(valueString);
-    }
-
-    static <T> Set<T> symmetricDifference(Set<T> a, Set<T> b) {
-        Set<T> result = new HashSet<T>(a);
-        for (T element : b) {
-            // .add() returns false if element already exists
-            if (!result.add(element)) {
-                result.remove(element);
-            }
-        }
-        return result;
     }
 
     public static final JSONArray EMPTY = new JSONArray();
@@ -287,7 +277,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                     if(rightSignatures == null){
                         continue;
                     }
-                    Set<Integer> differences = symmetricDifference(leftSignatures, rightSignatures);
+                    Set<Integer> differences = SetHelper.symmetricDifference(leftSignatures, rightSignatures);
                     int differenceSize = differences.size();
                     if(differenceSize == 0){
                         leastDifferences.put(i, Tuple.create(0, i, Arrays.asList(j)));

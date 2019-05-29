@@ -2,6 +2,7 @@ package JsonTuples;
 
 import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.utility.SetHelper;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -54,18 +55,18 @@ public class NamedValueTest {
     @Test
     public void testGetSignatures() {
         NamedValue namedValue = NamedValue.parse("\"name\": 12345");
-        assertEquals(TypeHelper.asSet("\"name\": 12345".hashCode(), "\"name\"".hashCode(), "12345".hashCode()),
+        assertEquals(SetHelper.asSet("\"name\": 12345".hashCode(), "\"name\"".hashCode(), "12345".hashCode()),
                 namedValue.getSignatures());
 
         String raw = "\"member\": {\n  \"id\": 111,\n  \"name\": \"Tom\",\n  \"vip\": false\n}";
         namedValue = NamedValue.parse(raw);
         String objectString = Parser.parse("{\"id\":111,\"name\": \"Tom\",\"vip\": false}").toString();
-        assertEquals(TypeHelper.asSet(raw.hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+        assertEquals(SetHelper.asSet(raw.hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
                 namedValue.getSignatures());
 
         NamedValue sorted = namedValue.getSorted(new OrdinalComparator<>("name"));
         objectString = Parser.parse("{\"name\": \"Tom\",\"id\":111,\"vip\": false}").toString();
-        assertEquals(TypeHelper.asSet(sorted.toString().hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+        assertEquals(SetHelper.asSet(sorted.toString().hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
                 sorted.getSignatures());
     }
 

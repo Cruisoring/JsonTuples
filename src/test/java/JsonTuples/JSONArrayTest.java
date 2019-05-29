@@ -1,10 +1,10 @@
 package JsonTuples;
 
 import io.github.cruisoring.Revokable;
-import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.utility.ResourceHelper;
+import io.github.cruisoring.utility.SetHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,10 +61,10 @@ public class JSONArrayTest {
     public void parseArray() {
         JSONArray array = JSONArray.parse(steps);
         assertEquals(10, array.getLength());
-        Logger.V(array.toString());
+        Logger.D(array.toString());
 
         JSONArray sorted = array.getSorted(Comparator.naturalOrder());
-        Logger.V(sorted.toString());
+        Logger.D(sorted.toString());
 
         IJSONValue delta = array.deltaWith(sorted);
         assertEquals(JSONArray.EMPTY, delta);
@@ -133,20 +133,28 @@ public class JSONArrayTest {
         Logger.D(shuffled.toJSONString(null));
 
         //For array of 8 elements, shuffle() shall always get an array containing same set elements but with different orders
-        assertEquals(array, shuffled);
+        assertNotEquals(array, shuffled);
         assertEquals(array.getLength(), shuffled.getLength());
+        assertTrue(array.deltaWith(shuffled, "").isEmpty(), array.deltaWith(shuffled, "index").isEmpty());
+        assertFalse(array.deltaWith(shuffled, null).isEmpty(), array.deltaWith(shuffled, "index+").isEmpty());
 
         try {
-            Revokable.register(() -> JSONArray.indexName, v -> JSONArray.indexName =v, "+index");
+            Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "");
+            assertTrue(array.equals(shuffled));
+
+            Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "+index");
             assertFalse(array.equals(shuffled));
 
-            Revokable.register(() -> JSONArray.indexName, v -> JSONArray.indexName =v, null);
+            Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "index");
             assertTrue(array.equals(shuffled));
+
+            Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, null);
+            assertFalse(array.equals(shuffled));
         }finally {
             Revokable.revokeAll();
         }
 
-        assertTrue(array.equals(shuffled));
+        assertFalse(array.equals(shuffled));
     }
 
     @Test
@@ -189,7 +197,7 @@ public class JSONArrayTest {
         Logger.D("signatures: %s\narray: %s\n\talice: %s\n\tbob: %s\n\tcarl: %s\n\tdave: %s\n\tellen: %s\n\t",
                 deepToString(array.getSignatures()),
                 array.hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode());
-        assertEquals(TypeHelper.asSet(array.toString().hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode()),
+        assertEquals(SetHelper.asSet(array.toString().hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode()),
                 array.getSignatures());
     }
 
@@ -203,21 +211,42 @@ public class JSONArrayTest {
                 ellen,
                 carl.withDelta("{\"age\":11}")
         );
-        Logger.D("array2: %s", array2);
+        Logger.V("array2: %s", array2);
         IJSONable delta1 = array.deltaWith(array2, null);
-        IJSONable delta2 = array2.deltaWith(array, "index");
-        IJSONable delta3 = array2.deltaWith(array, "+pos");
+        IJSONable delta2 = array.deltaWith(array2, "");
+        IJSONable delta3 = array.deltaWith(array2, "pos");
+        IJSONable delta4 = array.deltaWith(array2, "+pos");
         String delta1String = delta1.toJSONString(null);
         String delta2String = delta2.toJSONString(null);
         String delta3String = delta3.toJSONString(null);
-        Logger.D("delta1: %s\ndelta2: %s\ndelta3: %s", delta1String, delta2String, delta3String);
+        String delta4String = delta4.toJSONString(null);
+        Logger.D("delta1: %s\ndelta2: %s\ndelta3: %s\ndelta4: %s", delta1String, delta2String, delta3String, delta4String);
 
-        assertEquals("[{\"index\":[0,0],\"class\":[\"7N\",\"7F\"],\"age\":[12,13]},{\"index\":[1,2],\"scores\":{\"science\":[62,99],\"english\":[76,77]}},{\"index\":[2,4],\"age\":[12,11]},{\"index\":[3,1],\"gender\":[\"M\",\"F\"],\"name\":[\"Dave\",\"Darothy\"]}]",
+        assertEquals("{\"0\":{\"class\":[\"7N\",\"7F\"],\"age\":[12,13]}," +
+                        "\"1\":{\"gender\":[\"M\",\"F\"],\"scores\":{\"science\":[62,71],\"english\":[76,82],\"math\":[80,76],\"humanity\":[62,82]},\"name\":[\"Bob\",\"Darothy\"],\"age\":[13,12]}," +
+                        "\"2\":{\"scores\":{\"science\":[66,99],\"math\":[91,80],\"humanity\":[87,62]},\"name\":[\"Carl\",\"Bob\"],\"class\":[\"7B\",\"7C\"],\"age\":[12,13]}," +
+                        "\"3\":{\"gender\":[\"M\",\"F\"],\"scores\":{\"science\":[71,87],\"math\":[76,80],\"humanity\":[82,75]},\"name\":[\"Dave\",\"Ellen\"],\"class\":[\"7C\",\"7B\"]}," +
+                        "\"4\":{\"gender\":[\"F\",\"M\"],\"scores\":{\"science\":[87,66],\"english\":[82,77],\"math\":[80,91],\"humanity\":[75,87]},\"name\":[\"Ellen\",\"Carl\"],\"age\":[12,11]}}",
                 delta1String);
-        assertEquals("[{\"pos\":[0,0],\"class\":[\"7F\",\"7N\"],\"age\":[13,12]},{\"pos\":[1,3],\"gender\":[\"F\",\"M\"],\"name\":[\"Darothy\",\"Dave\"]},{\"pos\":[2,1],\"scores\":{\"science\":[99,62],\"english\":[77,76]}},{\"pos\":[4,2],\"age\":[11,12]}]",
+        assertEquals("[{\"age\":[12,13],\"class\":[\"7N\",\"7F\"]},{\"scores\":{\"english\":[76,77],\"science\":[62,99]}},{\"age\":[12,11]},{\"name\":[\"Dave\",\"Darothy\"],\"gender\":[\"M\",\"F\"]}]",
                 delta2String);
-        assertEquals("[{\"+pos\":[0,0],\"class\":[\"7F\",\"7N\"],\"age\":[13,12]},{\"+pos\":[1,3],\"gender\":[\"F\",\"M\"],\"name\":[\"Darothy\",\"Dave\"]},{\"+pos\":[2,1],\"scores\":{\"science\":[99,62],\"english\":[77,76]}},{\"+pos\":[3,4]},{\"+pos\":[4,2],\"age\":[11,12]}]",
+        assertEquals("[{\"pos\":[0,0],\"age\":[12,13],\"class\":[\"7N\",\"7F\"]},{\"pos\":[1,2],\"scores\":{\"english\":[76,77],\"science\":[62,99]}},{\"pos\":[2,4],\"age\":[12,11]},{\"pos\":[3,1],\"name\":[\"Dave\",\"Darothy\"],\"gender\":[\"M\",\"F\"]}]",
                 delta3String);
+         assertEquals("[{\"+pos\":[0,0],\"age\":[12,13],\"class\":[\"7N\",\"7F\"]},{\"+pos\":[1,2],\"scores\":{\"english\":[76,77],\"science\":[62,99]}},{\"+pos\":[2,4],\"age\":[12,11]},{\"+pos\":[3,1],\"name\":[\"Dave\",\"Darothy\"],\"gender\":[\"M\",\"F\"]},{\"+pos\":[4,3]}]",
+                delta4String);
+
+         assertEquals("{\"0\":{\"class\":[\"7F\",\"7N\"],\"age\":[13,12]}," +
+                         "\"1\":{\"gender\":[\"F\",\"M\"],\"scores\":{\"science\":[71,62],\"english\":[82,76],\"math\":[76,80],\"humanity\":[82,62]},\"name\":[\"Darothy\",\"Bob\"],\"age\":[12,13]}," +
+                         "\"2\":{\"scores\":{\"science\":[99,66],\"math\":[80,91],\"humanity\":[62,87]},\"name\":[\"Bob\",\"Carl\"],\"class\":[\"7C\",\"7B\"],\"age\":[13,12]}," +
+                         "\"3\":{\"gender\":[\"F\",\"M\"],\"scores\":{\"science\":[87,71],\"math\":[80,76],\"humanity\":[75,82]},\"name\":[\"Ellen\",\"Dave\"],\"class\":[\"7B\",\"7C\"]}," +
+                         "\"4\":{\"gender\":[\"M\",\"F\"],\"scores\":{\"science\":[66,87],\"english\":[77,82],\"math\":[91,80],\"humanity\":[87,75]},\"name\":[\"Carl\",\"Ellen\"],\"age\":[11,12]}}",
+                 array2.deltaWith(array, null).toJSONString(null));
+         assertEquals("[{\"age\":[13,12],\"class\":[\"7F\",\"7N\"]},{\"name\":[\"Darothy\",\"Dave\"],\"gender\":[\"F\",\"M\"]},{\"scores\":{\"english\":[77,76],\"science\":[99,62]}},{\"age\":[11,12]}]",
+                 array2.deltaWith(array, "").toJSONString(null));
+         assertEquals("[{\"?\":[0,0],\"age\":[13,12],\"class\":[\"7F\",\"7N\"]},{\"?\":[1,3],\"name\":[\"Darothy\",\"Dave\"],\"gender\":[\"F\",\"M\"]},{\"?\":[2,1],\"scores\":{\"english\":[77,76],\"science\":[99,62]}},{\"?\":[4,2],\"age\":[11,12]}]",
+                 array2.deltaWith(array, "?").toJSONString(null));
+         assertEquals("[{\"+\":[0,0],\"age\":[13,12],\"class\":[\"7F\",\"7N\"]},{\"+\":[1,3],\"name\":[\"Darothy\",\"Dave\"],\"gender\":[\"F\",\"M\"]},{\"+\":[2,1],\"scores\":{\"english\":[77,76],\"science\":[99,62]}},{\"+\":[3,4]},{\"+\":[4,2],\"age\":[11,12]}]",
+                 array2.deltaWith(array, "+").toJSONString(null));
     }
 
     @Test
@@ -228,38 +257,35 @@ public class JSONArrayTest {
                 ellen
         );
         Logger.D("array2: %s", array2);
-        IJSONable delta1 = array.deltaWith(array2, null);
+        IJSONable delta1 = array.deltaWith(array2, "");
         IJSONable delta2 = array2.deltaWith(array, "index");
         IJSONable delta3 = array2.deltaWith(array, "+pos");
         Logger.D("delta1: %s\ndelta2: %s\ndelta3: %s", delta1, delta2, delta3);
 
-        String delta1String = delta1.toJSONString(null);
-        String delta2String = delta2.toJSONString(null);
-        String delta3String = delta3.toJSONString(null);
-        assertEquals("[{\"index\":[0,0],\"class\":[\"7N\",\"7F\"],\"age\":[12,13]},{\"1\":{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}},\"-1\":null}]",
-                delta1String);
-        assertEquals("[{\"pos\":[0,0],\"class\":[\"7F\",\"7N\"],\"age\":[13,12]},{\"-1\":null,\"1\":{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}}}]",
-                delta2String);
-        assertEquals("[{\"+pos\":[0,0],\"class\":[\"7F\",\"7N\"],\"age\":[13,12]},{\"+pos\":[1,2]},{\"-1\":null,\"1\":{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}}}]",
-                delta3String);
+        assertEquals("[{\"age\":[12,13],\"class\":[\"7N\",\"7F\"]},[{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}},null]]",
+                delta1.toJSONString(null));
+        assertEquals("[{\"index\":[0,0],\"age\":[13,12],\"class\":[\"7F\",\"7N\"]},{\"-1\":null,\"1\":{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}}}]",
+                delta2.toJSONString(null));
+        assertEquals("[{\"+pos\":[0,0],\"age\":[13,12],\"class\":[\"7F\",\"7N\"]},{\"+pos\":[1,2]},{\"-1\":null,\"1\":{\"name\":\"Bob\",\"gender\":\"M\",\"age\":13,\"class\":\"7C\",\"scores\":{\"english\":76,\"science\":62,\"humanity\":62,\"math\":80}}}]",
+                delta3.toJSONString(null));
     }
 
     @Test
     public void compareTwoArrays_objectWithDifferentOrders_noDifferent(){
         JSONArray array = new JSONArray(alice, bob, carl, dave, ellen);
         JSONArray array2 = array.getSorted(Comparator.naturalOrder());
-        Logger.D("array2: %s", array2);
+        Logger.V("array2: %s", array2);
         assertTrue(array.deltaWith(array2).isEmpty());
 
         JSONArray array3 = new JSONArray(dave, alice.getSorted(Comparator.naturalOrder()), bob.getSorted(new OrdinalComparator<>("class", "age", "name")),
                 carl.getSorted(new OrdinalComparator<>("id", "class", "name", "age")), ellen.getSorted((Comparator<String>) Comparator.naturalOrder().reversed()));
-        Logger.D("array3: %s", array3);
-        assertTrue(array.deltaWith(array3, null).isEmpty(),
-                array3.deltaWith(array2, null).isEmpty());
+        Logger.V("array3: %s", array3);
+        assertTrue(array.deltaWith(array3, "").isEmpty(),
+                array3.deltaWith(array2, "").isEmpty());
 
-        IJSONValue delta1 = array.deltaWith(array3, "");
-        IJSONValue delta2 = array3.deltaWith(array2, "");
-        assertTrue(delta1.getLength()==4, delta2.getLength()==4);
+        IJSONValue delta1 = array.deltaWith(array3, "index");
+        IJSONValue delta2 = array3.deltaWith(array2, "index");
+        assertTrue(delta1.isEmpty(), delta2.isEmpty());
         Logger.D("delta1: %s\ndelta2: %s", delta1, delta2);
     }
 

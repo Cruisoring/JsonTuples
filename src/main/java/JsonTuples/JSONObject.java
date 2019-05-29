@@ -271,14 +271,14 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         if (other == null) {
             return new JSONArray(this, MISSING);
         } else if (other == this) {
-            return EMPTY;
+            return JSONArray.EMPTY;
         } else if (!(other instanceof JSONObject)) {
             return new JSONArray(this, other);
         }
 
         JSONObject otherObject = (JSONObject) other;
         if (otherObject.hashCode() == this.hashCode() && other.toString().equals(toString())) {
-            return EMPTY;
+            return JSONArray.EMPTY;
         }
 
         Set<String> allKeys = new HashSet<String>() {{
@@ -287,7 +287,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         }};
 
         if (allKeys.isEmpty()) {
-            return EMPTY;
+            return JSONArray.EMPTY;
         }
 
         List<NamedValue> differences = new ArrayList<>();
@@ -306,7 +306,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
         int differenceCount = differences.size();
         if (differenceCount == 0) {
-            return EMPTY;
+            return JSONArray.EMPTY;
         }
 
         JSONObject delta = new JSONObject(differences.toArray(new NamedValue[differenceCount]));

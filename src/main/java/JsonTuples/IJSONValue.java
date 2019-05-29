@@ -46,7 +46,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
      * @return      Representing the differences between this {@code IJSONValue} and other {@code IJSONValue} as a {@code IJSONValue}
      */
     default IJSONValue deltaWith(IJSONValue other){
-        return deltaWith(other, JSONArray.indexName);
+        return deltaWith(other, JSONArray.defaultIndexName);
     }
 
     /**
