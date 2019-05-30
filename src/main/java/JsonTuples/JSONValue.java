@@ -36,34 +36,6 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
 
-    public static final String SPACE = "  ";
-    public static final String NEW_LINE = "\n";
-    public static final String COMMA_NEWLINE = COMMA + NEW_LINE;
-    public static final String COMMA_NEWLINE_SPACE = COMMA + NEW_LINE + SPACE;
-
-    private static final Map<Integer, String> indentsMap = new HashMap(){{
-        put(0, "");
-        put(1, SPACE);
-        put(2, SPACE + SPACE);
-    }};
-    /**
-     * Get the filling spaces of lines of JSON string.
-     * @param indentFactor  level to be indented, 0 means no indent.
-     * @return      spaces of the concerned indent level.
-     */
-    static String getIndent(int indentFactor) {
-        if(indentsMap.containsKey(indentFactor)){
-            return indentsMap.get(indentFactor);
-        }
-
-        if(indentFactor < 0){
-            return "";
-        }
-        String indent = getIndent(indentFactor-1) + SPACE;
-        indentsMap.put(indentFactor, indent);
-        return indent;
-    }
-
     //endregion
 
     protected JSONValue(T t) {
@@ -145,34 +117,18 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof JSONValue)) {
+        if (obj == null || !canEqual(obj)) {
             return false;
         } else if (obj == this) {
             return true;
         }
 
-        //*///JSONValues must have identical toString() and thus identical hashCode()?
+        //JSONValues must have identical toString() and thus identical hashCode()?
         if (getFirst() == null) {
             return ((JSONValue) obj).getFirst() == null;
         } else {
             return (hashCode() == obj.hashCode() && toString().equals(obj.toString()));
         }
-        /*/
-        //Fallback if comparing with hashCode() and toString() only get problems
-        JSONValue other = (JSONValue) obj;
-
-        if (!other.canEqual(this) || hashCode() != other.hashCode()) {
-            return false;
-        }
-
-        Object thisValue = getFirst();
-        Object otherValue = other.getFirst();
-        if (thisValue == otherValue || (thisValue != null && thisValue.equals(otherValue))) {
-            return true;
-        } else {
-            return toString().equals(other.toString());
-        }
-        //*/
     }
 
     @Override

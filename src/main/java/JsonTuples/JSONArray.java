@@ -28,12 +28,24 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     static final String JSONArray_UNMODIFIABLE = "JSONArray instance is not modifiable, asMutableObject() would return a modifiable List of the underlying values that can be modified and then convert back to another JSONArray instance.";
 
     //Name of the index pair of the elements to show their deltas
-    public static String defaultIndexName = null;
+    public static String defaultIndexName = "";
 
     //Predicate to evaluate the indexName of deltaWith()
     public final static Predicate<String> includeDifferentIndexesPredicate = name -> name != null && name.contains("+");
+
     /**
-     * Assuming the concerned valueString is of array, parse it as a {@code JSONArray}
+     * Assuming the concerned valueString is of array, parse it as a {@code JSONArray} with given nameComparator.
+     *
+     * @param comparator    the name comparator used to sort the {@code IJSONValue} with fixed orders.
+     * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
+     * @return      a {@code JSONArray} instance from the given text.
+     */
+    public static JSONArray parse(Comparator<String> comparator, String valueString) {
+        return (JSONArray) Parser.parse(comparator, valueString);
+    }
+
+    /**
+     * Assuming the concerned valueString is of array, parse it as a {@code JSONArray} with default nameComparator.
      * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
      * @return      a {@code JSONArray} instance from the given text.
      */
@@ -94,7 +106,8 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     public String toJSONString(String indent) {
         checkStates(StringUtils.isBlank(indent));
 
-        if (values.length == 0 || "".equals(indent)) {
+        int length = values.length;
+        if (length == 0 || "".equals(indent)) {
             return toString();
         }
 
@@ -102,22 +115,23 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         if(indent == null) {
             String[] elementStrings = Arrays.stream(values).parallel().map(v -> v.toJSONString(null)).toArray(size -> new String[size]);
             return "[" + String.join(",", elementStrings) + "]";
+        } else {
+            TextStringBuilder sb = new TextStringBuilder();
+            final String elementIndent = indent+SPACE;
+            final String elementEnding = COMMA_NEWLINE + indent+SPACE;
+            sb.append(LEFT_BRACKET + NEW_LINE + elementIndent);
+            for (int i = 0; i < length - 1; i++) {
+                sb.append(values[i].toJSONString(elementIndent) + elementEnding);
+            }
+            sb.append(values[length-1].toJSONString(elementIndent) + NEW_LINE + indent + RIGHT_BRACKET);
+            return sb.toString();
         }
-
-        TextStringBuilder sb = new TextStringBuilder();
-        String[] lines = toString().split(JSONValue.NEW_LINE);
-        int length = lines.length;
-        sb.append(LEFT_BRACKET);
-        for (int i = 1; i < length; i++) {
-            sb.append(JSONValue.NEW_LINE + indent + lines[i]);
-        }
-        return sb.toString();
         /*/
         if(indent == null){
             String indented = toString().replaceAll("(?m)\\n\\s*", "");
             return indented;
         } else {
-            String indented = toString().replaceAll("(?m)\\n", JSONValue.NEW_LINE + indent);
+            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
             return indented;
         }
         //*/
@@ -131,24 +145,17 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 _toString = "[]";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
-                sb.append(LEFT_BRACKET + JSONValue.NEW_LINE + JSONValue.SPACE);
+                sb.append(LEFT_BRACKET + NEW_LINE + SPACE);
                 for (int i = 0; i < length - 1; i++) {
-                    sb.append(values[i].toJSONString(JSONValue.SPACE) + JSONValue.COMMA_NEWLINE_SPACE);
+                    sb.append(values[i].toJSONString(SPACE) + COMMA_NEWLINE_SPACE);
                 }
-                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + JSONValue.NEW_LINE + RIGHT_BRACKET);
+                sb.append(values[length-1].toJSONString(SPACE) + NEW_LINE + RIGHT_BRACKET);
                 _toString = sb.toString();
             }
         }
         return _toString;
     }
 
-    @Override
-    public int hashCode() {
-        if (_hashCode == null) {
-            _hashCode = toString().hashCode();
-        }
-        return _hashCode;
-    }
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof JSONArray || obj instanceof Collection || obj.getClass().isArray())) {
@@ -186,20 +193,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         return new JSONObject(namedValues);
     }
 
-    protected Map<String, List<Integer>> getValueIndexes(Comparator<String> comparator) {
-        Map<String, List<Integer>> indexes = new HashMap<>();
-        for (int i = 0; i < getLength(); i++) {
-            IJSONValue value = getValue(i).getSorted(comparator);
-            String valueString = value.toString();
-            if (indexes.containsKey(valueString)) {
-                indexes.get(valueString).add(i);
-            } else {
-                indexes.put(valueString, new ArrayList<>(Arrays.asList(i)));
-            }
-        }
-        return indexes;
-    }
-
     @Override
     public JSONArray getSorted(Comparator<String> comparator) {
         if (nameComparator == comparator) {
@@ -231,7 +224,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             return getSorted(comparator).deltaWith(otherArray.getSorted(comparator), indexName);
         } else if (this.nameComparator == null) {
             return getSorted(otherArray.nameComparator).deltaWith(otherArray, indexName);
-        } else if (otherArray.nameComparator == null){
+        } else if (this.nameComparator != otherArray.nameComparator){
             return deltaWith(otherArray.getSorted(this.nameComparator), indexName);
         }
 

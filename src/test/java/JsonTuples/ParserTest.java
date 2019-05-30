@@ -22,7 +22,7 @@ public class ParserTest {
         String jsonText = ResourceHelper.getTextFromResourceFile(rawFileName);
         String expectedParsedJson = ResourceHelper.getTextFromResourceFile(expectedFileName)
                 .replaceAll("\r\n", "\n");
-        Parser parser = new Parser(jsonText);
+        Parser parser = new Parser(null, jsonText);
 
         IJSONValue value = Logger.M(Measurement.start("parse()"), parser.parse(), LogLevel.info);
         assertTrue(value instanceof JSONObject);

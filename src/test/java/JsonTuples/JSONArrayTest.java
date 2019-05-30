@@ -133,8 +133,7 @@ public class JSONArrayTest {
         Logger.D(shuffled.toJSONString(null));
 
         //For array of 8 elements, shuffle() shall always get an array containing same set elements but with different orders
-        assertNotEquals(array, shuffled);
-        assertEquals(array.getLength(), shuffled.getLength());
+        assertEquals(array, shuffled);
         assertTrue(array.deltaWith(shuffled, "").isEmpty(), array.deltaWith(shuffled, "index").isEmpty());
         assertFalse(array.deltaWith(shuffled, null).isEmpty(), array.deltaWith(shuffled, "index+").isEmpty());
 
@@ -154,7 +153,7 @@ public class JSONArrayTest {
             Revokable.revokeAll();
         }
 
-        assertFalse(array.equals(shuffled));
+        assertTrue(array.equals(shuffled));
     }
 
     @Test
@@ -197,7 +196,7 @@ public class JSONArrayTest {
         Logger.D("signatures: %s\narray: %s\n\talice: %s\n\tbob: %s\n\tcarl: %s\n\tdave: %s\n\tellen: %s\n\t",
                 deepToString(array.getSignatures()),
                 array.hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode());
-        assertEquals(SetHelper.asSet(array.toString().hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode()),
+        assertEquals(SetHelper.asSet(array.hashCode(), alice.hashCode(), bob.hashCode(), carl.hashCode(), dave.hashCode(), ellen.hashCode()),
                 array.getSignatures());
     }
 
@@ -336,7 +335,7 @@ public class JSONArrayTest {
     public void testSorting() {
         String text = "[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"}," +
                 "{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]";
-        JSONArray array1 = JSONArray.parse(text);
+        JSONArray array1 = JSONArray.parse(null, text);
         Logger.V("array1: %s", array1.toJSONString());
         assertEquals("[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"},{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]",
                 array1.toJSONString(null));

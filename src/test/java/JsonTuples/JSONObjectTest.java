@@ -2,6 +2,10 @@ package JsonTuples;
 
 import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.logger.Measurement;
+import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.ResourceHelper;
+import io.github.cruisoring.utility.SetHelper;
 import org.junit.Test;
 
 import java.util.*;
@@ -214,27 +218,44 @@ public class JSONObjectTest {
 
     @Test
     public void getHashCode(){
-        String text = "{\n" +
-                "  \"address\": null,\n" +
-                "  \"scores\": {\n" +
-                "    \"English\": 80,\n" +
-                "    \"Science\": 88,\n" +
-                "    \"Math\": 90\n" +
-                "  },\n" +
-                "  \"name\": \"test name\",\n" +
-                "  \"id\": 123456,\n" +
-                "  \"isActive\": true,\n" +
-                "  \"class\": \"7A\"\n" +
-                "}";
-        JSONObject object1 = JSONObject.parse(text);
-        JSONObject object2 = JSONObject.parse(text);
+        String text = "{\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90},\"name\":\"test name\",\"id\":123456,\"isActive\":true,\"class\":\"7A\"}";
+        JSONObject object1 = JSONObject.parse(null, text);
+        Logger.D("object1: %s", object1.toJSONString(null));
+        Integer[] childrenHashCodes1 = new Integer[]{
+                NamedValue.parse("\"address\":null").hashCode(),
+                NamedValue.parse("\"scores\":{\"English\":80,\"Science\":88,\"Math\":90}").hashCode(),
+                NamedValue.parse("\"name\":\"test name\"").hashCode(),
+                NamedValue.parse("\"id\":123456").hashCode(),
+                NamedValue.parse("\"isActive\":true").hashCode(),
+                NamedValue.parse("\"class\":\"7A\"").hashCode()
+        };
+        Set<Integer> signatures1 = SetHelper.asSet(childrenHashCodes1);
+        signatures1.add(TypeHelper.deepHashCode(childrenHashCodes1));
+        assertEquals(signatures1, object1.getSignatures());
 
-        int superHashCode = TypeHelper.deepHashCode(object1.asArray());;
-        int hashCode = object2.hashCode();
-        String string1 = object1.toString();
-        assertEquals(hashCode, object1.hashCode());
-        assertEquals(hashCode, string1.hashCode());
-        assertTrue(hashCode != superHashCode);
+        Comparator<String> naturalOrder = Comparator.naturalOrder();
+        JSONObject object2 = JSONObject.parse(naturalOrder, text);
+        Logger.D("object2: %s", object2.toJSONString(null));
+        Integer[] childrenHashCodes2 = new Integer[] {
+                childrenHashCodes1[0],
+                childrenHashCodes1[5],
+                childrenHashCodes1[3],
+                childrenHashCodes1[4],
+                childrenHashCodes1[2],
+                NamedValue.parse("\"scores\":{\"English\":80,\"Math\":90,\"Science\":88}").hashCode()
+        };
+        assertEquals(TypeHelper.deepHashCode(childrenHashCodes2), object2.hashCode());
+
+        Set<Integer> signatures2 = SetHelper.asSet(childrenHashCodes2);
+        signatures2.add(TypeHelper.deepHashCode(childrenHashCodes2));
+        assertEquals(signatures2, object2.getSignatures());
+
+        Set<Integer> symDif = SetHelper.symmetricDifference(signatures1, signatures2);
+        List<Integer> expected = Arrays.asList(childrenHashCodes1[1], childrenHashCodes2[5], object1.hashCode(), object2.hashCode());
+        assertTrue(symDif.size() == 4 && symDif.containsAll(expected));
+
+        assertNotEquals(object1.toJSONString(null), object2.toJSONString(null));
+        assertNotEquals(object1.getSignatures(), object2.getSignatures());
     }
 
     @Test
@@ -273,6 +294,33 @@ public class JSONObjectTest {
         assertTrue(signature2.size() == 7,
                 signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
                 signature2.contains(sortedScores.hashCode()));
+    }
+
+    @Test
+    public void testDeltaWith_ofLargeObjects() {
+        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
+        int jsonTextLength = jsonText.length();
+
+        JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
+        Map<String, Object> modifiableMap = (Map<String, Object>) original.asMutableObject();
+
+        List listToBeUpdated = (List) modifiableMap.get("packages");
+        int listSize = listToBeUpdated.size();
+        Random random = new Random();
+        for (int i = 0; i < 100; i++) {
+            String change = String.format("ChangedValue%03d", i);
+            int nextIndex = random.nextInt(listSize);
+            Map<String, Object> child = (Map<String, Object>) listToBeUpdated.get(nextIndex);
+            String[] keys = child.keySet().toArray(new String[0]);
+            String randomKey = keys[random.nextInt(keys.length)];
+            child.put(randomKey, change);
+        }
+        Object shuffledArray = ArrayHelper.shuffle(listToBeUpdated.toArray());
+        modifiableMap.put("packages", shuffledArray);
+        JSONObject modifiedObject = (JSONObject) Utilities.jsonify(modifiableMap);
+
+        IJSONValue delta = original.deltaWith(modifiedObject);
+        Logger.I("delta: %s", delta);
     }
 
 }

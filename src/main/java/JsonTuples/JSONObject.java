@@ -23,7 +23,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     public static final JSONObject EMPTY = new JSONObject();
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
-    private static final Pattern LINE_STARTS = Pattern.compile("^" + JSONValue.SPACE, Pattern.MULTILINE);
+    private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
     public static IJSONValue MISSING = JSONValue.Null;
     final Comparator<String> nameComparator;
     Map<String, NamedValue> jsonMap = null;
@@ -39,13 +39,22 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     //region Parse given text as a JSONObject
-    public static IJSONValue parse(CharSequence jsonContext, Range range) {
-        checkWithoutNull(jsonContext, range);
-
-        String valueString = jsonContext.subSequence(range.getStartInclusive(), range.getEndExclusive()).toString().trim();
-        return parse(valueString);
+    /**
+     * Assuming the concerned valueString is of an JSON Object, parse it as a {@code JSONObject} with given nameComparator.
+     *
+     * @param comparator    the name comparator used to sort the {@code IJSONValue} with fixed orders.
+     * @param valueString   text to be parsed that shall begins with {(left brace) and ends with }(right brace).
+     * @return      a {@code JSONObject} instance from the given text.
+     */
+    public static JSONObject parse(Comparator<String> comparator, String valueString) {
+        return (JSONObject) Parser.parse(comparator, valueString);
     }
 
+    /**
+     * Assuming the concerned valueString is of an JSON Object, parse it as a {@code JSONObject} with default nameComparator.
+     * @param valueString   text to be parsed that shall begins with {(left brace) and ends with }(right brace).
+     * @return      a {@code JSONObject} instance from the given text.
+     */
     public static JSONObject parse(String valueString) {
         return (JSONObject) Parser.parse(valueString);
     }
@@ -112,7 +121,8 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     public String toJSONString(String indent) {
         checkStates(StringUtils.isBlank(indent));
 
-        if (values.length == 0 || "".equals(indent)) {
+        int length = values.length;
+        if (length == 0 || "".equals(indent)) {
             return toString();
         }
 
@@ -120,22 +130,22 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         if(indent == null) {
             String[] elementStrings = Arrays.stream(values).parallel().map(v -> v.toJSONString(null)).toArray(size -> new String[size]);
             return "{" + String.join(",", elementStrings) + "}";
+        } else {
+            TextStringBuilder sb = new TextStringBuilder();
+            sb.append(LEFT_BRACE + NEW_LINE);
+            String elementIndent = SPACE+indent;
+            for (int i = 0; i < length - 1; i++) {
+                sb.append(values[i].toJSONString(elementIndent) + COMMA_NEWLINE);
+            }
+            sb.append(values[length-1].toJSONString(elementIndent) + NEW_LINE + indent + RIGHT_BRACE);
+            return sb.toString();
         }
-
-        TextStringBuilder sb = new TextStringBuilder();
-        sb.append(LEFT_BRACE);
-        String[] lines = toString().split(JSONValue.NEW_LINE);
-        int length = lines.length;
-        for (int i = 1; i < length; i++) {
-            sb.append(JSONValue.NEW_LINE + indent + lines[i]);
-        }
-        return sb.toString();
         /*/
         if(indent == null){
             String indented = toString().replaceAll("(?m)\\n\\s*", "");
             return indented;
         } else {
-            String indented = toString().replaceAll("(?m)\\n", JSONValue.NEW_LINE + indent);
+            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
             return indented;
         }
         //*/
@@ -149,11 +159,11 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
                 _toString = "{}";
             } else {
                 TextStringBuilder sb = new TextStringBuilder();
-                sb.append(LEFT_BRACE + JSONValue.NEW_LINE);
+                sb.append(LEFT_BRACE + NEW_LINE);
                 for (int i = 0; i < length - 1; i++) {
-                    sb.append(values[i].toJSONString(JSONValue.SPACE) + JSONValue.COMMA_NEWLINE);
+                    sb.append(values[i].toJSONString(JSONValue.SPACE) + COMMA_NEWLINE);
                 }
-                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + JSONValue.NEW_LINE + RIGHT_BRACE);
+                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + NEW_LINE + RIGHT_BRACE);
                 _toString = sb.toString();
             }
         }
@@ -172,14 +182,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     public JSONObject withDelta(String jsonDeltas){
         JSONObject delta = JSONObject.parse(jsonDeltas);
         return withDelta(delta);
-    }
-
-    @Override
-    public int hashCode() {
-        if (_hashCode == null) {
-            _hashCode = toString().hashCode();
-        }
-        return _hashCode;
     }
 
     @Override
@@ -277,6 +279,16 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         }
 
         JSONObject otherObject = (JSONObject) other;
+        //Sort both JSONObjects with the same Comparator
+        if(this.nameComparator == null && otherObject.nameComparator == null){
+            Comparator<String> comparator = new OrdinalComparator<>();
+            return getSorted(comparator).deltaWith(otherObject.getSorted(comparator), indexName);
+        } else if (this.nameComparator == null) {
+            return getSorted(otherObject.nameComparator).deltaWith(otherObject, indexName);
+        } else if (this.nameComparator != ((JSONObject) other).nameComparator){
+            return deltaWith(otherObject.getSorted(this.nameComparator), indexName);
+        }
+
         if (otherObject.hashCode() == this.hashCode() && other.toString().equals(toString())) {
             return JSONArray.EMPTY;
         }

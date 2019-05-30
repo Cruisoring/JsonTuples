@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Range;
+import io.github.cruisoring.function.SupplierThrowable;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple4;
@@ -37,6 +38,8 @@ public final class Parser {
             Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON));
     final static Character MIN_CONTROL = Collections.min(CONTROLS);
     final static Character MAX_CONTROL = Collections.max(CONTROLS);
+
+    public static SupplierThrowable<Comparator<String>> defaultComparatorSupplier = () -> new OrdinalComparator<>();
     //endregion
 
     //region Static methods
@@ -60,9 +63,9 @@ public final class Parser {
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText) {
-        assertNotNull(jsonText, comparator);
+        assertNotNull(jsonText);
 
-        Parser parser = new Parser(jsonText, Range.ofLength(jsonText.length()), comparator);
+        Parser parser = new Parser(comparator, jsonText, Range.ofLength(jsonText.length()));
         return parser.parse();
     }
 
@@ -75,9 +78,9 @@ public final class Parser {
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText, Range range) {
-        assertNotNull(comparator, jsonText, range);
+        assertNotNull(jsonText, range);
 
-        Parser parser = new Parser(jsonText, range, comparator);
+        Parser parser = new Parser(comparator, jsonText, range);
         return parser.parse();
     }
     //endregion
@@ -96,11 +99,11 @@ public final class Parser {
     //endregion
 
     //region Constructors
-    Parser(CharSequence jsonText, Range range, Comparator<String> comparator) {
-        this(Range.subString(jsonText, range), comparator);
+    Parser(Comparator<String> comparator, CharSequence jsonText, Range range) {
+        this(comparator, Range.subString(jsonText, range));
     }
 
-    Parser(CharSequence jsonText, Comparator<String> comparator) {
+    Parser(Comparator<String> comparator, CharSequence jsonText) {
         this.nameComparator = comparator;
         this.jsonContext = jsonText;
         length = jsonContext.length();
@@ -113,7 +116,7 @@ public final class Parser {
     }
 
     Parser(CharSequence jsonText) {
-        this(jsonText, null);
+        this(defaultComparatorSupplier==null ? null : defaultComparatorSupplier.tryGet(), jsonText);
     }
     //endregion
 

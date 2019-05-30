@@ -38,7 +38,7 @@ public class NamedValueTest {
     @Test
     public void testHashCode() {
         NamedValue namedValue = new NamedValue("name", Parser.parse("\"Alice\""));
-        assertEquals("\"name\": \"Alice\"".hashCode(), namedValue.hashCode());
+        assertEquals(TypeHelper.deepHashCode(new String[]{"\"name\"", "\"Alice\""}), namedValue.hashCode());
         Logger.D("hashCode(): %s, signatures: %s", namedValue.hashCode(), TypeHelper.deepToString(namedValue.getSignatures()));
     }
 
@@ -55,19 +55,21 @@ public class NamedValueTest {
     @Test
     public void testGetSignatures() {
         NamedValue namedValue = NamedValue.parse("\"name\": 12345");
-        assertEquals(SetHelper.asSet("\"name\": 12345".hashCode(), "\"name\"".hashCode(), "12345".hashCode()),
+        assertEquals(SetHelper.asSet(TypeHelper.deepHashCode(new String[]{"\"name\"", "12345"}), "\"name\"".hashCode(), "12345".hashCode()),
                 namedValue.getSignatures());
 
         String raw = "\"member\": {\n  \"id\": 111,\n  \"name\": \"Tom\",\n  \"vip\": false\n}";
         namedValue = NamedValue.parse(raw);
-        String objectString = Parser.parse("{\"id\":111,\"name\": \"Tom\",\"vip\": false}").toString();
-        assertEquals(SetHelper.asSet(raw.hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+        JSONObject obj = JSONObject.parse("{\"id\":111,\"name\": \"Tom\",\"vip\": false}");
+        assertEquals(SetHelper.asSet(TypeHelper.deepHashCode(new Object[]{"\"member\"", obj.hashCode()}), "\"member\"".hashCode(), obj.hashCode()),
                 namedValue.getSignatures());
 
         NamedValue sorted = namedValue.getSorted(new OrdinalComparator<>("name"));
-        objectString = Parser.parse("{\"name\": \"Tom\",\"id\":111,\"vip\": false}").toString();
-        assertEquals(SetHelper.asSet(sorted.toString().hashCode(), "\"member\"".hashCode(), objectString.hashCode()),
+        obj = JSONObject.parse("{\"name\": \"Tom\",\"id\":111,\"vip\": false}");
+        assertEquals(SetHelper.asSet(TypeHelper.deepHashCode(new Object[]{"\"member\"", obj.hashCode()}), "\"member\"".hashCode(), obj.hashCode()),
                 sorted.getSignatures());
+
+        Logger.D("namedValue: %s\nsorted: %s", TypeHelper.deepToString(namedValue.getSignatures()), TypeHelper.deepToString(sorted.getSignatures()));
     }
 
     @Test

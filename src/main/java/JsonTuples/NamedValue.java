@@ -74,21 +74,11 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     @Override
-    public int hashCode() {
-        if (_hashCode == null) {
-            _hashCode = toString().hashCode();
-        }
-        return _hashCode;
-    }
-
-    @Override
     public NamedValue getSorted(Comparator<String> comparator) {
-        IJSONValue sortedValue = getSecond().getSorted(comparator);
-        if (sortedValue == getSecond()) {
-            return this;
-        } else {
-            return new NamedValue(getFirst(), sortedValue);
-        }
+        IJSONValue second = getSecond();
+        IJSONValue sortedValue = second.getSorted(comparator);
+
+        return sortedValue == second ? this : new NamedValue(getFirst(), sortedValue);
     }
 }
 

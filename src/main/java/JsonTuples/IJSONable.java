@@ -19,6 +19,12 @@ public interface IJSONable {
     char COLON = ':';
     char QUOTE = '"';
     char BACK_SLASH = '\\';
+
+    String SPACE = "  ";
+    String NEW_LINE = "\n";
+    String COMMA_NEWLINE = COMMA + NEW_LINE;
+    String COMMA_NEWLINE_SPACE = COMMA + NEW_LINE + SPACE;
+
     //endregion
 
     /**
