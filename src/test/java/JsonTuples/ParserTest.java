@@ -64,7 +64,7 @@ public class ParserTest {
 
         String sortedString = null;
         for (int i = 0; i < 10; i++) {
-            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %d", jsonTextLength),
+            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
                     () -> JSONObject.parse(jsonText));
             IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject of size %d", result.size()),
                     () -> result.getSorted(Comparator.naturalOrder()));
@@ -73,53 +73,55 @@ public class ParserTest {
 //        Logger.V(sortedString);
         Map<String, String> performanceSummary = Measurement.getAllSummary();
         performanceSummary.entrySet().forEach(entry -> Logger.I("%s--> %s", entry.getKey(), entry.getValue()));
+        Measurement.clear();
     }
 
     @Test
-    public void test70KJson() {
+    public void test69K() {
         testPerformance("navigation.json");
     }
 
     @Test
-    public void test180KJson() {
+    public void test722K() {
         testPerformance("paths.json");
     }
 
     @Test
-    public void test1314KJson() {
+    public void test1296K() {
         testPerformance("help.json");
     }
 
     @Test
-    public void test392KJson1() {
+    public void test391K() {
         testPerformance("nls.metadata.json");
     }
 
     @Test
-    public void test626KJson1() {
+    public void test625K() {
         testPerformance("places.json");
     }
 
     @Test
-    public void test1238KJson1() {
+    public void test1237K() {
         testPerformance("people.json");
     }
 
     @Test
-    public void test6257KJson() {
+    public void test6104KJson() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int jsonTextLength = jsonText.length();
 
         String sortedString = null;
         for (int i = 0; i < 10; i++) {
-            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %d", jsonTextLength),
+            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
                     () -> JSONObject.parse(jsonText));
-            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject of size %d", result.size()),
+            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject"),
                     () -> result.getSorted(Comparator.naturalOrder()));
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
         }
         Map<String, String> performanceSummary = Measurement.getAllSummary();
-        performanceSummary.entrySet().forEach(entry -> Logger.I("%s--> %s", entry.getKey(), entry.getValue()));
+        performanceSummary.values().forEach(v -> Logger.I("%s", v));
+        Measurement.clear();
     }
 
     @Test

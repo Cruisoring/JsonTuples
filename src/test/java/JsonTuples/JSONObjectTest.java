@@ -1,6 +1,8 @@
 package JsonTuples;
 
+import io.github.cruisoring.Revokable;
 import io.github.cruisoring.TypeHelper;
+import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ArrayHelper;
@@ -300,27 +302,83 @@ public class JSONObjectTest {
     public void testDeltaWith_ofLargeObjects() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int jsonTextLength = jsonText.length();
+        int changes = 1000;
 
-        JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
-        Map<String, Object> modifiableMap = (Map<String, Object>) original.asMutableObject();
+        try(
+                Revokable revokable = Logger.setLevelInScope(LogLevel.debug);){
+            JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
+            Map<String, Object> modifiableMap = (Map<String, Object>) Logger.M(Measurement.start("Get Modifiable Map"), () -> original.asMutableObject());
+            Object packagesList = modifiableMap.get("packages");
 
-        List listToBeUpdated = (List) modifiableMap.get("packages");
-        int listSize = listToBeUpdated.size();
-        Random random = new Random();
-        for (int i = 0; i < 100; i++) {
-            String change = String.format("ChangedValue%03d", i);
-            int nextIndex = random.nextInt(listSize);
-            Map<String, Object> child = (Map<String, Object>) listToBeUpdated.get(nextIndex);
-            String[] keys = child.keySet().toArray(new String[0]);
-            String randomKey = keys[random.nextInt(keys.length)];
-            child.put(randomKey, change);
+            Logger.M(Measurement.start("Modify %d leaf values", changes), () -> modifyAndShuffle(packagesList, changes));
+
+            Object shuffledArray = Logger.M(Measurement.start("Shuffle packages"), () -> ArrayHelper.shuffle(((List) packagesList).toArray()));
+            modifiableMap.put("packages", shuffledArray);
+            JSONObject modifiedObject = Logger.M(Measurement.start("jsonify()"), () ->(JSONObject) Utilities.jsonify(modifiableMap));
+
+            IJSONValue delta = Logger.M(Measurement.start("deltaWith() to get %d differnces", changes), () ->original.deltaWith(modifiedObject));
+            String deltaString = delta.toString();
+            Logger.V("delta: %s", deltaString);
+            for (int i = 0; i < changes; i++) {
+                String value = String.format("changedValue%03d", i);
+                assertTrue(deltaString.contains(value), "failed to locate value '%s'", value);
+            }
         }
-        Object shuffledArray = ArrayHelper.shuffle(listToBeUpdated.toArray());
-        modifiableMap.put("packages", shuffledArray);
-        JSONObject modifiedObject = (JSONObject) Utilities.jsonify(modifiableMap);
-
-        IJSONValue delta = original.deltaWith(modifiedObject);
-        Logger.I("delta: %s", delta);
     }
 
+    public Object modifyAndShuffle(Object modifiableObject, int changeCount) {
+        Random random = new Random();
+        for (int i = 0; i < changeCount; i++) {
+            String newValue = String.format("changedValue%03d", i);
+            while(true){
+                if(replaceAnyLeafValue(modifiableObject, newValue, random))
+                    break;
+            }
+        }
+        return modifiableObject;
+    }
+
+    private boolean replaceAnyLeafValue(Object object, String newValue, Random random){
+        if(object instanceof List) {
+            List list = (List)object;
+            int size = list.size();
+            if(size == 0){
+                return false;
+            }
+
+            Object child = list.get(random.nextInt(size));
+            if(child instanceof List || child instanceof Map) {
+                return replaceAnyLeafValue(child, newValue, random);
+            } else if (child.toString().startsWith("changedValue")) {
+                return false;
+            } else {
+                list.remove(child);
+                list.add(newValue);
+                Logger.V("%s of List is replaced by %s", child, newValue);
+                return true;
+            }
+        } else if (object instanceof Map) {
+            Map map = (Map)object;
+            int size = map.size();
+            if(size == 0){
+                return false;
+            }
+
+            Object[] keys = map.keySet().toArray();
+            Object key = keys[random.nextInt(keys.length)];
+            Object value = map.get(key);
+            if(value instanceof List || value instanceof Map){
+                return replaceAnyLeafValue(value, newValue, random);
+            } else if (value.toString().startsWith("changedValue")) {
+                return false;
+            } else {
+                map.remove(key);
+                map.put(key, newValue);
+                Logger.V("%s: value %s is replaced by %s", key, value, newValue);
+                return true;
+            }
+        } else {
+            return false;
+        }
+    }
 }

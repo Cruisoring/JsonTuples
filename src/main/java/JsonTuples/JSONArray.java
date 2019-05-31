@@ -250,8 +250,8 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             rightValues = this.values;
         }
 
-        final Set<Integer>[] leftSignaturesAll = Arrays.stream(leftValues).map(v -> v.getSignatures()).toArray(size -> new Set[size]);
-        final Set<Integer>[] rightSignaturesAll = Arrays.stream(rightValues).map(v -> v.getSignatures()).toArray(size -> new Set[size]);
+        final Set<Integer>[] leftSignaturesAll = Arrays.stream(leftValues).parallel().map(v -> v.getSignatures()).toArray(size -> new Set[size]);
+        final Set<Integer>[] rightSignaturesAll = Arrays.stream(rightValues).parallel().map(v -> v.getSignatures()).toArray(size -> new Set[size]);
 
         final Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences = new LinkedHashMap<>();
         Comparator<Tuple3<Integer, Integer, List<Integer>>> _comparator = Comparator.comparing(tuple -> tuple.getFirst());
