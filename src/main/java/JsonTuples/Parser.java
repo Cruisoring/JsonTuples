@@ -7,13 +7,12 @@ import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple4;
 import io.github.cruisoring.utility.ArrayHelper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
 
-import static io.github.cruisoring.Asserts.assertNotNull;
-import static io.github.cruisoring.Asserts.checkStates;
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.*;
 
 /**
  * Utility to parse JSON text based on information disclosed on <a href="http://www.json.org/">json.org</a>
@@ -304,7 +303,8 @@ public final class Parser {
             case QUOTE:
                 if (currentStringEnd == Integer.MAX_VALUE) {
                     currentStringEnd = position;
-                    lastStringValue = new JSONString(JSONString._unescapeJson(jsonContext, currentStringStart + 1, currentStringEnd));
+                    String text = jsonContext.subSequence(currentStringStart+1, currentStringEnd).toString();
+                    lastStringValue = new JSONString(StringEscapeUtils.unescapeJson(text));
                     if (isObject != null && !isObject) {
                         children.add(lastStringValue);
                     }

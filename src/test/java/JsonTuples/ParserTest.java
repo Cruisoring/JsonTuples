@@ -71,8 +71,7 @@ public class ParserTest {
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
         }
 //        Logger.V(sortedString);
-        Map<String, String> performanceSummary = Measurement.getAllSummary();
-        performanceSummary.entrySet().forEach(entry -> Logger.I("%s--> %s", entry.getKey(), entry.getValue()));
+        Measurement.printMeasurementSummaries(LogLevel.info);
         Measurement.clear();
     }
 
