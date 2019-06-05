@@ -157,6 +157,18 @@ public class JSONArrayTest {
     }
 
     @Test
+    public void testDeltaWith_arraysOfSameDifferences(){
+        assertEquals("[[1,4],[2,5],[3,6]]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
+        assertEquals("[[4,1],[5,2],[6,3]]",
+                JSONArray.parse("[4, 5, 6]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+        assertEquals("[[1,5],[2,6],[3,null]]",
+                JSONArray.parse("[1, 2, 3, 4]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
+        assertEquals("[[4,1],[5,2],[6,null]]",
+                JSONArray.parse("[3, 4, 5, 6]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+    }
+
+    @Test
     public void deltaWith_arrayOfSimpleValues() {
         Object[] objects = new Object[]{null, 99, true, 2.3, "Good", 'a', false, new int[]{1, 2}};
         JSONArray array = Utilities.asJSONArrayFromArray(objects);

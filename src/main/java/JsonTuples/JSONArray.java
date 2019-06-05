@@ -1,7 +1,5 @@
 package JsonTuples;
 
-import io.github.cruisoring.TypeHelper;
-import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple3;
@@ -306,15 +304,51 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 }
             }
 
-            if(Arrays.stream(rightSignaturesAll).allMatch(s -> s == null) && Arrays.stream(leftSignaturesAll).allMatch(s -> s == null)){
-                //Stop matching when there is no new pair unmatched
+            boolean rightAllNull = Arrays.stream(rightSignaturesAll).allMatch(s -> s == null);
+            boolean leftAllNull = Arrays.stream(leftSignaturesAll).allMatch(s -> s == null);
+            if(leftAllNull && rightAllNull) {
+                //Stop matching attempts when there is no new pair unmatched
                 break;
+            } else if (rightAllNull) {
+                IntStream.range(0, leftSize).filter(i -> leftSignaturesAll[i] != null).forEach(
+                        i -> {
+                            leftRightIndexPairs.add(Tuple.create(i, -1));
+                            leftSignaturesAll[i] = null;
+                        }
+                );
+            } else if (leftAllNull) {   //Shall never happen?!
+                throw new IllegalStateException("Right side shall be all nulls first!");
             } else if (lastSize == leftRightIndexPairs.size()){
+                Set<Integer> rightIndexesWithLeastUses = new HashSet<>();
+                int minUses = leftSize+1;
+                for (Map.Entry<Integer, Set<Integer>> entry : differencesToRights.entrySet()) {
+                    int entryUsed = entry.getValue().size();
+                    if(entryUsed > minUses){
+                        continue;
+                    } else if (entryUsed < minUses) {
+                        minUses = entryUsed;
+                        rightIndexesWithLeastUses.clear();
+                    }
 
-                break;
+                    rightIndexesWithLeastUses.add(entry.getKey());
+                }
+
+                Integer rightIndexWithLeastUses = null;
+                for (int i = 0; i < bestMatches.length; i++) {
+                    Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatches[i];
+                    if(tuple3 == null) {
+                        continue;
+                    }
+                    rightIndexWithLeastUses = tuple3.getThird().stream().filter(n -> rightIndexesWithLeastUses.contains(n)).findFirst().orElse(null);
+                    if(rightIndexesWithLeastUses != null && getIndexPair(tuple3, leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights)){
+                        bestMatches[i] = null;
+                        break;
+                    }
+                }
+
+                assertNotNull(rightIndexesWithLeastUses);
             }
 
-            lastSize = leftRightIndexPairs.size();
             leastDifferences.clear();
             differencesToRights.clear();
         } while(true);
