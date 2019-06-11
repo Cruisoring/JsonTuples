@@ -66,6 +66,16 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     @Override
+    public int getLeafCount(boolean countNulls) {
+        return getSecond().getLeafCount(countNulls);
+    }
+
+    @Override
+    public int getLeafCount() {
+        return getSecond().getLeafCount();
+    }
+
+    @Override
     public String toString() {
         if (_toString == null) {
             _toString = getFirst().toString() + ": " + getSecond().toString();

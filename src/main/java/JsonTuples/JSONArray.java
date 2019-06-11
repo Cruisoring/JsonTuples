@@ -104,6 +104,24 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     }
 
     @Override
+    public int getLeafCount(boolean countNulls) {
+        int count = 0;
+        for (IJSONValue element : values) {
+            count += element.getLeafCount(countNulls);
+        }
+        return count;
+    }
+
+    @Override
+    public int getLeafCount() {
+        int count = 0;
+        for (IJSONValue element : values) {
+            count += element.getLeafCount();
+        }
+        return count;
+    }
+
+    @Override
     public String toJSONString(String indent) {
         checkStates(StringUtils.isBlank(indent));
 
@@ -210,7 +228,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     @Override
     public IJSONValue deltaWith(IJSONValue other, String indexName) {
         if (other == null) {
-            return new JSONArray(this, JSONObject.MISSING);
+            return new JSONArray(this, JSONValue.MISSING);
         } else if (other == this) {
             return EMPTY;
         } else if (!(other instanceof JSONArray)) {

@@ -6,6 +6,7 @@ import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.DateTimeHelper;
 import io.github.cruisoring.utility.ResourceHelper;
 import io.github.cruisoring.utility.SetHelper;
 import org.junit.Test;
@@ -222,6 +223,19 @@ public class JSONObjectTest {
     }
 
     @Test
+    public void testGetLeafCount(){
+        assertEquals(0, JSONObject.EMPTY.getLeafCount(true));
+        assertEquals(3, JSONObject.parse("{ \"age\": 24, \"name\": null, \"other\": \"OK\" }").getLeafCount(true));
+        assertEquals(2, JSONObject.parse("{ \"age\": 24, \"name\": null, \"other\": \"OK\" }").getLeafCount(false));
+        assertEquals(5, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", true], \"name\": {\"first\":\"Tom\", \"last\":\"Clarks\"} }").getLeafCount(false));
+        assertEquals(5, JSONObject.parse("{ \"age\": null, \"other\": [null, null], \"name\": {\"first\":null, \"last\":null} }").getLeafCount(true));
+        assertEquals(0, JSONObject.parse("{ \"age\": null, \"other\": [null, null], \"name\": {\"first\":null, \"last\":null} }").getLeafCount(false));
+
+        assertEquals(3, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", null], \"name\": {\"first\":null, \"last\":\"none\"} }").getLeafCount());
+
+    }
+
+    @Test
     public void getHashCode(){
         String text = "{\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90},\"name\":\"test name\",\"id\":123456,\"isActive\":true,\"class\":\"7A\"}";
         JSONObject object1 = JSONObject.parse(null, text);
@@ -316,49 +330,44 @@ public class JSONObjectTest {
     public void testDeltaWith_ofLargeObjects() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int changes = 1000;
+        int jsonTextLength = jsonText.length();
+        JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
+        int originalLeafCount = original.getLeafCount(true);
 
-        try {
+        try(Revokable revokable = Logger.setLevelInScope(LogLevel.debug)) {
             for (int i = 0; i < 10; i++) {
-                test(jsonText, changes);
+                Map<String, Object> modifiableMap = (Map<String, Object>) Logger.M(Measurement.start("Get Modifiable Map"), () -> original.asMutableObject());
+                Object packagesList = modifiableMap.get("packages");
+
+                Logger.M(Measurement.start("Modify %d leaf values", changes), () -> modifyAndShuffle(packagesList, changes));
+
+                Object shuffledArray = Logger.M(Measurement.start("Shuffle packages list as array"), () -> ArrayHelper.shuffle(((List) packagesList).toArray()));
+                modifiableMap.put("packages", shuffledArray);
+                JSONObject modifiedObject = Logger.M(Measurement.start("jsonify() back to JSONObject"), () ->(JSONObject) Utilities.jsonify(modifiableMap));
+                int modifiedLeafCount = modifiedObject.getLeafCount(true);
+                Logger.D("Save modified JSONObject with %d leaves to %s", modifiedLeafCount,
+                        Logger.M(Measurement.start("save modified JSON"), () ->ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), "modified.json")));
+
+                IJSONValue delta = Logger.M(Measurement.start("deltaWith() between Object with %d leafs and another with %d leafs", originalLeafCount, modifiedLeafCount),
+                        () ->original.deltaWith(modifiedObject));
+                assertNotNull(delta, "Failed to get result.");
+                String deltaString = delta.toString();
+                Matcher matcher = Pattern.compile("changedValue\\d{3}").matcher(deltaString);
+                int count = 0;
+                while (matcher.find()){
+                    count++;
+                }
+
+                if(count != changes){
+                    String timeStamp = DateTimeHelper.asString(LocalDateTime.now(), "MMddHHmmss");
+                    String modifedFile = ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), String.format("modified%s.json", timeStamp));
+                    String deltaFile = ResourceHelper.saveTextToTargetFile(delta.toString(), String.format("delta%s.json", timeStamp));
+                    Logger.W("There are %d changed values found, the modified file is saved as %s, and delta is saved as %s.", count, modifedFile, deltaFile);
+                }
             }
         }finally {
             Measurement.printMeasurementSummaries(LogLevel.info);
             Measurement.clear();
-        }
-    }
-
-    private void test(String jsonText, int changes){
-        int jsonTextLength = jsonText.length();
-
-        try(
-                Revokable revokable = Logger.setLevelInScope(LogLevel.debug);){
-            JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
-            Map<String, Object> modifiableMap = (Map<String, Object>) Logger.M(Measurement.start("Get Modifiable Map"), () -> original.asMutableObject());
-            Object packagesList = modifiableMap.get("packages");
-
-            Logger.M(Measurement.start("Modify %d leaf values of its %d elements", changes, ((List)packagesList).size()), () -> modifyAndShuffle(packagesList, changes));
-
-            Object shuffledArray = Logger.M(Measurement.start("Shuffle packages list as array"), () -> ArrayHelper.shuffle(((List) packagesList).toArray()));
-            modifiableMap.put("packages", shuffledArray);
-            JSONObject modifiedObject = Logger.M(Measurement.start("jsonify() back to JSONObject"), () ->(JSONObject) Utilities.jsonify(modifiableMap));
-            Logger.D("Save modified JSONObject to %s",
-                    Logger.M(Measurement.start("save modified JSON"), () ->ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), "modified.json")));
-
-            IJSONValue delta = Logger.M(Measurement.start("deltaWith()******"), () ->original.deltaWith(modifiedObject));
-            assertNotNull(delta, "Failed to get result.");
-            String deltaString = delta.toString();
-            Matcher matcher = Pattern.compile("changedValue\\d{3}").matcher(deltaString);
-            int count = 0;
-            while (matcher.find()){
-                count++;
-            }
-
-            if(count != changes){
-                String timeStamp = TypeHelper.asString(LocalDateTime.now(), "MMddHHmmss");
-                String modifedFile = ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), String.format("modified%s.json", timeStamp));
-                String deltaFile = ResourceHelper.saveTextToTargetFile(delta.toString(), String.format("delta%s.json", timeStamp));
-                Logger.W("There are %d changed values found, the modified file is saved as %s, and delta is saved as %s.", count, modifedFile, deltaFile);
-            }
         }
     }
 

@@ -1,7 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Range;
-import io.github.cruisoring.function.SupplierThrowable;
+import io.github.cruisoring.throwables.SupplierThrowable;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple4;

@@ -23,10 +23,6 @@ import static io.github.cruisoring.Asserts.checkWithoutNull;
  */
 public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
-    //region Static constants
-    //Regex to match legal values of Boolean, null, String or Number with optional leading/ending spaces
-    public static final Pattern BASIC_VALUE_PATTERN = Pattern.compile("\\s*(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*");
-
     // Represent the values of either 'true'
     public static final JSONValue True = new JSONValue(Boolean.TRUE);
 
@@ -36,6 +32,13 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     //Represent the values of either 'null'
     public static final JSONValue Null = new JSONValue(null);
 
+    //the IJSONValue to represent something is missing, the IJSONable.getLeafCount() returns 0 if it is equal to this static field
+    // Notice: the JSONValue.Null must be defined before MISSING.
+    public static IJSONValue MISSING = JSONValue.Null;
+
+    //region Static constants
+    //Regex to match legal values of Boolean, null, String or Number with optional leading/ending spaces
+    public static final Pattern BASIC_VALUE_PATTERN = Pattern.compile("\\s*(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*");
     //endregion
 
     protected JSONValue(T t) {
@@ -90,6 +93,11 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     @Override
     public String toJSONString(String indent) {
         return toString();
+    }
+
+    @Override
+    public int getLeafCount(boolean countNulls) {
+        return countNulls ? 1 : (getFirst() == null ? 0 : 1);
     }
 
     @Override

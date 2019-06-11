@@ -37,6 +37,23 @@ public interface IJSONable {
     String toJSONString(String indent);
 
     /**
+     * Get the number of {@code JSONValue} contained by this IJSONable by specifying if null shall be counted.
+     *
+     * @param countNulls <tt>true</tt> to count JSONValue.NULL as 1
+     * @return number of {@code JSONValue}.
+     */
+    int getLeafCount(boolean countNulls);
+
+    /**
+     * Get the number of {@code JSONValue} contained by this IJSONable by counting 'null' as 1 or not depending on if JSONValue.MISSING is JSONValue.Null.
+     *
+     * @return number of {@code JSONValue}: count JSONValue.Null as 1 when JSONValue.MISSing is not JSON.MISSING.
+     */
+    default int getLeafCount() {
+        return this.equals(JSONValue.MISSING) ? 0 : 1;
+    }
+
+    /**
      * The <code>toJSONString</code> method allows a class to produce its own JSON
      * serialization.
      *

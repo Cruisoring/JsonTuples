@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.Range;
+import io.github.cruisoring.Revokable;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple1;
 import org.junit.Assert;
@@ -282,5 +283,40 @@ public class JSONValueTest {
         assertEquals(JSONValue.False, JSONValue.parse(context, Range.closed(14, 20)));
         assertEquals(new JSONNumber(9988), JSONValue.parse(context, Range.closed(21, 25)));
         assertEquals("", JSONValue.parse(context, Range.closed(28, 30)).getObject());
+    }
+
+    @Test
+    public void testGetLeafCount(){
+        assertEquals(0, JSONValue.Null.getLeafCount(false));
+        assertEquals(1, JSONValue.False.getLeafCount(false));
+        assertEquals(1, Parser.parse("1").getLeafCount(false));
+        assertEquals(1, Parser.parse("\"\"").getLeafCount(false));
+        assertEquals(1, JSONValue.Null.getLeafCount(true));
+        assertEquals(1, JSONValue.True.getLeafCount(false));
+        assertEquals(1, Parser.parse("1").getLeafCount(false));
+        assertEquals(1, Parser.parse("\"\"").getLeafCount(false));
+
+        try(
+                Revokable revokable = Revokable.register(() -> JSONValue.MISSING, v -> JSONValue.MISSING=v, JSONValue.Null)
+                ){
+            assertEquals(0, JSONValue.Null.getLeafCount());
+            assertEquals(1, JSONValue.False.getLeafCount());
+            assertEquals(1, Parser.parse("1").getLeafCount());
+            assertEquals(1, Parser.parse("\"\"").getLeafCount());
+
+            JSONValue.MISSING = Parser.parse("\"none\"");
+            assertEquals(1, JSONValue.Null.getLeafCount());
+            assertEquals(1, JSONValue.False.getLeafCount());
+            assertEquals(1, Parser.parse("-1").getLeafCount());
+            assertEquals(1, Parser.parse("\"\"").getLeafCount());
+            assertEquals(0, Parser.parse("\"none\"").getLeafCount());
+
+            JSONValue.MISSING = Parser.parse("-1");
+            assertEquals(1, JSONValue.Null.getLeafCount());
+            assertEquals(1, JSONValue.False.getLeafCount());
+            assertEquals(0, Parser.parse("-1").getLeafCount());
+            assertEquals(1, Parser.parse("\"\"").getLeafCount());
+            assertEquals(1, Parser.parse("\"none\"").getLeafCount());
+        }
     }
 }

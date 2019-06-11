@@ -48,6 +48,41 @@ public class JSONArrayTest {
     }
 
     @Test
+    public void testGetLeafCount(){
+        assertEquals(0, JSONArray.EMPTY.getLeafCount(true));
+        assertEquals(2, JSONArray.parse("[null, null]").getLeafCount(true));
+        assertEquals(2, JSONArray.parse("[1, null]").getLeafCount(true));
+
+        assertEquals(0, JSONArray.EMPTY.getLeafCount(false));
+        assertEquals(0, JSONArray.parse("[null, null]").getLeafCount(false));
+        assertEquals(1, JSONArray.parse("[1, null]").getLeafCount(false));
+
+        try(
+                Revokable revokable = Revokable.register(() -> JSONValue.MISSING, v -> JSONValue.MISSING=v, JSONValue.Null)
+        ){
+            assertEquals(0, JSONArray.EMPTY.getLeafCount());
+            assertEquals(0, JSONArray.parse("[null, null]").getLeafCount());
+            assertEquals(1, JSONArray.parse("[-1, null]").getLeafCount());
+            assertEquals(2, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
+            assertEquals(4, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
+
+            JSONValue.MISSING = Parser.parse("\"none\"");
+            assertEquals(0, JSONArray.EMPTY.getLeafCount());
+            assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
+            assertEquals(2, JSONArray.parse("[-1, null]").getLeafCount());
+            assertEquals(3, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
+            assertEquals(5, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
+
+            JSONValue.MISSING = Parser.parse("-1");
+            assertEquals(0, JSONArray.EMPTY.getLeafCount());
+            assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
+            assertEquals(1, JSONArray.parse("[-1, null]").getLeafCount());
+            assertEquals(3, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
+            assertEquals(5, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
+        }
+    }
+
+    @Test
     public void toJSONString() {
         JSONArray array = JSONArray.parse("[123, \"abc\"]");
         assertEquals("[\n  123,\n  \"abc\"\n]", array.toString());
@@ -157,11 +192,45 @@ public class JSONArrayTest {
     }
 
     @Test
-    public void testDeltaWith_arraysOfSameDifferences(){
+    public void testDeltaWith_differentJSONValues(){
+        //Compare with other types
+        assertEquals("[[1,2,3],null]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(Parser.parse("null"), "").toJSONString(null));
+        assertEquals("[1,[1,2,3]]",
+                Parser.parse("1").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+        assertEquals("[[1,2,3],{}]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(Parser.parse("{}"), "").toJSONString(null));
+
+        //Compare with empty array
+        assertEquals("[]",
+                JSONArray.EMPTY.deltaWith(JSONArray.parse("[]"), "").toJSONString(null));
+        assertEquals("[[1,null],[2,null],[3,null]]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[]"), "").toJSONString(null));
+        assertEquals("[[null,1],[null,2],[null,3]]",
+                JSONArray.parse("[]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+
+        //Compare with array of same length and no similarities
         assertEquals("[[1,4],[2,5],[3,6]]",
                 JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
         assertEquals("[[4,1],[5,2],[6,3]]",
                 JSONArray.parse("[4, 5, 6]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+
+        //Compare with array of same length and similarities
+        assertEquals("[[1,4],[3,5]]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 2]"), "").toJSONString(null));
+        assertEquals("[]",
+                JSONArray.parse("[3,1,2]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+        assertEquals("[[1,2],[1,2]]",
+                JSONArray.parse("[1, 1, 1]").deltaWith(JSONArray.parse("[1, 2, 2]"), "").toJSONString(null));
+        assertEquals("[]",
+                JSONArray.parse("[1, 1, 1]").deltaWith(JSONArray.parse("[1, 1, 1]"), "").toJSONString(null));
+
+        //Compare with array of different length and no similarities
+        assertEquals("[[1,4],[2,5],[3,6],[null,7]]",
+                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 6, 7]"), "").toJSONString(null));
+        assertEquals("[[4,1],[5,2],[6,3],[7,null]]",
+                JSONArray.parse("[4, 5, 6, 7]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+
         assertEquals("[[1,5],[2,6],[3,null]]",
                 JSONArray.parse("[1, 2, 3, 4]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
         assertEquals("[[4,1],[5,2],[6,null]]",

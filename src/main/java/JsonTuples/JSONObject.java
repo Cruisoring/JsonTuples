@@ -23,7 +23,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
     private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
-    public static IJSONValue MISSING = JSONValue.Null;
     final Comparator<String> nameComparator;
     Map<String, NamedValue> jsonMap = null;
     Map<String, Object> objectMap = null;
@@ -169,6 +168,24 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         return _toString;
     }
 
+    @Override
+    public int getLeafCount(boolean countNulls) {
+        int count = 0;
+        for (NamedValue element : values) {
+            count += element.getLeafCount(countNulls);
+        }
+        return count;
+    }
+
+    @Override
+    public int getLeafCount() {
+        int count = 0;
+        for (NamedValue element : values) {
+            count += element.getLeafCount();
+        }
+        return count;
+    }
+
     public JSONObject withDelta(Map<String, Object> delta) {
         checkWithoutNull(delta);
         Map<String, Object> thisMap = (Map<String, Object>) asMutableObject();
@@ -270,7 +287,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     @Override
     public IJSONValue deltaWith(IJSONValue other, String indexName) {
         if (other == null) {
-            return new JSONArray(this, MISSING);
+            return new JSONArray(this, JSONValue.MISSING);
         } else if (other == this) {
             return JSONArray.EMPTY;
         } else if (!(other instanceof JSONObject)) {
@@ -306,8 +323,8 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         Map<String, NamedValue> otherValues = otherObject.getJsonMap();
 
         for (String key : allKeys) {
-            IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key).getSecond() : MISSING;
-            IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key).getSecond() : MISSING;
+            IJSONValue thisValue = thisValues.containsKey(key) ? thisValues.get(key).getSecond() : JSONValue.MISSING;
+            IJSONValue otherValue = otherObject.containsKey(key) ? otherValues.get(key).getSecond() : JSONValue.MISSING;
             IJSONValue valueDelta = thisValue.deltaWith(otherValue, indexName);
             if (valueDelta.getLength() != 0) {
                 NamedValue newDif = new NamedValue(key, valueDelta);

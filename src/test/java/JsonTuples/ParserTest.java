@@ -114,7 +114,8 @@ public class ParserTest {
         for (int i = 0; i < 10; i++) {
             JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
                     () -> JSONObject.parse(jsonText));
-            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject"),
+            int leafCount = result.getLeafCount(true);
+            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject with %d leaf nodes", leafCount),
                     () -> result.getSorted(Comparator.naturalOrder()));
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
         }
