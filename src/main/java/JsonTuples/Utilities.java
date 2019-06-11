@@ -1,7 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.TypeHelper;
-import io.github.cruisoring.function.FunctionThrowable;
+import io.github.cruisoring.throwables.FunctionThrowable;
 import io.github.cruisoring.tuple.Tuple2;
 
 import java.util.*;
