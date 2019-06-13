@@ -120,12 +120,9 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
         checkStates(StringUtils.isBlank(indent));
 
         int length = values.length;
-        if (length == 0 || "".equals(indent)) {
-            return toString();
-        }
-
-        //*/
-        if(indent == null) {
+        if (length == 0) {
+            return "{}";
+        } else if(indent == null) {
             String[] elementStrings = Arrays.stream(values).parallel().map(v -> v.toJSONString(null)).toArray(size -> new String[size]);
             return "{" + String.join(",", elementStrings) + "}";
         } else {
@@ -138,34 +135,11 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             sb.append(values[length-1].toJSONString(elementIndent) + NEW_LINE + indent + RIGHT_BRACE);
             return sb.toString();
         }
-        /*/
-        if(indent == null){
-            String indented = toString().replaceAll("(?m)\\n\\s*", "");
-            return indented;
-        } else {
-            String indented = toString().replaceAll("(?m)\\n", NEW_LINE + indent);
-            return indented;
-        }
-        //*/
     }
 
     @Override
     public String toString() {
-        if (_toString == null) {
-            int length = values.length;
-            if (length == 0) {
-                _toString = "{}";
-            } else {
-                TextStringBuilder sb = new TextStringBuilder();
-                sb.append(LEFT_BRACE + NEW_LINE);
-                for (int i = 0; i < length - 1; i++) {
-                    sb.append(values[i].toJSONString(JSONValue.SPACE) + COMMA_NEWLINE);
-                }
-                sb.append(values[length-1].toJSONString(JSONValue.SPACE) + NEW_LINE + RIGHT_BRACE);
-                _toString = sb.toString();
-            }
-        }
-        return _toString;
+        return toJSONString("");
     }
 
     @Override

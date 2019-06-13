@@ -41,6 +41,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     public static final Pattern BASIC_VALUE_PATTERN = Pattern.compile("\\s*(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*");
     //endregion
 
+    protected String _toString;
     protected JSONValue(T t) {
         super(t);
     }
@@ -84,13 +85,6 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public Set<Integer> getSignatures() {
-        Set<Integer> signatures = new HashSet<>();
-        signatures.add(hashCode());
-        return signatures;
-    }
-
-    @Override
     public String toJSONString(String indent) {
         return toString();
     }
@@ -115,7 +109,16 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
             _hashCode = toString().hashCode();
         }
         return _hashCode;
+    }
 
+    @Override
+    public Set<Integer> getSignatures() {
+        if (_signatures == null) {
+            Set<Integer> hashCodes = new HashSet<>();
+            hashCodes.add(hashCode());
+            _signatures = Collections.unmodifiableSet(hashCodes);
+        }
+        return _signatures;
     }
 
     @Override

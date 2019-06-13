@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.github.cruisoring.Asserts.checkNotNull;
+
 /**
  * Name value pair contained by JSONObject. Each name is followed by : (colon) and the name/value pairs are separated by , (comma)
  * @see <a href="http://www.json.org">http://www.json.org</a>
@@ -39,11 +41,11 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     protected NamedValue(JSONString name, IJSONValue value) {
-        super(name, value);
+        super(checkNotNull(name, "The name cannot be null"), checkNotNull(value, "The name cannot be null"));
     }
 
     protected NamedValue(String nameString, IJSONValue value) {
-        super(new JSONString(nameString), value);
+        super(new JSONString(checkNotNull(nameString, "The name cannot be null")), value);
     }
 
     public String getName() {
@@ -52,17 +54,6 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
 
     public Object getValue() {
         return getSecond().getObject();
-    }
-
-    @Override
-    public String toJSONString(String indent) {
-        if ("".equals(indent)) {
-            return toString();
-        } else if (indent == null) {
-            return getFirst() + ":" + getSecond().toJSONString(null);
-        } else {
-            return indent + getFirst() + ": " + getSecond().toJSONString(indent);
-        }
     }
 
     @Override
@@ -76,11 +67,17 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     @Override
-    public String toString() {
-        if (_toString == null) {
-            _toString = getFirst().toString() + ": " + getSecond().toString();
+    public String toJSONString(String indent) {
+        if (indent == null) {
+            return getFirst() + ":" + getSecond().toJSONString(null);
+        } else {
+            return indent + getFirst() + ": " + getSecond().toJSONString(indent);
         }
-        return _toString;
+    }
+
+    @Override
+    public String toString() {
+        return toJSONString("");
     }
 
     @Override

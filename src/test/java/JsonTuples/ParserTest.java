@@ -191,4 +191,17 @@ public class ParserTest {
         Map mapAt5 = (Map)array.get(5);
         assertEquals(123, mapAt5.get("id"));
     }
+
+    @Test
+    public void parseJSON_withSyntaxErrors_throwExceptions() throws Exception{
+        assertLogging(() -> Parser.parse("null}"), "Missing '{' to pair '}'");
+        assertLogging(() -> Parser.parse("[  , null]"), "IllegalStateException", "\"  \"", '[', ',');
+        assertLogging(() -> Parser.parse("}"), "Missing '{' to pair '}'");
+        assertLogging(() -> Parser.parse("]"), "Missing '[' to pair ']'");
+        assertLogging(() -> Parser.parse("[123, null]]"), "Missing '[' to pair ']'");
+        assertLogging(() -> Parser.parse("[123, null"), "JSONArray is not closed");
+        assertLogging(() -> Parser.parse("{ abc: 123}"), "Fail to enclose", "\" abc\"");
+        assertLogging(() -> Parser.parse("{\"abc\": 123ab}"), "IllegalStateException", "123ab");
+        assertLogging(() -> Parser.parse("{\"abc\": \"xxx}"), "JSONString is not enclosed properly");
+    }
 }
