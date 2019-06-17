@@ -4,7 +4,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.regex.Pattern;
 
-import static io.github.cruisoring.Asserts.checkState;
+import static io.github.cruisoring.Asserts.fail;
 
 /**
  * A string is a sequence of zero or more Unicode characters, wrapped in double quotes, using backslash escapes.
@@ -12,8 +12,6 @@ import static io.github.cruisoring.Asserts.checkState;
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONString extends JSONValue<String> {
-    //Determine if the String shall be enclosed by Quotes ('"'), so it can be parsed as a JSONString
-    public static boolean validateJSONString = false;
 
     //A string is a sequence of Unicode code points wrapped with quotation marks (U+0022). All code points may
     //be placed within the quotation marks except for the code points that must be escaped: quotation mark
@@ -35,18 +33,15 @@ public class JSONString extends JSONValue<String> {
     /**
      * Parse given string enclosed by quotes(") as a JSONString instance by un-escape special characters.
      *
-     * @param wrappedValueString String to represent a JSON String value.
+     * @param valueString String to represent a JSON String value.
      * @return An JSONString instance that keeps the un-escaped string as a Tuple.
      */
-    public static JSONString parseString(String wrappedValueString) {
-
-        wrappedValueString = forbidUnescapedControls ? JSONString.trimJSONString(wrappedValueString) : wrappedValueString.trim();
+    public static JSONString parseString(String valueString) {
+        String wrappedValueString = forbidUnescapedControls ? JSONString.trimJSONString(valueString) : valueString.trim();
         int length = wrappedValueString.length();
 
-        if(validateJSONString) {
-            //Enforce the validation by setting validateJSONString to true
-            checkState(QUOTE != wrappedValueString.charAt(0) || QUOTE != wrappedValueString.charAt(wrappedValueString.length() - 1),
-                    "The given valueString is not enclosed by quotes: %s", wrappedValueString);
+        if(length < 2 || QUOTE != wrappedValueString.charAt(0) || QUOTE != wrappedValueString.charAt(length - 1)) {
+            fail("the valueString \"%s\" is not enclosed by quotation marks.", valueString);
         }
 
         String unescaped = StringEscapeUtils.unescapeJson(wrappedValueString.substring(1, length - 1));

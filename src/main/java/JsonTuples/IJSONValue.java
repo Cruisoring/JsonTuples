@@ -4,7 +4,7 @@ import io.github.cruisoring.tuple.WithValues;
 
 import java.util.Comparator;
 
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
 
 /**
  *  JSON Value representing simple kinds of JAVA values. A value can be a string in double quotes, or a number,
@@ -64,7 +64,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
      */
     @Override
     default IJSONValue<T> getSorted(String... orderedNames) {
-        checkWithoutNull(orderedNames);
+        assertAllNotNull(orderedNames);
         Comparator<String> comparator = new OrdinalComparator<String>(orderedNames);
         return getSorted(comparator);
     }

@@ -8,8 +8,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static io.github.cruisoring.Asserts.checkStates;
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.*;
 
 /**
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
@@ -59,7 +58,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     //region Use the given nameComparator to sort a NamedValue array by their names
     protected static NamedValue[] sorted(Comparator<String> comparator, NamedValue[] namedValues) {
-        checkStates(namedValues != null);
+        assertAllTrue(namedValues != null);
 
         if (comparator != null) {
             Arrays.sort(namedValues, (nv1, nv2)
@@ -117,7 +116,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public String toJSONString(String indent) {
-        checkStates(StringUtils.isBlank(indent));
+        assertAllTrue(StringUtils.isBlank(indent));
 
         int length = values.length;
         if (length == 0) {
@@ -161,7 +160,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     public JSONObject withDelta(Map<String, Object> delta) {
-        checkWithoutNull(delta);
+        assertAllNotNull(delta);
         Map<String, Object> thisMap = (Map<String, Object>) asMutableObject();
         thisMap.putAll(delta);
 

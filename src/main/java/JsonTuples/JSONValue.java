@@ -3,10 +3,13 @@ package JsonTuples;
 import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple1;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
 
 /**
  * Represent the value of JSON strings of following types:
@@ -53,8 +56,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
      * @return      parsed {@code JSONValue} of the concerned valueString, could be true, false, null, JSON string or number.
      */
     public static JSONValue parse(CharSequence jsonContext, Range range) {
-        checkWithoutNull(jsonContext);
-        checkWithoutNull(range);
+        assertAllNotNull(jsonContext, range);
 
         final String trimmed = Range.subString(jsonContext, range).trim();
         switch (trimmed) {
@@ -144,7 +146,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
 
     @Override
     public IJSONValue deltaWith(IJSONValue other, String indexName) {
-        checkWithoutNull(other);
+        assertAllNotNull(other);
 
         if (equals(other)) {
             return JSONArray.EMPTY;

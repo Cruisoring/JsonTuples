@@ -2,7 +2,7 @@ package JsonTuples;
 
 import java.util.Comparator;
 
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
 
 /**
  * Represent something that can be sorted with a given {@code Comparator<String>}.
@@ -24,7 +24,7 @@ public interface ISortable {
      * @returnthis  a {@code ISortable} instance sorted accordingly.
      */
     default ISortable getSorted(String... orderedNames) {
-        checkWithoutNull(orderedNames);
+        assertAllNotNull(orderedNames);
         Comparator<String> comparator = new OrdinalComparator<>(orderedNames);
         return getSorted(comparator);
     }

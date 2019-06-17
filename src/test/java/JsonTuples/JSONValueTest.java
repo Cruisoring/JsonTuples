@@ -203,26 +203,26 @@ public class JSONValueTest {
     public void getSignatures() {
         Set<Integer> signatures;
         signatures = JSONValue.Null.getSignatures();
-        assertTrue(signatures.contains("null".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("null".hashCode()) && signatures.size()==1);
         signatures = JSONValue.True.getSignatures();
-        assertTrue(signatures.contains("true".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("true".hashCode()) && signatures.size()==1);
         signatures = JSONValue.False.getSignatures();
-        assertTrue(signatures.contains("false".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("false".hashCode()) && signatures.size()==1);
 
         signatures = new JSONString("string").getSignatures();
-        assertTrue(signatures.contains("\"string\"".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("\"string\"".hashCode()) && signatures.size()==1);
         signatures = new JSONString("").getSignatures();
-        assertTrue(signatures.contains("\"\"".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("\"\"".hashCode()) && signatures.size()==1);
         signatures = new JSONNumber(-0L).getSignatures();
-        assertTrue(signatures.contains("0".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("0".hashCode()) && signatures.size()==1);
         signatures = new JSONNumber(Short.valueOf("33")).getSignatures();
-        assertTrue(signatures.contains("33".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("33".hashCode()) && signatures.size()==1);
         signatures = new JSONNumber(37.0f).getSignatures();
-        assertTrue(signatures.contains("37.0".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("37.0".hashCode()) && signatures.size()==1);
         signatures = new JSONNumber(-0.0002).getSignatures();
-        assertTrue(signatures.contains("-2.0E-4".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("-2.0E-4".hashCode()) && signatures.size()==1);
         signatures = JSONNumber.parseNumber("-20.0000000000000000000000002").getSignatures();
-        assertTrue(signatures.contains("-20.0000000000000000000000002".hashCode()) && signatures.size()==1);
+        assertAllTrue(signatures.contains("-20.0000000000000000000000002".hashCode()) && signatures.size()==1);
     }
 
     @Test
@@ -289,12 +289,12 @@ public class JSONValueTest {
     public void testGetLeafCount(){
         assertEquals(0, JSONValue.Null.getLeafCount(false));
         assertEquals(1, JSONValue.False.getLeafCount(false));
-        assertEquals(1, Parser.parse("1").getLeafCount(false));
-        assertEquals(1, Parser.parse("\"\"").getLeafCount(false));
+        assertEquals(1, JSONNumber.parseNumber("1").getLeafCount(false));
+        assertEquals(1, JSONString.parseString("\"\"").getLeafCount(false));
         assertEquals(1, JSONValue.Null.getLeafCount(true));
         assertEquals(1, JSONValue.True.getLeafCount(false));
-        assertEquals(1, Parser.parse("1").getLeafCount(false));
-        assertEquals(1, Parser.parse("\"\"").getLeafCount(false));
+        assertEquals(1, JSONNumber.parseNumber("1").getLeafCount(false));
+        assertEquals(1, JSONString.parseString("\"\"").getLeafCount(false));
 
         try(
                 Revokable revokable = Revokable.register(() -> JSONValue.MISSING, v -> JSONValue.MISSING=v, JSONValue.Null)

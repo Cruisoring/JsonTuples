@@ -90,7 +90,7 @@ public class UtilitiesTest {
                 ((JSONObject)steps.getValue(9)).get("status").toString());
         Object[] stepArray = (Object[])steps.getObject();
         Map<String,Object>[] stepMaps = Arrays.stream(stepArray).map(e -> (Map<String,Object>)e).toArray(size -> new Map[size]);
-        assertTrue(stepMaps.length==10,
+        assertAllTrue(stepMaps.length==10,
                 stepMaps[0].get("name").equals("Given I get some test data from  \"ABC Indroduction.xlsx\""),
                 stepMaps[9].get("name").equals("And I logout from the server"));
         JSONArray converted = Utilities.asJSONArrayFromArray(stepArray);

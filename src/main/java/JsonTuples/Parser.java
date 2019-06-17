@@ -4,7 +4,6 @@ import io.github.cruisoring.Range;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.throwables.SupplierThrowable;
 import io.github.cruisoring.tuple.Tuple;
-import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple4;
 import io.github.cruisoring.utility.ArrayHelper;
 import io.github.cruisoring.utility.StringHelper;
@@ -17,9 +16,11 @@ import java.util.function.Consumer;
 import static io.github.cruisoring.Asserts.*;
 
 /**
- * Utility to parse JSON text based on information disclosed on <a href="http://www.json.org/">json.org</a>
+ * Utility to parse JSON text of either JSONArray or JSONObject based on information disclosed on <a href="http://www.json.org/">json.org</a>
  */
 public final class Parser {
+
+    public static final int JSON_TEXT_LENGTH_WHEN_THROWS = 100;
 
     //region static variables
     public static final char START_JSON_SIGN = '^';
@@ -47,7 +48,7 @@ public final class Parser {
     /**
      * To parse the given qualified JSON text to an {@code IJSONValue}
      *
-     * @param jsonText JSON text to be parsed.
+     * @param jsonText JSON text to be parsed that represent a JSONObject or JSONArray.
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(CharSequence jsonText) {
@@ -64,7 +65,7 @@ public final class Parser {
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText) {
-        assertNotNull(jsonText);
+        assertAllNotNull(jsonText);
 
         Parser parser = new Parser(comparator, jsonText, Range.ofLength(jsonText.length()));
         return parser.parse();
@@ -79,35 +80,19 @@ public final class Parser {
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText, Range range) {
-        assertNotNull(jsonText, range);
+        assertAllNotNull(jsonText, range);
 
         Parser parser = new Parser(comparator, jsonText, range);
         return parser.parse();
     }
     //endregion
 
-    //region instance variables
-    public final CharSequence jsonContext;
-    public final int length;
-    public final Comparator<String> nameComparator;
-    final Consumer<String> nameConsumer;
-    char lastControl = START_JSON_SIGN;
-    int lastPosition = -1;
-    int currentStringStart = Integer.MAX_VALUE;
-    int currentStringEnd = -1;
-    JSONString lastName = null, lastStringValue;
-    Stack<Tuple4<Boolean, IJSONable[], JSONString, Boolean>> contextStack = new Stack<>();
-    //endregion
-
     //region Constructors
     Parser(Comparator<String> comparator, CharSequence jsonText, Range range) {
-        this(comparator, Range.subString(jsonText, range));
-    }
-
-    Parser(Comparator<String> comparator, CharSequence jsonText) {
         this.nameComparator = comparator;
         this.jsonContext = jsonText;
-        length = jsonContext.length();
+        jsonRange = range;
+        length = (int) range.size();
         if(comparator instanceof OrdinalComparator){
             OrdinalComparator<String> ordinalComparator = (OrdinalComparator)comparator;
             nameConsumer = name -> ordinalComparator.putIfAbsent(name);
@@ -116,9 +101,35 @@ public final class Parser {
         }
     }
 
+    Parser(Comparator<String> comparator, CharSequence jsonText) {
+        this(comparator, jsonText, Range.ofLength(jsonText.length()));
+    }
+
     Parser(CharSequence jsonText) {
         this(defaultComparatorSupplier==null ? null : defaultComparatorSupplier.tryGet(), jsonText);
     }
+    //endregion
+
+    //region instance variables
+    public final CharSequence jsonContext;
+    public final Range jsonRange;
+    public final int length;
+    public final Comparator<String> nameComparator;
+    final Consumer<String> nameConsumer;
+
+    //isObject acts as triple-state flag to indicate if the context under parsing is in an Object (true), an Array (false) or None of them (null).
+    Boolean isObject = null;
+    //lastControl keeps the last control character, '^' means there is no last control character recorded
+    char lastControl = START_JSON_SIGN;
+    //lastPosition keeps the position of the last control character, -1 means there is no last control character recorded
+    int lastPosition = -1;
+    //currentStringStart and currentStringEnd are used to record the start and end quotation marks of the current JSONString
+    int currentStringStart = Integer.MAX_VALUE;
+    int currentStringEnd = -1;
+    //lastName and lastStringValue are used to keep the recent JSONString values for further evaluations
+    JSONString lastName = null, lastStringValue;
+    //contextStack is a simple Stack function as the state machine of this Parser
+    Stack<Tuple4<Boolean, IJSONable[], JSONString, Integer>> contextStack = new Stack<>();
     //endregion
 
     //region Instance methods
@@ -128,13 +139,13 @@ public final class Parser {
      * @return The root node of either JSONObject or JSONArray.
      */
     IJSONValue parse() {
-        Boolean isObject = null;
         List<IJSONable> children = new ArrayList<>();
-        Tuple2<Boolean, IJSONValue> tuple = null;
-        boolean isInString = false;
+        IJSONValue value = null;
 
         //Identify the JSONString elements, save all control characters
         int position = -1;
+        //isInString signals if the parser has entered a scope with previous control of Quotation mark
+        boolean isInString = false;
         try {
             for (position = 0; position < length; position++) {
                 char currentChar = jsonContext.charAt(position);
@@ -155,8 +166,7 @@ public final class Parser {
                     }
 
                     isInString = !isInString;
-                    tuple = processControl(isObject, children, currentChar, position);
-                    isObject = tuple.getFirst();
+                    value = processControl(children, currentChar, position);
                     continue;
                 }
 
@@ -166,20 +176,45 @@ public final class Parser {
                     continue;
                 }
 
-                tuple = processControl(isObject, children, currentChar, position);
-                isObject = tuple.getFirst();
+                value = processControl(children, currentChar, position);
+            }
+            assertFalse(isInString, "JSONString is not enclosed properly");
+            assertNull(lastName, "The NamedValue is not supported by Parser.parse() which returns IJSONValue only!");
+            if(isObject == null) {
+                return asSimpleValue(jsonRange);
             }
             assertTrue(children.isEmpty(), "%s is not closed properly?", isObject?"JSONObject":"JSONArray");
-            assertFalse(isInString, "JSONString is not enclosed properly");
         } catch (Exception e) {
             position = position > length - 1 ? length - 1 : position;
             try {
-                String message = e.getMessage();
-                int last = Math.max(0, lastPosition - 20);
-                String beforeLast = lastPosition - last > 1 ? Range.closedOpen(last, lastPosition).subString(jsonContext) : "";
-                String afterPosition = position >= length - 1 ? "" : Range.open(position, Math.min(position + 10, length)).subString(jsonContext);
-                String between = Range.closed(lastPosition < 0 ? 0 : lastPosition, position).subString(jsonContext);
-                Logger.D(e.getClass().getSimpleName() + (message == null ? "" : "("+message+")") + ": >>>" + beforeLast + "%s" + afterPosition + "<<<", between);
+                String message = e.getMessage()==null ? "" : e.getMessage();
+                Range problemRange = Range.closed(lastPosition, position).intersectionWith(jsonRange);
+                Range beforeProblem = Range.open(lastPosition-40, lastPosition).intersectionWith(jsonRange);
+                Range afterProblem = Range.open(position, position+40).intersectionWith(jsonRange);
+
+                String summary = String.format("%s(%s): ", e.getClass().getSimpleName(), message.length()<40 ?  message : message.substring(0, 40)+"...");
+                if(problemRange.size() > JSON_TEXT_LENGTH_WHEN_THROWS) {
+                    if(problemRange.getStartInclusive() == 0) {
+                        Logger.D(summary + "%s...%s<<<[%d]" + subString(afterProblem),
+                                subString(Range.closed(problemRange.getStartInclusive(), problemRange.getStartInclusive() + JSON_TEXT_LENGTH_WHEN_THROWS/2)),
+                                subString(Range.closed(problemRange.getEndInclusive()-JSON_TEXT_LENGTH_WHEN_THROWS/2, problemRange.getEndInclusive())),
+                                problemRange.getEndInclusive());
+                    } else {
+                        Logger.D(summary + (beforeProblem.getStartInclusive()==0?"":"...") + subString(beforeProblem) + "[%d]>>>" + "%s...%s<<<[%d]" + subString(afterProblem),
+                                problemRange.getStartInclusive(),
+                                subString(Range.closed(problemRange.getStartInclusive(), problemRange.getStartInclusive() + JSON_TEXT_LENGTH_WHEN_THROWS/2)),
+                                subString(Range.closed(problemRange.getEndInclusive()-JSON_TEXT_LENGTH_WHEN_THROWS/2, problemRange.getEndInclusive())),
+                                problemRange.getEndInclusive());
+                    }
+                } else {
+                    if(problemRange.getStartInclusive() == 0) {
+                        Logger.D(summary + "%s<<<[%d]" + subString(afterProblem),
+                                subString(problemRange), problemRange.getEndInclusive());
+                    } else {
+                        Logger.D(summary + (beforeProblem.getStartInclusive()==0?"":"...") + subString(beforeProblem) + "[%d]>>>" + "%s<<<[%d]" + subString(afterProblem),
+                                problemRange.getStartInclusive(), subString(problemRange), problemRange.getEndInclusive());
+                    }
+                }
             } catch (Exception e2) {
                 Logger.D(e.getClass().getSimpleName() + ": >>>%s<<<",
                         Range.closed(lastPosition<0?0:lastPosition, position).subString(jsonContext));
@@ -188,36 +223,36 @@ public final class Parser {
         }
 
         //If there is no single control character to get tuple, it must be a JSONValue
-        if(tuple == null || tuple.getFirst() == null) {
-            return JSONValue.parse(jsonContext, Range.ofLength(jsonContext.length()));
+        if(value == null || isObject == null) {
+            return JSONValue.parse(jsonContext, jsonRange);
         } else {
-            return tuple.getSecond();
+            return value;
         }
     }
 
-    Tuple2<Boolean, IJSONValue> processControl(Boolean isObject, List<IJSONable> children, char control, int position) {
+    IJSONValue processControl(List<IJSONable> children, char control, int position) {
 
         final JSONString nameElement;
         final IJSONValue valueElement;
         final NamedValue namedValueElement;
 
         IJSONValue closedValue = null;
-        //The 4 values of state: isParentObject (Boolean), children elements, name JSONString, isCurrentObject
-        Tuple4<Boolean, IJSONable[], JSONString, Boolean> state = null;
+        //The 4 values of state: isParentObject (Boolean), children elements, name JSONString, Position of either '{' or '['
+        Tuple4<Boolean, IJSONable[], JSONString, Integer> state = null;
         switch (control) {
             case LEFT_BRACE:    //Start of JSONObject
             case LEFT_BRACKET:  //Start of JSONArray
                 nameElement = lastName;
                 boolean enterObject = control == LEFT_BRACE;
-                state = Tuple.create(isObject, children.toArray(new IJSONable[0]), nameElement, enterObject);
+                state = Tuple.create(isObject, children.toArray(new IJSONable[0]), nameElement, position);
                 isObject = enterObject;
                 lastName = null;
                 children.clear();
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
-                checkState(!contextStack.isEmpty(), "Missing '%s' to pair '%s'", LEFT_BRACE, RIGHT_BRACE);
-                checkState(isObject, "No matching '%s' for this '%s]?", LEFT_BRACE, RIGHT_BRACE);
+                assertTrue(!contextStack.isEmpty(), "Missing '%s' to pair '%s'", LEFT_BRACE, RIGHT_BRACE);
+                assertTrue(isObject, "No matching '%s' for this '%s]?", LEFT_BRACE, RIGHT_BRACE);
                 switch (lastControl) {
                     case COLON:
                         valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
@@ -242,6 +277,10 @@ public final class Parser {
 
                 state = contextStack.pop();
                 if (state.getFirst() == null) {
+                    if(state.getThird() != null) {
+                        lastPosition = state.getFourth();
+                        fail("The current JSONObject is value of a NamedValue which is the root element");
+                    }
                     break;
                 }
 
@@ -250,22 +289,23 @@ public final class Parser {
                 if (isObject) {
                     final JSONString name = state.getThird();
                     children.add(new NamedValue(name, closedValue));
+                    lastName = null;
                 } else {
-                    checkStates(state.getThird() == null);
+                    assertAllTrue(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
 
             case RIGHT_BRACKET: //Close of current JSONArray
-                checkState(!contextStack.isEmpty(), "Missing '%s' to pair '%s'", LEFT_BRACKET, RIGHT_BRACKET);
-                checkState(!isObject, "No matching '%s' for this '%s]?", LEFT_BRACKET, RIGHT_BRACKET);
+                assertTrue(!contextStack.isEmpty(), "Missing '%s' to pair '%s'", LEFT_BRACKET, RIGHT_BRACKET);
+                assertTrue(!isObject, "No matching '%s' for this '%s]?", LEFT_BRACKET, RIGHT_BRACKET);
                 switch (lastControl) {
                     case COMMA:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         children.add(valueElement);
                         break;
                     case LEFT_BRACKET:  //Empty Array or with only one simple value
-                        String valueString = Range.open(lastPosition, position).subString(jsonContext);
+                        String valueString = subString(Range.open(lastPosition, position));
                         if (!StringUtils.isBlank(valueString)) {
                             valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
                             children.add(valueElement);
@@ -280,6 +320,10 @@ public final class Parser {
 
                 state = contextStack.pop();
                 if (state.getFirst() == null) {
+                    if(state.getThird() != null) {
+                        lastPosition = state.getFourth();
+                        fail("The current JSONArray is value of a NamedValue which is the root element");
+                    }
                     break;
                 }
 
@@ -288,8 +332,9 @@ public final class Parser {
                 if (isObject) {
                     final JSONString name = state.getThird();
                     children.add(new NamedValue(name, closedValue));
+                    lastName = null;
                 } else {
-                    checkStates(state.getThird() == null);
+                    assertAllTrue(state.getThird() == null);
                     children.add(closedValue);
                 }
                 break;
@@ -304,11 +349,13 @@ public final class Parser {
                     case COLON:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         namedValueElement = new NamedValue(lastName, valueElement);
+                        lastName = null;
                         children.add(namedValueElement);
                         break;
                     case QUOTE:
                         if (isObject) {
                             namedValueElement = new NamedValue(lastName, lastStringValue);
+                            lastName = null;
                             children.add(namedValueElement);
                         }
                     default:
@@ -317,7 +364,7 @@ public final class Parser {
                 break;
             case COLON:
                 lastName = checkNotNull(lastStringValue, "Fail to enclose \"%s\" with quotation marks before ':'",
-                        Range.open(lastPosition, position).subString(jsonContext));
+                        subString(Range.open(lastPosition, position)));
                 if(nameConsumer != null) {
                     nameConsumer.accept(lastName.getFirst());
                 }
@@ -332,6 +379,7 @@ public final class Parser {
                         children.add(lastStringValue);
                     }
                 } else {
+                    assertFalse(lastControl == QUOTE, "two JSONStrings must be seperated by a control char.");
                     //This position is the start of a new String scope
                     currentStringStart = position;
                     currentStringEnd = Integer.MAX_VALUE;
@@ -343,7 +391,7 @@ public final class Parser {
         }
         lastControl = control;
         lastPosition = position;
-        return Tuple.create(isObject, closedValue);
+        return closedValue;
     }
 
     protected JSONObject createObject(List<IJSONable> children) {
@@ -359,7 +407,7 @@ public final class Parser {
     }
 
     protected IJSONValue asSimpleValue(Range range) {
-        final String trimmed = range.subString(jsonContext).trim();
+        final String trimmed = subString(range).trim();
         try {
             switch (trimmed) {
                 case JSON_TRUE:
@@ -369,14 +417,23 @@ public final class Parser {
                 case JSON_NULL:
                     return JSONValue.Null;
                 default:
-                    //The valueString can only stand for a number or get Exception thrown there
-                    return JSONNumber.parseNumber(trimmed);
+                    if(trimmed.startsWith("\"")) {
+                        return JSONString.parseString(trimmed);
+                    } else {
+                        return JSONNumber.parseNumber(trimmed);
+                    }
             }
+        } catch (NumberFormatException ne) {
+            String message = StringHelper.tryFormatString("Cannot parse \"%s\" as a JSONValue", subString(range));
+            throw new IllegalStateException(message, ne);
         } catch (Exception e) {
-            String message = StringHelper.tryFormatString("Cannot parse \"%s\" between '%s' and '%s' as JSONValue",
-                    range.subString(jsonContext), jsonContext.charAt(range.getStartExclusive()), jsonContext.charAt(range.getEndExclusive()));
-            throw new IllegalStateException(message);
+            throw e;
         }
+    }
+
+    protected String subString(Range range){
+        Range intersection = range.intersectionWith(jsonRange);
+        return intersection.subString(jsonContext);
     }
     //endregion
 }

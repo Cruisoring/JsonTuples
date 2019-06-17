@@ -7,6 +7,8 @@ import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ResourceHelper;
 import org.junit.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
@@ -14,6 +16,43 @@ import java.util.Map;
 import static io.github.cruisoring.Asserts.*;
 
 public class ParserTest {
+
+    @Test
+    public void testParsingJSONValues_withValidJSON_shallHandleAll(){
+        assertEquals(JSONValue.Null, Parser.parse("null "));
+        assertEquals(JSONValue.True, Parser.parse(" true"));
+        assertEquals(JSONValue.False, Parser.parse("false"));
+        assertEquals(Integer.valueOf(123), Parser.parse("123").getObject());
+        assertEquals(Double.valueOf(123.0), Parser.parse("123.000").getObject());
+        assertEquals(BigInteger.valueOf(2147483648L), Parser.parse("2147483648").getObject());
+        assertEquals(BigInteger.valueOf(-2147483649L), Parser.parse("-2147483649").getObject());
+        assertEquals(new BigDecimal("-123.456789012345678901"), Parser.parse("-123.456789012345678901").getObject());
+        assertEquals("", Parser.parse("\"\"").getObject());
+        assertEquals("xyz", Parser.parse("\"xyz\"").getObject());
+        assertEquals("null", Parser.parse("\"null\"").getObject());
+        assertEquals("", Parser.parse("\"\"").getObject());
+    }
+
+    @Test
+    public void testParsingJSONValues_withInvalidJSON_shallThrows(){
+        assertException(() -> Parser.parse(""), IllegalStateException.class);
+        assertException(() -> Parser.parse("nu_ll"), IllegalStateException.class);
+        assertException(() -> Parser.parse("true,"), IllegalStateException.class);
+        assertException(() -> Parser.parse("falsE"), IllegalStateException.class);
+        assertException(() -> Parser.parse("0x123a"), IllegalStateException.class); //No support of hexadecimal string
+        assertException(() -> Parser.parse("123 456"), IllegalStateException.class);
+
+        assertException(() -> Parser.parse("\""), IllegalStateException.class);
+        assertException(() -> Parser.parse("\"abc"), IllegalStateException.class);
+        assertException(() -> Parser.parse("\"abc\"\""), IllegalStateException.class, "two JSONStrings must be seperated by a control char");
+    }
+
+    @Test
+    public void testParsingNamedValue_shallThrows(){
+        assertException(() -> Parser.parse("\"name\": 123"), IllegalStateException.class);
+        assertException(() -> Parser.parse("\"name\": {\"value\":123}"), IllegalStateException.class);
+        assertException(() -> Parser.parse("\"name\": []"), IllegalStateException.class);
+    }
 
     private void compareJsonParsed(String jsonName) {
         String rawFileName = String.format("%s.json", jsonName);
@@ -25,7 +64,7 @@ public class ParserTest {
         Parser parser = new Parser(null, jsonText);
 
         IJSONValue value = Logger.M(Measurement.start("parse()"), parser.parse(), LogLevel.info);
-        assertTrue(value instanceof JSONObject);
+        assertAllTrue(value instanceof JSONObject);
         String actual = Logger.M(Measurement.start("value.toString()"), value.toString(), LogLevel.info);
         Logger.D(actual);
 
@@ -150,9 +189,9 @@ public class ParserTest {
     @Test
     public void parseText_getRightIJSONValue() {
         //parse texts of null, true or false
-        assertTrue(JSONValue.Null == Parser.parse("null"));
-        assertTrue(JSONValue.True == Parser.parse("true"));
-        assertTrue(JSONValue.False == Parser.parse("false"));
+        assertAllTrue(JSONValue.Null == Parser.parse("null"));
+        assertAllTrue(JSONValue.True == Parser.parse("true"));
+        assertAllTrue(JSONValue.False == Parser.parse("false"));
 
         //text of a number to JSONNumber
         JSONNumber number = (JSONNumber) Parser.parse(" 12.345  ");
@@ -175,14 +214,14 @@ public class ParserTest {
 //        JSONObject object = JSONObject.parse("{\"id\":123,\"name\":null,\"courses\":[\"English\", \"Math\", \"Science\"]}");
         JSONObject object = (JSONObject) Parser.parse("{\"id\":123,\"name\":null,\"courses\":[\"English\", \"Math\", \"Science\"]}");
         assertEquals(123, object.get("id"));
-        assertNull(object.get("name"));
+        assertAllNull(object.get("name"));
         assertEquals(new Object[]{"English", "Math", "Science"}, object.get("courses"));
 
         //Array alike text would be parsed as JSONArray
 //        JSONArray array = JSONArray.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
         JSONArray array = (JSONArray) Parser.parse("[1, null, true, \"abc\", [false, null], {\"id\":123}]");
         assertEquals(1, array.get(0));
-        assertTrue(
+        assertAllTrue(
                 array.size() == 6,
                 array.contains(null),
                 array.containsAll(Arrays.asList(true, "abc"))
@@ -203,5 +242,38 @@ public class ParserTest {
         assertLogging(() -> Parser.parse("{ abc: 123}"), "Fail to enclose", "\" abc\"");
         assertLogging(() -> Parser.parse("{\"abc\": 123ab}"), "IllegalStateException", "123ab");
         assertLogging(() -> Parser.parse("{\"abc\": \"xxx}"), "JSONString is not enclosed properly");
+    }
+
+    @Test
+    public void testLogging_problemTobeHighlighted() {
+        String text = "{\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90},\"name\":\"test name\",\"id\":123456,\"isActive\":true,\"class\":\"7A\"}";
+        JSONObject object = checkNotNull(JSONObject.parse(text), "Failed to parse JSON text with sound syntax");
+        assertLogging(() -> Parser.parse(text.substring(0, 9) + "\"" + text.substring(9)),
+                "two JSONStrings must be seperated by a control char", "{\"address[9]>>>\"\"<<<[10]:null,\"scores\":{");
+        assertLogging(() -> Parser.parse(text.substring(0, 15) + "," + text.substring(15)),
+                "(Cannot parse \"\" as a JSONValue)",
+                "{\"address\":null[15]>>>,,<<<[16]\"scores\":{\"English\"");
+        assertLogging(() -> Parser.parse(text.substring(0, 24) + ":" + text.substring(24)),
+                "Fail to enclose \"\" with quotation marks before ':'",
+                "\"scores\"[24]>>>::<<<[25]{");
+        assertLogging(() -> Parser.parse(text.substring(0, 25) + "," + text.substring(25)),
+                "\"scores\"[24]>>>:,<<<[25]{");
+        assertLogging(() -> Parser.parse(text.substring(0, 81) + "," + text.substring(81)),
+                "Cannot parse \"\" as a JSONValue",
+                "\"test name\"[81]>>>,,<<<[82]\"id\"");
+        assertLogging(() -> Parser.parse(text.substring(0, 92) + "a" + text.substring(92)),
+                "Cannot parse \"12345a6\" as a JSONValue",
+                "\"id\"[86]>>>:12345a6,<<<[94]\"isActive\":true");
+        assertLogging(() -> Parser.parse(text.substring(0, 109) + "s" + text.substring(109)),
+                "Cannot parse \"trues\" as a JSONValue",
+                "\"isActive\"[104]>>>:trues,<<<[110]\"class\"");
+        assertLogging(() -> Parser.parse(text.substring(0, 117) + text.substring(118)),
+                "two JSONStrings must be seperated by a control char.",
+                ",\"class[116]>>>\"\"<<<[117]7A\"}");
+        assertLogging(() -> Parser.parse(text+"]"),
+                "IllegalStateException: Missing '[' to pair ']'",
+                "\"isActive\":true,\"class\":\"7A\"[122]>>>}]<<<[123]");
+
+        //assertLogging(() -> Parser.parse(text.substring(0, 10) + "a" + text.substring(10)));    //The extra 'a' between '"' and ':' is ignored: "address"a:null
     }
 }

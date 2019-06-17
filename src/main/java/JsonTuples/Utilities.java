@@ -6,8 +6,7 @@ import io.github.cruisoring.tuple.Tuple2;
 
 import java.util.*;
 
-import static io.github.cruisoring.Asserts.checkStates;
-import static io.github.cruisoring.Asserts.checkWithoutNull;
+import static io.github.cruisoring.Asserts.*;
 
 /**
  * Utility methods to convert JAVA Objects to/from {@code ISONValue}s, or compare any two JAVA objects.
@@ -120,7 +119,7 @@ public class Utilities {
      * @return JSONArray to represent the Array object to be converted.
      */
     protected static JSONArray asJSONArrayFromArray(Object array) {
-        checkStates(array != null && array.getClass().isArray());
+        assertAllTrue(array != null, array.getClass().isArray());
 
         Object[] objects = TypeHelper.convert(array, Object[].class);
         IJSONValue[] values = Arrays.stream(objects)
@@ -136,7 +135,7 @@ public class Utilities {
      * @return JSONArray to represent the Collection object to be converted.
      */
     protected static JSONArray asJSONArrayFromCollection(Object collection) {
-        checkStates(collection != null && collection instanceof Collection);
+        assertAllTrue(collection != null, collection instanceof Collection);
 
         Object[] array = ((Collection) collection).toArray();
         return asJSONArrayFromArray(array);
@@ -149,7 +148,7 @@ public class Utilities {
      * @return JSONString to represent the unknown type of object.
      */
     protected static JSONString asJSONStringFromOthers(Object object) {
-        checkWithoutNull(object);
+        assertAllNotNull(object);
 
         String string = object.toString();
         return new JSONString(string);

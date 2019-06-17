@@ -123,7 +123,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     @Override
     public String toJSONString(String indent) {
-        checkStates(StringUtils.isBlank(indent));
+        assertAllTrue(StringUtils.isBlank(indent));
 
         int length = values.length;
         if (length == 0) {
@@ -338,14 +338,14 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                     }
                 }
 
-                assertNotNull(rightIndexesWithLeastUses);
+                assertAllNotNull(rightIndexesWithLeastUses);
             }
 
             leastDifferences.clear();
             differencesToRights.clear();
         } while(true);
 
-        assertTrue(leftRightIndexPairs.size() == leftSize,
+        assertAllTrue(leftRightIndexPairs.size() == leftSize,
                 Arrays.stream(rightSignaturesAll).allMatch(s -> s == null),
                 Arrays.stream(leftSignaturesAll).allMatch(s -> s == null));
 

@@ -66,14 +66,14 @@ public class JSONArrayTest {
             assertEquals(2, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
             assertEquals(4, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
 
-            JSONValue.MISSING = Parser.parse("\"none\"");
+            JSONValue.MISSING = JSONString.parseString("\"none\"");
             assertEquals(0, JSONArray.EMPTY.getLeafCount());
             assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
             assertEquals(2, JSONArray.parse("[-1, null]").getLeafCount());
             assertEquals(3, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
             assertEquals(5, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
 
-            JSONValue.MISSING = Parser.parse("-1");
+            JSONValue.MISSING = JSONNumber.parseNumber("-1");
             assertEquals(0, JSONArray.EMPTY.getLeafCount());
             assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
             assertEquals(1, JSONArray.parse("[-1, null]").getLeafCount());
@@ -125,14 +125,14 @@ public class JSONArrayTest {
         assertEquals(false, objArray[2]);
         assertEquals(new Object[]{null, "ok", 123}, objArray[3]);
         Map<String, Object> map = (Map)objArray[4];
-        assertTrue(map.size() == 1, map.get("result").equals("good"), map.get("else")==null);
+        assertAllTrue(map.size() == 1, map.get("result").equals("good"), map.get("else")==null);
         assertException(() -> map.put("ok", true), UnsupportedOperationException.class);
 
         //Updating the Object[] would not affect the JSONArray.
         objArray[0] = null;
         Object[] obj1 = (Object[])array.getObject();
         assertNotEquals(objArray, obj1);
-        checkStates(obj1[0] != null);
+        assertAllNotNull(obj1[0]);
     }
 
     @Test
@@ -145,7 +145,7 @@ public class JSONArrayTest {
         list.remove(3);
         List subList = (List)list.get(3);
         Map<String, Object> mapOfSubList = (Map<String, Object>)subList.get(1);
-        assertTrue(mapOfSubList.get("id").equals(111), mapOfSubList.get("notes")==null);
+        assertAllTrue(mapOfSubList.get("id").equals(111), mapOfSubList.get("notes")==null);
         mapOfSubList.remove("notes");
         mapOfSubList.put("id", 222);
         mapOfSubList.put("name", "Bill");
@@ -169,26 +169,26 @@ public class JSONArrayTest {
 
         //For array of 8 elements, shuffle() shall always get an array containing same set elements but with different orders
         assertEquals(array, shuffled);
-        assertTrue(array.deltaWith(shuffled, "").isEmpty(), array.deltaWith(shuffled, "index").isEmpty());
-        assertFalse(array.deltaWith(shuffled, null).isEmpty(), array.deltaWith(shuffled, "index+").isEmpty());
+        assertAllTrue(array.deltaWith(shuffled, "").isEmpty(), array.deltaWith(shuffled, "index").isEmpty());
+        assertAllFalse(array.deltaWith(shuffled, null).isEmpty(), array.deltaWith(shuffled, "index+").isEmpty());
 
         try {
             Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "");
-            assertTrue(array.equals(shuffled));
+            assertAllTrue(array.equals(shuffled));
 
             Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "+index");
-            assertFalse(array.equals(shuffled));
+            assertAllFalse(array.equals(shuffled));
 
             Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, "index");
-            assertTrue(array.equals(shuffled));
+            assertAllTrue(array.equals(shuffled));
 
             Revokable.register(() -> JSONArray.defaultIndexName, v -> JSONArray.defaultIndexName =v, null);
-            assertFalse(array.equals(shuffled));
+            assertAllFalse(array.equals(shuffled));
         }finally {
             Revokable.revokeAll();
         }
 
-        assertTrue(array.equals(shuffled));
+        assertAllTrue(array.equals(shuffled));
     }
 
     @Test
@@ -247,7 +247,7 @@ public class JSONArrayTest {
         IJSONValue delta = array.deltaWith(shuffled, null);
         Logger.D("array: %s\nshaffled: %s\ndelta: %s", array.toJSONString(null), shuffled.toJSONString(null), delta.toJSONString(null));
         //There shall always be some differences shown as JSONObject
-        assertTrue(delta instanceof JSONObject, !delta.isEmpty());
+        assertAllTrue(delta instanceof JSONObject, !delta.isEmpty());
 
         //No difference when order doesn't matter
         assertEquals(JSONArray.EMPTY, array.deltaWith(shuffled, ""));
@@ -355,17 +355,17 @@ public class JSONArrayTest {
         JSONArray array = new JSONArray(alice, bob, carl, dave, ellen);
         JSONArray array2 = array.getSorted(Comparator.naturalOrder());
         Logger.V("array2: %s", array2);
-        assertTrue(array.deltaWith(array2).isEmpty());
+        assertAllTrue(array.deltaWith(array2).isEmpty());
 
         JSONArray array3 = new JSONArray(dave, alice.getSorted(Comparator.naturalOrder()), bob.getSorted(new OrdinalComparator<>("class", "age", "name")),
                 carl.getSorted(new OrdinalComparator<>("id", "class", "name", "age")), ellen.getSorted((Comparator<String>) Comparator.naturalOrder().reversed()));
         Logger.V("array3: %s", array3);
-        assertTrue(array.deltaWith(array3, "").isEmpty(),
+        assertAllTrue(array.deltaWith(array3, "").isEmpty(),
                 array3.deltaWith(array2, "").isEmpty());
 
         IJSONValue delta1 = array.deltaWith(array3, "index");
         IJSONValue delta2 = array3.deltaWith(array2, "index");
-        assertTrue(delta1.isEmpty(), delta2.isEmpty());
+        assertAllTrue(delta1.isEmpty(), delta2.isEmpty());
         Logger.D("delta1: %s\ndelta2: %s", delta1, delta2);
     }
 
@@ -379,7 +379,7 @@ public class JSONArrayTest {
         IJSONValue delta = array.deltaWith(shuffled, "+");
         Logger.D(delta.toJSONString(null));
         //There shall always be some differences shown as JSONObject
-        assertTrue(delta instanceof JSONArray, !delta.isEmpty());
+        assertAllTrue(delta instanceof JSONArray, !delta.isEmpty());
 
         delta = array.deltaWith(shuffled, "");
         assertEquals(JSONArray.EMPTY, delta);

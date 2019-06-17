@@ -9,6 +9,7 @@ import io.github.cruisoring.utility.ArrayHelper;
 import io.github.cruisoring.utility.DateTimeHelper;
 import io.github.cruisoring.utility.ResourceHelper;
 import io.github.cruisoring.utility.SetHelper;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
@@ -34,8 +35,8 @@ public class JSONObjectTest {
                 "  ]\n" +
                 "}", string);
         assertEquals(3, obj.size());
-        assertTrue(obj.containsKey("age"), obj.containsValue(null), obj.containsValue(123));
-        assertFalse(obj.containsKey("Age"), obj.containsKey(null), obj.containsValue("Alex"));
+        assertAllTrue(obj.containsKey("age"), obj.containsValue(null), obj.containsValue(123));
+        assertAllFalse(obj.containsKey("Age"), obj.containsKey(null), obj.containsValue("Alex"));
         assertEquals(123, obj.get("age"));
         assertEquals(null, obj.get("other"));
         assertEquals(null, obj.get(null));
@@ -87,7 +88,7 @@ public class JSONObjectTest {
                 "}", string);
 
         JSONObject nullOrdered = obj.getSorted((Comparator<String>) null);
-        assertTrue(nullOrdered.equals(naturalOrdered));
+        assertAllTrue(nullOrdered.equals(naturalOrdered));
 
         JSONObject naturalReversed = obj.getSorted(naturalOrdered.nameComparator.reversed());
         string = naturalReversed.toString();
@@ -130,7 +131,7 @@ public class JSONObjectTest {
         assertEquals("{\"age\":[123,null]}", obj1.deltaWith(JSONObject.EMPTY).toJSONString(null));
         assertEquals("{\"age\":[null,123]}", JSONObject.EMPTY.deltaWith(obj1).toJSONString(null));
 
-        JSONObject obj11 = JSONObject.parse("{\"name\": null,  \"age\": 123, }");
+        JSONObject obj11 = JSONObject.parse("{\"name\": null,  \"age\": 123, }");   //Empty NamedValue is allowed at the closing tag?
         assertEquals(JSONArray.EMPTY, obj1.deltaWith(obj11));
 
         //TODO: to differentiate null or MISSING from JSONValue.Null?
@@ -271,7 +272,7 @@ public class JSONObjectTest {
 
         Set<Integer> symDif = SetHelper.symmetricDifference(signatures1, signatures2);
         List<Integer> expected = Arrays.asList(childrenHashCodes1[1], childrenHashCodes2[5], object1.hashCode(), object2.hashCode());
-        assertTrue(symDif.size() == 4 && symDif.containsAll(expected));
+        assertAllTrue(symDif.size() == 4 && symDif.containsAll(expected));
 
         assertNotEquals(object1.toJSONString(null), object2.toJSONString(null));
         assertNotEquals(object1.getSignatures(), object2.getSignatures());
@@ -304,18 +305,18 @@ public class JSONObjectTest {
                 deepToString(signature1), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode());
 //                deepToString(address.getSignatures()), deepToString(scores.getSignatures()), deepToString(name.getSignatures()),
 //                deepToString(id.getSignatures()), deepToString(isActive.getSignatures()), deepToString(classNamedValue.getSignatures()));
-        assertTrue(signature1.size() == 7,
+        assertAllTrue(signature1.size() == 7,
                 signature1.containsAll(Arrays.asList(object1.hashCode(), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())));
 
         JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
         Set<Integer> signature2 = new HashSet<>(object2.getSignatures());
         NamedValue sortedScores = NamedValue.parse("\"scores\": {\"English\":80,\"Math\": 90,\"Science\": 88}");
-        assertTrue(signature2.size() == 7,
+        assertAllTrue(signature2.size() == 7,
                 signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
                 signature2.contains(sortedScores.hashCode()));
     }
 
-    @Test
+    @Test @Ignore
     public void compareBig(){
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         String modified = ResourceHelper.getTextFromResourceFile("c:\\temp\\modified.json");
@@ -323,7 +324,7 @@ public class JSONObjectTest {
         IJSONValue obj1 = Parser.parse(jsonText);
         IJSONValue obj2 = Parser.parse(modified);
         IJSONValue delta = obj1.deltaWith(obj2, "");
-        assertNotNull(delta);
+        assertAllNotNull(delta);
     }
 
     @Test
