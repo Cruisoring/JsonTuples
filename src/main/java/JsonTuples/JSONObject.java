@@ -142,15 +142,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     }
 
     @Override
-    public int getLeafCount(boolean countNulls) {
-        int count = 0;
-        for (NamedValue element : values) {
-            count += element.getLeafCount(countNulls);
-        }
-        return count;
-    }
-
-    @Override
     public int getLeafCount() {
         int count = 0;
         for (NamedValue element : values) {

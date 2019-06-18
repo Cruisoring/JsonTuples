@@ -6,6 +6,7 @@ import io.github.cruisoring.throwables.SupplierThrowable;
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple4;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.SetHelper;
 import io.github.cruisoring.utility.StringHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
@@ -27,6 +28,7 @@ public final class Parser {
     public static final String JSON_NULL = "null";
     public static final String JSON_TRUE = "true";
     public static final String JSON_FALSE = "false";
+
     //Special keys to mark the value boundary or escaped sequences
     final static char LEFT_BRACE = '{';
     final static char RIGHT_BRACE = '}';
@@ -36,10 +38,7 @@ public final class Parser {
     final static char COLON = ':';
     final static char QUOTE = '"';
     final static char BACK_SLASH = '\\';
-    final static Set<Character> CONTROLS = new HashSet<Character>(
-            Arrays.asList(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON));
-    final static Character MIN_CONTROL = Collections.min(CONTROLS);
-    final static Character MAX_CONTROL = Collections.max(CONTROLS);
+    final static Set<Character> CONTROLS = SetHelper.asHashSet(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON);
 
     public static SupplierThrowable<Comparator<String>> defaultComparatorSupplier = () -> new OrdinalComparator<>();
     //endregion
@@ -134,7 +133,7 @@ public final class Parser {
 
     //region Instance methods
     /**
-     * Parse the preloaded string as an IJSONValue that can be either JSONObject or JSONArray.
+     * Scan the preloaded string to parse it as an IJSONValue.
      *
      * @return The root node of either JSONObject or JSONArray.
      */
@@ -166,7 +165,7 @@ public final class Parser {
                     }
 
                     isInString = !isInString;
-                    value = processControl(children, currentChar, position);
+                    value = updateState(children, currentChar, position);
                     continue;
                 }
 
@@ -176,7 +175,7 @@ public final class Parser {
                     continue;
                 }
 
-                value = processControl(children, currentChar, position);
+                value = updateState(children, currentChar, position);
             }
             assertFalse(isInString, "JSONString is not enclosed properly");
             assertNull(lastName, "The NamedValue is not supported by Parser.parse() which returns IJSONValue only!");
@@ -230,7 +229,7 @@ public final class Parser {
         }
     }
 
-    IJSONValue processControl(List<IJSONable> children, char control, int position) {
+    IJSONValue updateState(List<IJSONable> children, char control, int position) {
 
         final JSONString nameElement;
         final IJSONValue valueElement;
@@ -305,7 +304,7 @@ public final class Parser {
                         children.add(valueElement);
                         break;
                     case LEFT_BRACKET:  //Empty Array or with only one simple value
-                        String valueString = subString(Range.open(lastPosition, position));
+                        String valueString = Range.open(lastPosition, position).subString(jsonContext);
                         if (!StringUtils.isBlank(valueString)) {
                             valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
                             children.add(valueElement);
@@ -364,7 +363,7 @@ public final class Parser {
                 break;
             case COLON:
                 lastName = checkNotNull(lastStringValue, "Fail to enclose \"%s\" with quotation marks before ':'",
-                        subString(Range.open(lastPosition, position)));
+                        Range.open(lastPosition, position).subString(jsonContext));
                 if(nameConsumer != null) {
                     nameConsumer.accept(lastName.getFirst());
                 }
@@ -407,7 +406,7 @@ public final class Parser {
     }
 
     protected IJSONValue asSimpleValue(Range range) {
-        final String trimmed = subString(range).trim();
+        final String trimmed = range.subString(jsonContext).trim();
         try {
             switch (trimmed) {
                 case JSON_TRUE:
@@ -424,7 +423,7 @@ public final class Parser {
                     }
             }
         } catch (NumberFormatException ne) {
-            String message = StringHelper.tryFormatString("Cannot parse \"%s\" as a JSONValue", subString(range));
+            String message = StringHelper.tryFormatString("Cannot parse \"%s\" as a JSONValue", range.subString(jsonContext));
             throw new IllegalStateException(message, ne);
         } catch (Exception e) {
             throw e;

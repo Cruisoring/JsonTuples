@@ -15,7 +15,6 @@ import static io.github.cruisoring.Asserts.checkNotNull;
 public class NamedValue extends Tuple2<JSONString, IJSONValue>
         implements IJSONable, ISortable {
 
-    //TODO: check if name can contain escaped quotes?
     //Where VALUE could be: true, false, null, "STRING", number
     public static final Pattern SIMPLIFIED_NAME_PATTERN = Pattern.compile("\\\"(.*?)\\\":\\s*?(true|false|null|\\\".*?\\\"|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)");
     public static final Pattern DEFAULT_NAMED_VALUE_PATTERN = Pattern.compile("(\\\".*?(?!\\\\)\\\"): (.*)$");
@@ -57,13 +56,8 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     @Override
-    public int getLeafCount(boolean countNulls) {
-        return getSecond().getLeafCount(countNulls);
-    }
-
-    @Override
     public int getLeafCount() {
-        return getSecond().getLeafCount();
+        return 1 + getSecond().getLeafCount();
     }
 
     @Override

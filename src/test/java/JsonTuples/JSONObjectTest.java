@@ -225,14 +225,12 @@ public class JSONObjectTest {
 
     @Test
     public void testGetLeafCount(){
-        assertEquals(0, JSONObject.EMPTY.getLeafCount(true));
-        assertEquals(3, JSONObject.parse("{ \"age\": 24, \"name\": null, \"other\": \"OK\" }").getLeafCount(true));
-        assertEquals(2, JSONObject.parse("{ \"age\": 24, \"name\": null, \"other\": \"OK\" }").getLeafCount(false));
-        assertEquals(5, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", true], \"name\": {\"first\":\"Tom\", \"last\":\"Clarks\"} }").getLeafCount(false));
-        assertEquals(5, JSONObject.parse("{ \"age\": null, \"other\": [null, null], \"name\": {\"first\":null, \"last\":null} }").getLeafCount(true));
-        assertEquals(0, JSONObject.parse("{ \"age\": null, \"other\": [null, null], \"name\": {\"first\":null, \"last\":null} }").getLeafCount(false));
+        assertEquals(0, JSONObject.EMPTY.getLeafCount());
+        assertEquals(6, JSONObject.parse("{ \"age\": 24, \"name\": null, \"other\": \"OK\" }").getLeafCount());
+        assertEquals(10, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", true], \"name\": {\"first\":\"Tom\", \"last\":\"Clarks\"} }").getLeafCount());
+        assertEquals(10, JSONObject.parse("{ \"age\": null, \"other\": [null, null], \"name\": {\"first\":null, \"last\":null} }").getLeafCount());
 
-        assertEquals(3, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", null], \"name\": {\"first\":null, \"last\":\"none\"} }").getLeafCount());
+        assertEquals(10, JSONObject.parse("{ \"age\": 123, \"other\": [\"none\", null], \"name\": {\"first\":null, \"last\":\"none\"} }").getLeafCount());
 
     }
 
@@ -279,7 +277,7 @@ public class JSONObjectTest {
     }
 
     @Test
-    public void getSignatures() {
+    public void testGetSignatures() {
         String text = "{\n" +
                 "  \"address\": null,\n" +
                 "  \"scores\": {\n" +
@@ -309,7 +307,7 @@ public class JSONObjectTest {
                 signature1.containsAll(Arrays.asList(object1.hashCode(), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())));
 
         JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
-        Set<Integer> signature2 = new HashSet<>(object2.getSignatures());
+        Set<Integer> signature2 = object2.getSignatures();
         NamedValue sortedScores = NamedValue.parse("\"scores\": {\"English\":80,\"Math\": 90,\"Science\": 88}");
         assertAllTrue(signature2.size() == 7,
                 signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
@@ -333,7 +331,7 @@ public class JSONObjectTest {
         int changes = 1000;
         int jsonTextLength = jsonText.length();
         JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonTextLength/1024), () -> JSONObject.parse(jsonText));
-        int originalLeafCount = original.getLeafCount(true);
+        int originalLeafCount = original.getLeafCount();
 
         try(Revokable revokable = Logger.setLevelInScope(LogLevel.debug)) {
             for (int i = 0; i < 10; i++) {
@@ -345,7 +343,7 @@ public class JSONObjectTest {
                 Object shuffledArray = Logger.M(Measurement.start("Shuffle packages list as array"), () -> ArrayHelper.shuffle(((List) packagesList).toArray()));
                 modifiableMap.put("packages", shuffledArray);
                 JSONObject modifiedObject = Logger.M(Measurement.start("jsonify() back to JSONObject"), () ->(JSONObject) Utilities.jsonify(modifiableMap));
-                int modifiedLeafCount = modifiedObject.getLeafCount(true);
+                int modifiedLeafCount = modifiedObject.getLeafCount();
                 Logger.D("Save modified JSONObject with %d leaves to %s", modifiedLeafCount,
                         Logger.M(Measurement.start("save modified JSON"), () ->ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), "modified.json")));
 

@@ -49,37 +49,12 @@ public class JSONArrayTest {
 
     @Test
     public void testGetLeafCount(){
-        assertEquals(0, JSONArray.EMPTY.getLeafCount(true));
-        assertEquals(2, JSONArray.parse("[null, null]").getLeafCount(true));
-        assertEquals(2, JSONArray.parse("[1, null]").getLeafCount(true));
+        assertEquals(0, JSONArray.EMPTY.getLeafCount());
+        assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
+        assertEquals(2, JSONArray.parse("[1, null]").getLeafCount());
 
-        assertEquals(0, JSONArray.EMPTY.getLeafCount(false));
-        assertEquals(0, JSONArray.parse("[null, null]").getLeafCount(false));
-        assertEquals(1, JSONArray.parse("[1, null]").getLeafCount(false));
-
-        try(
-                Revokable revokable = Revokable.register(() -> JSONValue.MISSING, v -> JSONValue.MISSING=v, JSONValue.Null)
-        ){
-            assertEquals(0, JSONArray.EMPTY.getLeafCount());
-            assertEquals(0, JSONArray.parse("[null, null]").getLeafCount());
-            assertEquals(1, JSONArray.parse("[-1, null]").getLeafCount());
-            assertEquals(2, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
-            assertEquals(4, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
-
-            JSONValue.MISSING = JSONString.parseString("\"none\"");
-            assertEquals(0, JSONArray.EMPTY.getLeafCount());
-            assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
-            assertEquals(2, JSONArray.parse("[-1, null]").getLeafCount());
-            assertEquals(3, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
-            assertEquals(5, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
-
-            JSONValue.MISSING = JSONNumber.parseNumber("-1");
-            assertEquals(0, JSONArray.EMPTY.getLeafCount());
-            assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
-            assertEquals(1, JSONArray.parse("[-1, null]").getLeafCount());
-            assertEquals(3, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
-            assertEquals(5, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
-        }
+        assertEquals(4, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
+        assertEquals(10, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
     }
 
     @Test

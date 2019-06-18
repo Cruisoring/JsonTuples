@@ -23,9 +23,6 @@ import static io.github.cruisoring.Asserts.*;
  */
 public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValue>, List<Object> {
 
-    //Indicates if the order of the elements composing this JSONArray is matter, which has impact on how deltaWith() works
-    public static boolean defaultElementOrderMatters = false;
-
     static final String JSONArray_UNMODIFIABLE = "JSONArray instance is not modifiable, asMutableObject() would return a modifiable List of the underlying values that can be modified and then convert back to another JSONArray instance.";
 
     //Name of the index pair of the elements to show their deltas
@@ -101,15 +98,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             list.add(values[i].asMutableObject());
         }
         return list;
-    }
-
-    @Override
-    public int getLeafCount(boolean countNulls) {
-        int count = 0;
-        for (IJSONValue element : values) {
-            count += element.getLeafCount(countNulls);
-        }
-        return count;
     }
 
     @Override

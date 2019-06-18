@@ -159,10 +159,9 @@ public class Utilities {
      * Compare any two JAVA objects and return their differences as an {@code IJSONValue}.
      * @param obj1      the first Object to be compared.
      * @param obj2      the second Object to be compared.
-     * @param orderMatters  indicates if the order of elements of two {@code JSONArray}s matter.
      * @return  the differences of the above two Objects.
      */
-    public static IJSONValue deltaWith(Object obj1, Object obj2, boolean orderMatters, String indexKey){
+    public static IJSONValue deltaWith(Object obj1, Object obj2, String indexKey){
         IJSONValue json1 = jsonify(obj1);
         IJSONValue json2 = jsonify(obj2);
 

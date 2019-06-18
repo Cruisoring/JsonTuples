@@ -58,7 +58,7 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     public static JSONValue parse(CharSequence jsonContext, Range range) {
         assertAllNotNull(jsonContext, range);
 
-        final String trimmed = Range.subString(jsonContext, range).trim();
+        final String trimmed = range.subString(jsonContext).trim();
         switch (trimmed) {
             case JSON_TRUE:
                 return JSONValue.True;
@@ -92,8 +92,8 @@ public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
     }
 
     @Override
-    public int getLeafCount(boolean countNulls) {
-        return countNulls ? 1 : (getFirst() == null ? 0 : 1);
+    public int getLeafCount() {
+        return 1;
     }
 
     @Override
