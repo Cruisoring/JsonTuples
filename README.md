@@ -1,7 +1,7 @@
 #JsonTuples
 ===================
 
-Driven by [Functional Programming paradigm](https://en.wikipedia.org/wiki/Functional_programming) and using uses immutable Tuples of [functionExtensions 2.0.0](http://repo1.maven.org/maven2/io/github/cruisoring/functionExtensions/2.0.0/) to keep data, the JsonTuples is a Java library to parse big JSON strings, or converting JAVA Array/Collection/Map to corresponding JSONValues quickly, then the huge data sets embedded can be serialized, sorted or compared so as to be used as a Data Analytic tool.
+Driven by [Functional Programming paradigm](https://en.wikipedia.org/wiki/Functional_programming) and using uses immutable Tuples of [functionExtensions 2.0.0](http://repo1.maven.org/maven2/io/github/cruisoring/functionExtensions/2.0.0/) to keep data, the JsonTuples can not only be used to parse/format huge JSON files to get immutable Map or Array, but also b used as a media to compare generic JAVA data structures to get their differences effortlessly.
 
 The original intention of this project is to use given set of JSON texts as templates to compose requests and match responses automatically for REST API testing, that means a fast parser to convert sample REST payloads into common JAVA data structures of Maps or Collections, then part of them could be modified/removed/added easily before converting the updated data back to JSON texts as HTTP GET/POST/PUT/DELETE payloads. By studying available open-source projects to convert JAVA Objects to/from JSON, I realized that there could be steep learning curves, and might not get desirable performance and functions. This library means to expose simple APIs to parse JSON text as Maps, Arrays or combination of them that can be accessed conveniently. Further more, with the embdedded features of Tuple, the JsonTuples can compare huge datasets composed by Collections and Maps to get their deltas effectively.
 
@@ -33,8 +33,7 @@ Add the following dependency to your pom.xml:
 
 Alternatively, get the packages directly from [Maven Central](http://repo1.maven.org/maven2/io/github/cruisoring/JsonTuples/1.0.0/)
 
-
-## Converting Text/JAVA to/from JSON
+## Mapping between JSON Objects and JAVA Objects
 
 The JSON objects refer to classes/interfaces defined in JsonTuples project, JAVA Objects means common JAVA types like primitive objects, as well as generic Map, Collection and Arrays. For the JSON texts to be processed, it is assumed they have followed the correct JSON syntax.
 
@@ -42,15 +41,21 @@ The JsonTuples is implemented based on the information from [json.org](http://ww
 
 | Interfaces | Classes | | JAVA Object embedded | JSON sample | Notes |
 | --- | --- | --- | --- | --- | --- |
-|IJSONValue&lt;T&gt; | JSONValue&lt;T&gt; | **Null** | null | *null* | *NULL* is not accepted |
-| | |**True** | true| *true*| *True* is not accepted |
-| | |**False**| false | *false*| *FALSE* is not accepted |
+|IJSONValue&lt;T&gt; | JSONValue&lt;T&gt; | **Null** | null | *null* | Case sensitive, thus *NULL* is not accepted |
+| | |**True** | true| *true*| Case sensitive, thus *True* is not accepted |
+| | |**False**| false | *false*| Case sensitive, thus *FALSE* is not accepted |
 | | |**JSONString** | String | \"A string\"| special chars like \'\\n\' or \'\\t\' would be trimmed by default | 
 | | |**JSONNumber** | Integer, BigInteger, Double, BigDecimal | *123.45e5* | the actual Object saved doesn't affect equals() which would compare by toString\(\)  |
-|IJSONValue&lt;*NamedValue*&gt;| **JSONObject** | | Map&lt;String, Object&gt; |\{\"id\":12,\"name\":\"Tom\"\}| JSONObject has implemented **Map&lt;String, Object&gt;**, the **NamedValue** is used internally | 
-|IJSONValue&lt;*IJSONValue*&gt;| **JSONArray** | | Object\[\] |\[null,true,1,\"abc\",\{\},\[\]\]| JSONArray can hold any number of IJSONValue |
+|IJSONValue&lt;*NamedValue*&gt;, **Map&lt;String, Object&gt;**| **JSONObject** | | Map&lt;String, Object&gt; |\{\"id\":12,\"name\":\"Tom\"\}| JSONObject has implemented **Map&lt;String, Object&gt;**, the **NamedValue** is used internally | 
+|IJSONValue&lt;*IJSONValue*&gt;, **List&lt;Object&gt;**| **JSONArray** | | Object\[\] |\[null,true,1,\"abc\",\{\},\[\]\]| JSONArray can hold any number of IJSONValue |
 
-The two major JSON objects are **JSONObject** and **JSONArray**. Both of them extend the generic [Tuple](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/tuple/Tuple.java) type and are immutable. JAVA *Map<String, Object>* is the natural equivalent of *JSONObject*, and *Collection<Object>* or *Object[]* can be mapped to JSONArray naturally. The *JSONObject* retains the orders of its elements with *LinkedHashMap*; on the other side, though *JSONArray* keeps the orders of its elements, that order might be ignored considering *Collection*s doesn't care element orders like *Set*.
+All these types extend the generic [Tuple](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/tuple/Tuple.java) type and are immutable.
+
+The first 5 simple types (**Null, True, False, JSONString, JSONNumber**) are referred as leaf nodes in this libarary, since their JAVA counterparts cannot be split further, while **JSONObject** and **JSONArray** contain zero to multiple of them, the *IJSONable.getLeafCount()* reflects how big the JSON object is by counting the occurences of the first 5 simple types.
+
+The two major JSON objects are **JSONObject** and **JSONArray** that can are mapped to JAVA *Map<String, Object>* and *Collection&lt;Object&gt;* or *Object[]* naturally. Under the hood, the *JSONObject* retains the orders of its elements with *LinkedHashMap*; on the other side, though *JSONArray* keeps the orders of its elements, that order might be ignored when considering its *Collection* as JAVA *Set* that doesn't care element orders.
+
+## APIs used to parse JSON text
 
 Constructors of all above JSON objects in bold (**Null, True, False, JSONString, JSONNumber, JSONObject and JSONArray**) are protected, and would be created by:
   * **The JSON Syntax checking is not enforced** by assuming the JSON text supplied to this library comply JSON protocol.
@@ -64,31 +69,9 @@ Constructors of all above JSON objects in bold (**Null, True, False, JSONString,
     
 Usually, the above methods shall be enough to get most JSON to/from JAVA conversions done.
 
-## Sort and Format Text from JSON
-
-To display the content held by JSONObject with a ordered manner, a **Comparator<String>** can be used in two ways:
-  * Supplied as argument of __*Parser.parse(Comparator<String> comparator, CharSequence jsonText)*__ or __*parse(Comparator<String> comparator, CharSequence jsonText, Range range)*__, then the parsed *JSONObject* and all its children would be saved with orders specified by the given **comparator**.
-  * the __*JSONObject.getSorted(Comparator<String> comparator)*__ or __*JSONArray.getSorted(Comparator<String> comparator)*__ would return a new JSONObject or JSONArray with their children elements sorted by names following rules specified by the given **comparator**.
-  
-As a special case, the [OrdinalComparator](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/OrdinalComparator.java) would register all names of JSON Object in order and sort all names accordingly.
-
-The TAB of indent has been hard-coded as ```"  "``` in **JSONValue.SPACE**, the **toJSONString(String indent)** defined in **IJSONable** interface accepts a blank String that can be either _null_ or all white-spaces to get JSON text based on value of the given **indent**:
-  *  If the JSONObject is empty, then it would always return ```{}```;
-  *  If the JSONArray is empty, then it would always return ```[]```;
- Otherwise:
-  *  If **indent** is null, then the generated JSON text would be a compact single-line String by removing all white-spaces;
-  *  If **indent** is ```""```, then the generated JSON text would be a multi-line String with extra ```"  "``` for each indent level.
-  *  If **indent** is not empty, then the generated JSON text would be a multi-line String with given **indent** appended ahead of each lines from above case.
-
-The toString() would show same String as if the **indent** is ```""```. Just as the [base Tuple type](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/tuple/Tuple.java), the toString() result is cached for achieve performance benefits that along with cached hashCode, is critical for fast comparison of huge datasets.
-
-## Basic Examples
-
-This section shows how JsonTuples can be used to parse JSON text or convert common JAVA objects to JSON objects.
-
 ### Parse Text as JSON Objects
 
-The unit test below shows how __*IJSONValue Parser.parse(CharSequence)*__ can be used to parse different text to corresponding IJSONValue types.
+To make this library easy to use, there is no setup needed before calling the static methods. The unit test below shows how __*IJSONValue Parser.parse(CharSequence)*__ can be used to parse different text to corresponding IJSONValue types.
 ```java
     @Test
     public void parseText_getRightIJSONValue() {
@@ -127,7 +110,13 @@ The unit test below shows how __*IJSONValue Parser.parse(CharSequence)*__ can be
     }
 ```
 
-Notice: the *assertTrue()*, *assertEquals()* are helper methods defined in [Asserts.java of functionExtensions 2.0.0](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/Asserts.java) to assert multiple expressions or compare elements of two Arrays or Collections.
+The *assertTrue()*, *assertEquals()* are helper methods defined in [Asserts.java of functionExtensions 2.0.0](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/Asserts.java) to assert multiple expressions or compare elements of two Arrays or Collections.
+
+As shown in the above codes, the parsed *JSONArray* and *JSONObject* can be accessed as immutable **List&lt;Object&gt;** and **Map&lt;String, Object&gt;** respectively, and the **Object** returned would already be common JAVA objects (nulls, Booleans, Strings, Numbers and combinations of them as arrays or maps) that are not changeable. 
+
+### Lenient Parsing with Syntax Error Highlighted
+
+
 
 Since JSON texts representing Map or Array are used most, __*JSONObject.parse(String valueString)*__ and __*JSONArray.parse(String valueString)*__ act as syntactic sugar to cast the IJSONValue to JSONObject or JSONArray behind the scene.
 
@@ -162,6 +151,29 @@ The above unit test loads text from [catalog.json](https://github.com/Cruisoring
 When running from my 4-cores i7-7700HQ @ 2.8G laptop, the screenshot below shows the average and max time to parse the 6.11M file are __*216ms and 385ms*__ respectively.
 
 ![test6257KJson outcome](images/performance.png "Parsing 6M JSON text for 10 times")
+
+
+## Sort and Format Text from JSON
+
+To display the content held by JSONObject with a ordered manner, a **Comparator<String>** can be used in two ways:
+  * Supplied as argument of __*Parser.parse(Comparator<String> comparator, CharSequence jsonText)*__ or __*parse(Comparator<String> comparator, CharSequence jsonText, Range range)*__, then the parsed *JSONObject* and all its children would be saved with orders specified by the given **comparator**.
+  * the __*JSONObject.getSorted(Comparator<String> comparator)*__ or __*JSONArray.getSorted(Comparator<String> comparator)*__ would return a new JSONObject or JSONArray with their children elements sorted by names following rules specified by the given **comparator**.
+  
+As a special case, the [OrdinalComparator](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/OrdinalComparator.java) would register all names of JSON Object in order and sort all names accordingly.
+
+The TAB of indent has been hard-coded as ```"  "``` in **JSONValue.SPACE**, the **toJSONString(String indent)** defined in **IJSONable** interface accepts a blank String that can be either _null_ or all white-spaces to get JSON text based on value of the given **indent**:
+  *  If the JSONObject is empty, then it would always return ```{}```;
+  *  If the JSONArray is empty, then it would always return ```[]```;
+ Otherwise:
+  *  If **indent** is null, then the generated JSON text would be a compact single-line String by removing all white-spaces;
+  *  If **indent** is ```""```, then the generated JSON text would be a multi-line String with extra ```"  "``` for each indent level.
+  *  If **indent** is not empty, then the generated JSON text would be a multi-line String with given **indent** appended ahead of each lines from above case.
+
+The toString() would show same String as if the **indent** is ```""```. Just as the [base Tuple type](https://github.com/Cruisoring/functionExtensions/blob/master/src/main/java/io/github/cruisoring/tuple/Tuple.java), the toString() result is cached for achieve performance benefits that along with cached hashCode, is critical for fast comparison of huge datasets.
+
+## Basic Examples
+
+This section shows how JsonTuples can be used to parse JSON text or convert common JAVA objects to JSON objects.
 
 ### Sorting and Printing
 

@@ -164,6 +164,25 @@ public class ParserTest {
     }
 
     @Test
+    public void test185MJson() {
+        String jsonText = ResourceHelper.getTextFromResourceFile("c:/temp/citylots.json");
+        int jsonTextLength = jsonText.length();
+
+        String sortedString = null;
+        for (int i = 0; i < 1; i++) {
+            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
+                    () -> JSONObject.parse(jsonText));
+            int leafCount = result.getLeafCount();
+//            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject with %d leaf nodes", leafCount),
+//                    () -> result.getSorted(Comparator.naturalOrder()));
+//            sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
+        }
+        Map<String, String> performanceSummary = Measurement.getAllSummary();
+        performanceSummary.values().forEach(v -> Logger.I("%s", v));
+        Measurement.clear();
+    }
+
+    @Test
     public void parseWithNameComparator_withExpectedOrders() {
         assertEquals("{\"age\":12,\"id\":\"111\",\"name\":\"Grace\"}",
                 Parser.parse(Comparator.naturalOrder(),"{\"name\":\"Grace\",\"id\":\"111\",\"age\":12}").toJSONString(null));

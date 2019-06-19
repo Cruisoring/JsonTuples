@@ -1,6 +1,7 @@
 package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
+import io.github.cruisoring.utility.ArrayHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -27,10 +28,16 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     Map<String, Object> objectMap = null;
 
     protected JSONObject(NamedValue... namedValues) {
-        this(null, namedValues);
+        super(NamedValue.class, namedValues);
+        nameComparator = null;
     }
 
     protected JSONObject(Comparator<String> comparator, NamedValue... namedValues) {
+        super(NamedValue.class, comparator == null ? namedValues : sorted(comparator, namedValues));
+        nameComparator = comparator;
+    }
+
+    protected JSONObject(Comparator<String> comparator, List<IJSONable> namedValues) {
         super(NamedValue.class, sorted(comparator, namedValues));
         nameComparator = comparator;
     }
@@ -65,6 +72,13 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
                     -> comparator.compare(nv1.getName(), nv2.getName()));
         }
         return namedValues;
+    }
+
+    protected static NamedValue[] sorted(Comparator<String> comparator, List<IJSONable> namedValueList) {
+        assertAllTrue(namedValueList != null);
+
+        NamedValue[] namedValues = (NamedValue[]) ArrayHelper.create(NamedValue.class, namedValueList.size(), i -> namedValueList.get(i));
+        return comparator == null ? namedValues : sorted(comparator, namedValues);
     }
 
     private Map<String, NamedValue> getJsonMap() {

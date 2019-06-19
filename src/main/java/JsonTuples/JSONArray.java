@@ -63,12 +63,18 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     protected List<Object> objects = null;
 
     protected JSONArray(IJSONValue... values) {
-        this(null, values);
+        super(IJSONValue.class, values);
+        this.nameComparator = null;
     }
 
     protected JSONArray(Comparator<String> comparator, IJSONValue... values) {
-        super(values);
+        super(IJSONValue.class, values);
         this.nameComparator = comparator;
+    }
+
+    protected JSONArray(Comparator<String> comparator, List<IJSONable> values) {
+        super(IJSONValue.class, values);
+        nameComparator = comparator;
     }
 
     /**
