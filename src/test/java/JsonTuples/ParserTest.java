@@ -5,6 +5,7 @@ import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ResourceHelper;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -163,7 +164,7 @@ public class ParserTest {
         Measurement.clear();
     }
 
-    @Test
+    @Test @Ignore
     public void test185MJson() {
         String jsonText = ResourceHelper.getTextFromResourceFile("c:/temp/citylots.json");
         int jsonTextLength = jsonText.length();

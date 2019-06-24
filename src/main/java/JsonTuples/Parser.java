@@ -1,12 +1,13 @@
 package JsonTuples;
 
 import io.github.cruisoring.Range;
+import io.github.cruisoring.TypedList;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.throwables.SupplierThrowable;
 import io.github.cruisoring.tuple.Tuple;
-import io.github.cruisoring.tuple.Tuple5;
-import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.tuple.Tuple4;
 import io.github.cruisoring.utility.SetHelper;
+import io.github.cruisoring.utility.SimpleTypedList;
 import io.github.cruisoring.utility.StringHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
@@ -14,8 +15,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static io.github.cruisoring.Asserts.assertAllTrue;
-import static io.github.cruisoring.Asserts.fail;
+import static io.github.cruisoring.Asserts.*;
 
 
 /**
@@ -134,32 +134,33 @@ public final class Parser {
     //lastName and lastStringValue are used to keep the recent JSONString values for further evaluations
     JSONString lastName = null, lastStringValue;
     //contextStack is a simple Stack function as the state machine of this Parser
-    Stack<Tuple5<Boolean, IJSONable[], Integer, JSONString, Integer>> contextStack = new Stack<>();
-    int childrenSize = 128;
-    IJSONable[] children = new IJSONable[childrenSize];
-    int childIndex = 0;
+    Stack<Tuple4<Boolean, Integer, JSONString, IJSONable[]>> contextStack = new Stack<>();
+    TypedList<IJSONable> list = new SimpleTypedList<>();
+//    int childrenSize = 128;
+//    IJSONable[] children = new IJSONable[childrenSize];
+//    int childIndex = 0;
 
     //endregion
 
     //region Instance methods
 
-    void addChild(IJSONable child){
-        if(childIndex >= childrenSize) {
-            IJSONable[] newArray = new IJSONable[childrenSize*2];
-            for (int i = 0; i < childrenSize; i++) {
-                newArray[i] = children[i];
-            }
-            childrenSize = newArray.length;
-            children = newArray;
-        }
-        children[childIndex++] = child;
-    }
-
-    void reload(IJSONable[] others, int length){
-        childIndex = length;
-        children = others;
-        childrenSize = others.length;
-    }
+//    void addChild(IJSONable child){
+//        if(childIndex >= childrenSize) {
+//            IJSONable[] newArray = new IJSONable[childrenSize*2];
+//            for (int i = 0; i < childrenSize; i++) {
+//                newArray[i] = children[i];
+//            }
+//            childrenSize = newArray.length;
+//            children = newArray;
+//        }
+//        children[childIndex++] = child;
+//    }
+//
+//    void reload(IJSONable[] others, int length){
+//        childIndex = length;
+//        children = others;
+//        childrenSize = others.length;
+//    }
 
     /**
      * Parse the preloaded string as an IJSONValue that can be either JSONObject or JSONArray.
@@ -214,7 +215,7 @@ public final class Parser {
             }
             if(isObject == null) {
                 return asSimpleValue(jsonRange);
-            } else if (childIndex != 0) {
+            } else if (!list.isEmpty()) {
                 fail("%s is not closed properly?", isObject?"JSONObject":"JSONArray");
             }
         } catch (Exception e) {
@@ -269,7 +270,7 @@ public final class Parser {
     IJSONValue updateState(char control, int position) {
         if(position >= checkPoint){
             Logger.I("%dms after %d M, stack depth = %d, children length = %d",
-                    System.currentTimeMillis()-lastMoment, checkPoint/(1024*1024), contextStack.size(), childIndex);
+                    System.currentTimeMillis()-lastMoment, checkPoint/(1024*1024), contextStack.size(), list.size());
             checkPoint += 1024*1024;
             lastMoment = System.currentTimeMillis();
         }
@@ -279,18 +280,17 @@ public final class Parser {
         final NamedValue namedValueElement;
 
         IJSONValue closedValue = null;
-        //The 4 values of state: isParentObject (Boolean), children elements Array, actual size, name JSONString, Position of either '{' or '['
-        Tuple5<Boolean, IJSONable[], Integer, JSONString, Integer> state = null;
+        //The 4 values of state: isParentObject (Boolean), Position of either '{' or '[', name JSONString, children array
+        Tuple4<Boolean, Integer, JSONString, IJSONable[]> state = null;
         switch (control) {
             case LEFT_BRACE:    //Start of JSONObject
             case LEFT_BRACKET:  //Start of JSONArray
                 nameElement = lastName;
                 boolean enterObject = control == LEFT_BRACE;
-                state = Tuple.create(isObject, children, childIndex, nameElement, position);
-//                state = Tuple.create(isObject, children.toArray(new IJSONable[0]), nameElement, position);
+                state = Tuple.create(isObject, position, nameElement, list.toArray(new IJSONable[list.size()]));
                 isObject = enterObject;
                 lastName = null;
-                reload(new IJSONable[128], 0);
+                list.clear();
                 contextStack.push(state);
                 break;
             case RIGHT_BRACE:   //End of current JSONObject
@@ -305,39 +305,41 @@ public final class Parser {
                         nameElement = lastName;
                         namedValueElement = new NamedValue(nameElement, valueElement);
                         lastName = null;
-                        addChild(namedValueElement);
+                        list.add(namedValueElement);
                         break;
                     case QUOTE:
                         nameElement = lastName;
                         valueElement = lastStringValue;
                         namedValueElement = new NamedValue(nameElement, valueElement);
                         lastName = null;
-                        addChild(namedValueElement);
+                        list.add(namedValueElement);
                         break;
                     default:
                         break;
                 }
 
-                closedValue = new JSONObject(nameComparator, (NamedValue[]) ArrayHelper.create(NamedValue.class, childIndex, i -> children[i]));
+                closedValue = new JSONObject(nameComparator, (NamedValue[]) list.toArray(new NamedValue[list.size()]));
 
                 state = contextStack.pop();
-                reload(state.getSecond(), state.getThird());
+                list.clear();
+                list.appendAll(state.getFourth());
                 if (state.getFirst() == null) {
-                    if(state.getFourth() != null) {
-                        lastPosition = state.getFifth();
-                        fail("The current JSONObject is value of a NamedValue which is the root element");
+                    JSONString nameAtRoot = state.getThird();
+                    if(nameAtRoot != null) {
+                        lastPosition = state.getSecond();
+                        fail("There shall be no name defined at root level: %s", nameAtRoot);
                     }
                     break;
                 }
 
                 isObject = state.getFirst();
+                final JSONString nameInObject = state.getThird();
                 if (isObject) {
-                    final JSONString name = state.getFourth();
-                    addChild(new NamedValue(name, closedValue));
+                    list.add(new NamedValue(nameInObject, closedValue));
                     lastName = null;
                 } else {
-                    assertAllTrue(state.getFourth() == null);
-                    addChild(closedValue);
+                    assertNull(nameInObject, "There shall be no name defined: %s", nameInObject);
+                    list.add(closedValue);
                 }
                 break;
 
@@ -350,40 +352,42 @@ public final class Parser {
                 switch (lastControl) {
                     case COMMA:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
-                        addChild(valueElement);
+                        list.add(valueElement);
                         break;
                     case LEFT_BRACKET:  //Empty Array or with only one simple value
                         String valueString = Range.open(lastPosition, position).subString(jsonContext);
                         if (!StringUtils.isBlank(valueString)) {
                             valueElement = asSimpleValue(Range.open(lastPosition, position)); //Simple value
-                            addChild(valueElement);
+                            list.add(valueElement);
                         }
                         break;
                     default:
                         break;
                 }
 
-                closedValue = new JSONArray(nameComparator, (IJSONValue[]) ArrayHelper.create(IJSONValue.class, childIndex, i -> children[i]));
-                childIndex=0;
+                closedValue = new JSONArray(nameComparator, list.toArray(new IJSONValue[list.size()]));
+                list.clear();
 
                 state = contextStack.pop();
                 if (state.getFirst() == null) {
-                    if(state.getThird() != null) {
-                        lastPosition = state.getFifth();
-                        fail("The current JSONArray is value of a NamedValue which is the root element");
+                    JSONString nameOfRootArray = state.getThird();
+                    if(nameOfRootArray != null) {
+                        lastPosition = state.getSecond();
+                        fail("The root JSONArray shall not be the value of a NamedValue with name %s", nameOfRootArray);
                     }
                     break;
                 }
 
-                reload(state.getSecond(), state.getThird());
+                list.clear();
+                list.appendAll(state.getFourth());
                 isObject = state.getFirst();
+                final JSONString nameOfArrayInObject = state.getThird();
                 if (isObject) {
-                    final JSONString name = state.getFourth();
-                    addChild(new NamedValue(name, closedValue));
+                    list.add(new NamedValue(checkNotNull(nameOfArrayInObject, "The name of array in Object cannot be null."), closedValue));
                     lastName = null;
                 } else {
-                    assertAllTrue(state.getFourth() == null);
-                    addChild(closedValue);
+                    assertNull(nameOfArrayInObject, "The array in Array shall not have any name: %s", nameOfArrayInObject);
+                    list.add(closedValue);
                 }
                 break;
 
@@ -392,19 +396,19 @@ public final class Parser {
                     case LEFT_BRACKET:
                     case COMMA:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
-                        addChild(valueElement);
+                        list.add(valueElement);
                         break;
                     case COLON:
                         valueElement = asSimpleValue(Range.open(lastPosition, position));     //Simple value
                         namedValueElement = new NamedValue(lastName, valueElement);
                         lastName = null;
-                        addChild(namedValueElement);
+                        list.add(namedValueElement);
                         break;
                     case QUOTE:
                         if (isObject) {
                             namedValueElement = new NamedValue(lastName, lastStringValue);
                             lastName = null;
-                            addChild(namedValueElement);
+                            list.add(namedValueElement);
                         }
                     default:
                         break;
@@ -427,7 +431,7 @@ public final class Parser {
                     String text = StringEscapeUtils.unescapeJson(jsonContext.subSequence(currentStringStart+1, currentStringEnd).toString());
                     lastStringValue = new JSONString(text);
                     if (isObject != null && !isObject) {
-                        addChild(lastStringValue);
+                        list.add(lastStringValue);
                     }
                 } else {
                     if(lastControl == QUOTE) {
