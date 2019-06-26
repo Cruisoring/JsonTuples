@@ -9,7 +9,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
-import static io.github.cruisoring.Asserts.*;
+import static JsonTuples.Parser.JSON_NULL;
+import static io.github.cruisoring.Asserts.assertAllTrue;
+import static io.github.cruisoring.Asserts.assertEquals;
 
 public class UtilitiesTest {
 
@@ -44,7 +46,7 @@ public class UtilitiesTest {
         assertEquals(33.4, dbl.getObject());
 
         assertEquals(JSONValue.Null, Utilities.asJSONNumber(null));
-        assertEquals(IJSONValue.JSON_NULL, Utilities.asJSONNumber(null).toString());
+        assertEquals(JSON_NULL, Utilities.asJSONNumber(null).toString());
     }
 
     @Test

@@ -6,7 +6,8 @@ import io.github.cruisoring.tuple.Tuple2;
 
 import java.util.*;
 
-import static io.github.cruisoring.Asserts.*;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
+import static io.github.cruisoring.Asserts.assertAllTrue;
 
 /**
  * Utility methods to convert JAVA Objects to/from {@code ISONValue}s, or compare any two JAVA objects.

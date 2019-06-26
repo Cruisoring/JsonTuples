@@ -5,27 +5,6 @@ package JsonTuples;
  */
 public interface IJSONable {
 
-    //region static variables
-    String JSON_NULL = "null";
-    String JSON_TRUE = "true";
-    String JSON_FALSE = "false";
-
-    //Special keys to mark the value boundary or escaped sequences
-    char LEFT_BRACE = '{';
-    char RIGHT_BRACE = '}';
-    char LEFT_BRACKET = '[';
-    char RIGHT_BRACKET = ']';
-    char COMMA = ',';
-    char COLON = ':';
-    char QUOTE = '"';
-    char BACK_SLASH = '\\';
-
-    String SPACE = "  ";
-    String NEW_LINE = "\n";
-    String COMMA_NEWLINE = COMMA + NEW_LINE;
-
-    //endregion
-
     /**
      * The <code>toJSONString</code> method allows a class to produce its own JSON
      * serialization.

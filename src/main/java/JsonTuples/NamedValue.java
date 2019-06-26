@@ -40,7 +40,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
     }
 
     protected NamedValue(JSONString name, IJSONValue value) {
-        super(checkNotNull(name, "The name cannot be null"), checkNotNull(value, "The name cannot be null"));
+        super(checkNotNull(name, "The name cannot be null"), checkNotNull(value, "The value cannot be null"));
     }
 
     protected NamedValue(String nameString, IJSONValue value) {

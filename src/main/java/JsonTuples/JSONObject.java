@@ -2,6 +2,7 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.SimpleTypedList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 
@@ -9,7 +10,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static io.github.cruisoring.Asserts.*;
+import static JsonTuples.Parser.*;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
+import static io.github.cruisoring.Asserts.assertAllTrue;
 
 /**
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).
@@ -296,7 +299,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             return JSONArray.EMPTY;
         }
 
-        List<NamedValue> differences = new ArrayList<>();
+        List<NamedValue> differences = new SimpleTypedList<>();
         Map<String, NamedValue> thisValues = getJsonMap();
         Map<String, NamedValue> otherValues = otherObject.getJsonMap();
 

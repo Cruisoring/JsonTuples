@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static JsonTuples.Parser.QUOTE;
 import static io.github.cruisoring.Asserts.assertAllNotNull;
 
 /**
@@ -25,6 +26,11 @@ import static io.github.cruisoring.Asserts.assertAllNotNull;
  * @see <a href="http://www.json.org">http://www.json.org</a>
  */
 public class JSONValue<T> extends Tuple1<T> implements IJSONValue {
+
+    public static final String JSON_NULL = "null";
+    public static final String JSON_TRUE = "true";
+    public static final String JSON_FALSE = "false";
+
 
     // Represent the values of either 'true'
     public static final JSONValue True = new JSONValue(Boolean.TRUE);

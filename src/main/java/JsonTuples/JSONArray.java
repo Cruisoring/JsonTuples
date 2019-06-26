@@ -4,7 +4,9 @@ import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
 import io.github.cruisoring.tuple.Tuple3;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.ReadOnlyList;
 import io.github.cruisoring.utility.SetHelper;
+import io.github.cruisoring.utility.SimpleTypedList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -14,7 +16,9 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
-import static io.github.cruisoring.Asserts.*;
+import static JsonTuples.Parser.*;
+import static io.github.cruisoring.Asserts.assertAllNotNull;
+import static io.github.cruisoring.Asserts.assertAllTrue;
 
 /**
  * An ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]
@@ -59,7 +63,6 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     // the Comparator<String> used by this {@code JSONArray} to sort its children JSONObjects.
     final Comparator<String> nameComparator;
 
-    // the buffered list of {@code Object} represented by this {@code IJSONValue}
     protected List<Object> objects = null;
 
     protected JSONArray(IJSONValue... values) {
@@ -88,21 +91,15 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     private List<Object> _getObjects(){
         if(objects == null){
-            List<Object> objs = new ArrayList<>();
-            for (int i = 0; i < values.length; i++) {
-                objs.add(values[i].getObject());
-            }
-            objects = Collections.unmodifiableList(objs);
+            objects = new ReadOnlyList(() -> ArrayHelper.create(Object.class, values.length, i -> values[i].getObject()));
         }
         return objects;
     }
 
     @Override
     public Object asMutableObject() {
-        List<Object> list = new ArrayList<>();
-        for (int i = 0; i < values.length; i++) {
-            list.add(values[i].asMutableObject());
-        }
+        Object[] mutables = (Object[]) ArrayHelper.create(Object.class, values.length, i -> values[i].asMutableObject());
+        List<Object> list = new SimpleTypedList<>(mutables);
         return list;
     }
 
@@ -240,7 +237,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         final Set<Integer>[] leftSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, leftSize, i -> leftValues[i].getSignatures());
         final Set<Integer>[] rightSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, rightSize, i -> rightValues[i].getSignatures());
 
-        List<Tuple2<Integer, Integer>> leftRightIndexPairs = new ArrayList<>();
+        List<Tuple2<Integer, Integer>> leftRightIndexPairs = new SimpleTypedList<>();
         Comparator<Tuple3<Integer, Integer, List<Integer>>> _comparator = Comparator.comparing(tuple -> tuple.getFirst());
         _comparator = _comparator.thenComparing(tuple -> tuple.getThird().size());
 
@@ -349,7 +346,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             leftRightIndexPairs.sort(Comparator.comparing(tuple2 -> (leftSize+tuple2.getSecond()) % leftSize));
         }
 
-        List<IJSONValue> deltas = new ArrayList<>();
+        List<IJSONValue> deltas = new SimpleTypedList<>();
         Integer thisIndex, otherIndex;
         IJSONValue thisValue, otherValue;
         for (Tuple2<Integer, Integer> indexPair : leftRightIndexPairs) {
@@ -394,7 +391,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         return deltas.isEmpty() ? EMPTY : new JSONArray(nameComparator, deltas.toArray(new IJSONValue[deltas.size()]));
     }
 
-    private boolean getIndexPair(Tuple3<Integer, Integer, List<Integer>> tuple3, List<Tuple2<Integer, Integer>> leftRightIndexPairs, Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
+    private static boolean getIndexPair(Tuple3<Integer, Integer, List<Integer>> tuple3, List<Tuple2<Integer, Integer>> leftRightIndexPairs, Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
         Integer leftIndex = tuple3.getSecond();
         Integer rightIndex = tuple3.getThird().get(0);
         if(leftSignaturesAll[leftIndex]!=null && rightSignaturesAll[rightIndex]!=null){
@@ -408,7 +405,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         return false;
     }
 
-    private void findDifferences(Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
+    private static void findDifferences(Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
         int leftSize = leftSignaturesAll.length;
         int rightSize = rightSignaturesAll.length;
         for (int i = 0; i < leftSize; i++) {
@@ -425,7 +422,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 Set<Integer> differences = SetHelper.symmetricDifference(leftSignatures, rightSignatures);
                 int differenceSize = differences.size();
                 if(!leastDifferences.containsKey(i)) {
-                    leastDifferences.put(i, Tuple.create(differenceSize, i, new ArrayList<>()));
+                    leastDifferences.put(i, Tuple.create(differenceSize, i, new SimpleTypedList<>()));
                 }
 
                 Tuple3<Integer, Integer, List<Integer>> tuple3 = leastDifferences.get(i);
@@ -524,16 +521,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     @Override
     public <T> T[] toArray(T[] a) {
-        List<Object> objects = _getObjects();
-        int size = objects.size();
-        if(a == null || a.length < size) {
-            return (T[]) ArrayHelper.create(a.getClass().getComponentType(), size, i -> objects.get(i));
-        } else {
-            //When the given array is bigger, then implements as ArrayList.toArray(T[] a) by setting remaining elments to be nulls
-            //Is that reasonable?
-            ArrayHelper.setAll(a, i -> a[i] = (i<size) ? (T) values[i] : null);
-            return a;
-        }
+        return _getObjects().toArray(a);
     }
 
     @Override

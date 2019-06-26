@@ -1,11 +1,11 @@
 package JsonTuples;
 
+import io.github.cruisoring.Range;
 import io.github.cruisoring.Revokable;
 import io.github.cruisoring.logger.LogLevel;
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.logger.Measurement;
 import io.github.cruisoring.utility.ResourceHelper;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -111,8 +111,7 @@ public class ParserTest {
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
         }
 //        Logger.V(sortedString);
-        Measurement.printMeasurementSummaries(LogLevel.info);
-        Measurement.clear();
+        Measurement.purge(LogLevel.info);
     }
 
     @Test
@@ -159,28 +158,18 @@ public class ParserTest {
                     () -> result.getSorted(Comparator.naturalOrder()));
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
         }
-        Map<String, String> performanceSummary = Measurement.getAllSummary();
-        performanceSummary.values().forEach(v -> Logger.I("%s", v));
-        Measurement.clear();
+        Measurement.purge(LogLevel.warning);
     }
 
-    @Test @Ignore
-    public void test185MJson() {
-        String jsonText = ResourceHelper.getTextFromResourceFile("c:/temp/citylots.json");
+    @Test
+    public void test181MJson() {
+        String jsonText = Logger.M(Measurement.start("Load JSON as String"), () -> ResourceHelper.getTextFromResourceFile("c:/temp/citylots.json"));
         int jsonTextLength = jsonText.length();
 
         String sortedString = null;
-        for (int i = 0; i < 1; i++) {
-            JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
-                    () -> JSONObject.parse(jsonText));
-            int leafCount = result.getLeafCount();
-//            IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject with %d leaf nodes", leafCount),
-//                    () -> result.getSorted(Comparator.naturalOrder()));
-//            sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
-        }
-        Map<String, String> performanceSummary = Measurement.getAllSummary();
-        performanceSummary.values().forEach(v -> Logger.I("%s", v));
-        Measurement.clear();
+        JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength / 1024),
+                () -> JSONObject.parse(jsonText));
+        Measurement.purge(LogLevel.warning);
     }
 
     @Test
@@ -266,34 +255,63 @@ public class ParserTest {
 
     @Test
     public void testLogging_problemTobeHighlighted() {
-        String text = "{\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90},\"name\":\"test name\",\"id\":123456,\"isActive\":true,\"class\":\"7A\"}";
-        JSONObject object = checkNotNull(JSONObject.parse(text), "Failed to parse JSON text with sound syntax");
-        assertLogging(() -> Parser.parse(text.substring(0, 9) + "\"" + text.substring(9)),
-                "two JSONStrings must be seperated by a control char", "{\"address[9]>>>\"\"<<<[10]:null,\"scores\":{");
-        assertLogging(() -> Parser.parse(text.substring(0, 15) + "," + text.substring(15)),
-                "(Cannot parse \"\" as a JSONValue)",
-                "{\"address\":null[15]>>>,,<<<[16]\"scores\":{\"English\"");
-        assertLogging(() -> Parser.parse(text.substring(0, 24) + ":" + text.substring(24)),
-                "Fail to enclose \"\" with quotation marks before ':'",
-                "\"scores\"[24]>>>::<<<[25]{");
-        assertLogging(() -> Parser.parse(text.substring(0, 25) + "," + text.substring(25)),
-                "\"scores\"[24]>>>:,<<<[25]{");
-        assertLogging(() -> Parser.parse(text.substring(0, 81) + "," + text.substring(81)),
-                "Cannot parse \"\" as a JSONValue",
-                "\"test name\"[81]>>>,,<<<[82]\"id\"");
-        assertLogging(() -> Parser.parse(text.substring(0, 92) + "a" + text.substring(92)),
-                "Cannot parse \"12345a6\" as a JSONValue",
-                "\"id\"[86]>>>:12345a6,<<<[94]\"isActive\":true");
-        assertLogging(() -> Parser.parse(text.substring(0, 109) + "s" + text.substring(109)),
-                "Cannot parse \"trues\" as a JSONValue",
-                "\"isActive\"[104]>>>:trues,<<<[110]\"class\"");
-        assertLogging(() -> Parser.parse(text.substring(0, 117) + text.substring(118)),
-                "two JSONStrings must be seperated by a control char.",
-                ",\"class[116]>>>\"\"<<<[117]7A\"}");
-        assertLogging(() -> Parser.parse(text+"]"),
-                "IllegalStateException: Missing '[' to pair ']'",
-                "\"isActive\":true,\"class\":\"7A\"[122]>>>}]<<<[123]");
+        try (
+                Revokable<Integer> revokable = Revokable.register(() -> Parser.JSON_TEXT_LENGTH_TO_LOG, l -> Parser.JSON_TEXT_LENGTH_TO_LOG = l, 100);
+        ) {
+            String text = "{\"address\":null,\"scores\":{\"English\":80,\"Science\":88,\"Math\":90},\"name\":\"test name\",\"id\":123456,\"isActive\":true,\"class\":\"7A\"}";
+            JSONObject object = checkNotNull(JSONObject.parse(text), "Failed to parse JSON text with sound syntax");
+            assertLogging(() -> Parser.parse(text.substring(0, 9) + "\"" + text.substring(9)),
+                    "two JSONStrings must be seperated by a control char", "{\"address[9]>>>\"\"<<<[10]:null,\"scores\":{");
+            assertLogging(() -> Parser.parse(text.substring(0, 15) + "," + text.substring(15)),
+                    "(Cannot parse \"\" as a JSONValue)",
+                    "{\"address\":null[15]>>>,,<<<[16]\"scores\":{\"English\"");
+            assertLogging(() -> Parser.parse(text.substring(0, 24) + ":" + text.substring(24)),
+                    "Fail to enclose \"\" with quotation marks before ':'",
+                    "\"scores\"[24]>>>::<<<[25]{");
+            assertLogging(() -> Parser.parse(text.substring(0, 25) + "," + text.substring(25)),
+                    "\"scores\"[24]>>>:,<<<[25]{");
+            assertLogging(() -> Parser.parse(text.substring(0, 81) + "," + text.substring(81)),
+                    "Cannot parse \"\" as a JSONValue",
+                    "\"test name\"[81]>>>,,<<<[82]\"id\"");
+            assertLogging(() -> Parser.parse(text.substring(0, 92) + "a" + text.substring(92)),
+                    "Cannot parse \"12345a6\" as a JSONValue",
+                    "\"id\"[86]>>>:12345a6,<<<[94]\"isActive\":true");
+            assertLogging(() -> Parser.parse(text.substring(0, 109) + "s" + text.substring(109)),
+                    "Cannot parse \"trues\" as a JSONValue",
+                    "\"isActive\"[104]>>>:trues,<<<[110]\"class\"");
+            assertLogging(() -> Parser.parse(text.substring(0, 117) + text.substring(118)),
+                    "two JSONStrings must be seperated by a control char.",
+                    ",\"class[116]>>>\"\"<<<[117]7A\"}");
+            assertLogging(() -> Parser.parse(text + "]"),
+                    "IllegalStateException: Missing '[' to pair ']'",
+                    "\"isActive\":true,\"class\":\"7A\"[122]>>>}]<<<[123]");
 
-        //assertLogging(() -> Parser.parse(text.substring(0, 10) + "a" + text.substring(10)));    //The extra 'a' between '"' and ':' is ignored: "address"a:null
+            //assertLogging(() -> Parser.parse(text.substring(0, 10) + "a" + text.substring(10)));    //The extra 'a' between '"' and ':' is ignored: "address"a:null
+        }
+    }
+
+    @Test
+    public void testParseRange() {
+        final String jsonText = "[{\"id\":222, \"name\":\"Alice\", \"grade\":9},null,false,{\"id\":333, \"name\":\"Grace\", \"grade\":7} ]";
+        assertEquals("{\"id\":222,\"name\":\"Alice\",\"grade\":9}",
+                Parser.parseRange(jsonText, 1, 38).toJSONString(null));
+        assertEquals("null",
+                Parser.parseRange(jsonText, 39, 43).toJSONString());
+        assertEquals(JSONValue.False,
+                Parser.parseRange(Comparator.naturalOrder(), jsonText, Range.open(43, 49)));
+        assertEquals("{\"id\":333,\"grade\":7,\"name\":\"Grace\"}",
+                Parser.parseRange(new OrdinalComparator<>("id", "grade"), jsonText, Range.open(49, jsonText.length() - 1)).toJSONString(null));
+    }
+
+    @Test
+    public void validateLenientParsing_withUnexpectedChars_ignoreIfNoConfusion() {
+        assertEquals("{\"id\":222,\"name\":\"Alice\"}",
+                Parser.parse("{\"id\"XXX:222, \"name\":\"Alice\"}").toJSONString(null));
+        assertEquals("{\"id\":222,\"name\":\"Alice\"}",
+                Parser.parse("XXX{\"id\":222, \"name\":\"Alice\"}XXX").toJSONString(null));
+        assertEquals("{\"id\":222,\"name\":\"Alice\"}",
+                Parser.parse("{XXX\"id\":222, XXX \"name\":\"Alice\"}").toJSONString(null));
+        assertEquals("{\"id\":222,\"name\":\"Alice\"}",
+                Parser.parse("{\"id\":222,  \"name\":\"Alice\"}, null").toJSONString(null));
     }
 }

@@ -1,6 +1,11 @@
 package JsonTuples;
 
-import java.util.*;
+import io.github.cruisoring.utility.SimpleTypedList;
+
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static io.github.cruisoring.Asserts.checkNoneNulls;
@@ -13,7 +18,7 @@ import static io.github.cruisoring.Asserts.checkNoneNulls;
 public class OrdinalComparator<T> implements Comparator<T> {
 
     final Map<T, Integer> orders = new HashMap<>();
-    final List<T> orderedKeys = new ArrayList<>();
+    final List<T> orderedKeys = new SimpleTypedList<>();
 
     /**
      * Construct an {@code OrdinalComparator} with known options in order, which would used to maintain the orders when sorting an Array.

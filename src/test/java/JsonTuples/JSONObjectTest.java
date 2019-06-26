@@ -9,7 +9,6 @@ import io.github.cruisoring.utility.ArrayHelper;
 import io.github.cruisoring.utility.DateTimeHelper;
 import io.github.cruisoring.utility.ResourceHelper;
 import io.github.cruisoring.utility.SetHelper;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
@@ -314,17 +313,6 @@ public class JSONObjectTest {
                 signature2.contains(sortedScores.hashCode()));
     }
 
-    @Test @Ignore
-    public void compareBig(){
-        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
-        String modified = ResourceHelper.getTextFromResourceFile("c:\\temp\\modified.json");
-
-        IJSONValue obj1 = Parser.parse(jsonText);
-        IJSONValue obj2 = Parser.parse(modified);
-        IJSONValue delta = obj1.deltaWith(obj2, "");
-        assertAllNotNull(delta);
-    }
-
     @Test
     public void testDeltaWith_ofLargeObjects() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
@@ -348,7 +336,7 @@ public class JSONObjectTest {
                         Logger.M(Measurement.start("save modified JSON"), () ->ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), "modified.json")));
 
                 IJSONValue delta = Logger.M(Measurement.start("deltaWith() between Object with %d leafs and another with %d leafs", originalLeafCount, modifiedLeafCount),
-                        () ->original.deltaWith(modifiedObject));
+                        () -> original.deltaWith(modifiedObject, "pos"));
                 assertNotNull(delta, "Failed to get result.");
                 String deltaString = delta.toString();
                 Matcher matcher = Pattern.compile("changedValue\\d{3}").matcher(deltaString);
@@ -357,16 +345,13 @@ public class JSONObjectTest {
                     count++;
                 }
 
-                if(count != changes){
-                    String timeStamp = DateTimeHelper.asString(LocalDateTime.now(), "MMddHHmmss");
-                    String modifedFile = ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), String.format("modified%s.json", timeStamp));
-                    String deltaFile = ResourceHelper.saveTextToTargetFile(delta.toString(), String.format("delta%s.json", timeStamp));
-                    Logger.W("There are %d changed values found, the modified file is saved as %s, and delta is saved as %s.", count, modifedFile, deltaFile);
-                }
+                String timeStamp = DateTimeHelper.asString(LocalDateTime.now(), "MMddHHmmss");
+                String modifedFile = ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), String.format("modified%s.json", timeStamp));
+                String deltaFile = ResourceHelper.saveTextToTargetFile(delta.toString(), String.format("delta%s.json", timeStamp));
+                Logger.I("There are %d changed values found, the modified file is saved as %s, and delta is saved as %s.", count, modifedFile, deltaFile);
             }
         }finally {
-            Measurement.printMeasurementSummaries(LogLevel.info);
-            Measurement.clear();
+            Measurement.purge(LogLevel.warning);
         }
     }
 
@@ -391,9 +376,14 @@ public class JSONObjectTest {
             }
 
             Object child = list.get(random.nextInt(size));
-            if(child instanceof List || child instanceof Map) {
+            if (child == null) {
+                list.remove(child);
+                list.add(newValue);
+                Logger.V("%s of List is replaced by %s", "null", newValue);
+                return true;
+            } else if (child instanceof List || child instanceof Map) {
                 return replaceAnyLeafValue(child, newValue, random);
-            } else if (child.toString().startsWith("changedValue")) {
+            } else if (child.toString().contains("changedValue")) {
                 return false;
             } else {
                 list.remove(child);
@@ -402,24 +392,32 @@ public class JSONObjectTest {
                 return true;
             }
         } else if (object instanceof Map) {
-            Map map = (Map)object;
-            int size = map.size();
-            if(size == 0){
-                return false;
-            }
+            try {
+                Map map = (Map) object;
+                int size = map.size();
+                if (size == 0) {
+                    return false;
+                }
 
-            Object[] keys = map.keySet().toArray();
-            Object key = keys[random.nextInt(keys.length)];
-            Object value = map.get(key);
-            if(value instanceof List || value instanceof Map){
-                return replaceAnyLeafValue(value, newValue, random);
-            } else if (value.toString().contains("changedValue")) {
+                Object[] keys = map.keySet().toArray();
+                Object key = keys[random.nextInt(keys.length)];
+                Object value = map.get(key);
+                if (value == null) {
+                    map.put(key, newValue);
+                    Logger.V("%s: value %s is replaced by %s", key, "null", newValue);
+                    return true;
+                } else if (value instanceof List || value instanceof Map) {
+                    return replaceAnyLeafValue(value, newValue, random);
+                } else if (value != null && value.toString().contains("changedValue")) {
+                    return false;
+                } else {
+                    map.put(key, newValue);
+                    Logger.V("%s: value %s is replaced by %s", key, value, newValue);
+                    return true;
+                }
+            } catch (Exception e) {
+                Logger.D(e);
                 return false;
-            } else {
-                map.remove(key);
-                map.put(key, newValue);
-                Logger.V("%s: value %s is replaced by %s", key, value, newValue);
-                return true;
             }
         } else {
             return false;
