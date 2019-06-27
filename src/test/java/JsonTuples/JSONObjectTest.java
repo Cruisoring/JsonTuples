@@ -9,6 +9,7 @@ import io.github.cruisoring.utility.ArrayHelper;
 import io.github.cruisoring.utility.DateTimeHelper;
 import io.github.cruisoring.utility.ResourceHelper;
 import io.github.cruisoring.utility.SetHelper;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDateTime;
@@ -311,6 +312,25 @@ public class JSONObjectTest {
         assertAllTrue(signature2.size() == 7,
                 signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
                 signature2.contains(sortedScores.hashCode()));
+    }
+
+    @Test @Ignore
+    public void testDeltaWith_ofSimilarFiles(){
+        String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
+        String modifiedText = ResourceHelper.getTextFromResourceFile("c:/temp/modified.json");
+
+        JSONObject original = Logger.M(Measurement.start("Parse JSON of %dk", jsonText.length()/1024), () -> JSONObject.parse(jsonText));
+        JSONObject modified = Logger.M(Measurement.start("Parse JSON of %dk", modifiedText.length()/1024), () -> JSONObject.parse(modifiedText));
+
+        IJSONValue delta = Logger.M(Measurement.start("deltaWith()"),
+                () -> original.deltaWith(modified, "index"));
+        Matcher matcher = Pattern.compile("changedValue\\d{3}").matcher(delta.toJSONString(null));
+        int count = 0;
+        while (matcher.find()){
+            count++;
+        }
+
+        Logger.W("There are %d differences", count);
     }
 
     @Test

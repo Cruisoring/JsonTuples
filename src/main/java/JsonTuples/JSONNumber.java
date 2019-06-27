@@ -36,10 +36,7 @@ public class JSONNumber extends JSONValue<Number> {
     public static JSONNumber parseNumber(String valueString) {
         valueString = valueString.trim();
 
-//        if(validateJSONNumber) {
-//            //Enforce the validation by setting validateJSONNumber to true
-//            assertTrue(JSON_NUMBER_PATTERN.matcher(valueString).matches(), "Not of number pattern: %s", valueString);
-//        }
+//        assertTrue(JSON_NUMBER_PATTERN.matcher(valueString).matches(), "Not of number pattern: %s", valueString);
 
         //Assume the valueString represent float number if it contains '.', 'e' or 'E'
         if (valueString.contains(".") || StringUtils.containsIgnoreCase(valueString, "e")) {

@@ -2,6 +2,7 @@ package JsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.ArrayHelper;
+import io.github.cruisoring.utility.SetHelper;
 import io.github.cruisoring.utility.SimpleTypedList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -25,7 +26,6 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     public static final JSONObject EMPTY = new JSONObject();
     //Pattern of string to represent a solid JSON Object
     public static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("^\\{[\\s\\S]*?\\}$", Pattern.MULTILINE);
-    private static final Pattern LINE_STARTS = Pattern.compile("^" + SPACE, Pattern.MULTILINE);
     final Comparator<String> nameComparator;
     Map<String, NamedValue> jsonMap = null;
     Map<String, Object> objectMap = null;
@@ -80,7 +80,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     protected static NamedValue[] sorted(Comparator<String> comparator, List<IJSONable> namedValueList) {
         assertAllTrue(namedValueList != null);
 
-        NamedValue[] namedValues = (NamedValue[]) ArrayHelper.create(NamedValue.class, namedValueList.size(), i -> namedValueList.get(i));
+        NamedValue[] namedValues = (NamedValue[]) ArrayHelper.create(NamedValue.class, namedValueList.size(), namedValueList::get);
         return comparator == null ? namedValues : sorted(comparator, namedValues);
     }
 
@@ -242,7 +242,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof JSONObject) || !(obj instanceof Map)) {
+        if (!(obj instanceof JSONObject) || !(obj instanceof Map)) {
             return false;
         } else if (obj == this) {
             return true;
@@ -290,10 +290,7 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
             return JSONArray.EMPTY;
         }
 
-        Set<String> allKeys = new HashSet<String>() {{
-            addAll(keySet());
-            addAll(otherObject.keySet());
-        }};
+        Set<String> allKeys = SetHelper.union(keySet(), otherObject.keySet());
 
         if (allKeys.isEmpty()) {
             return JSONArray.EMPTY;

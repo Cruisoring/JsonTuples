@@ -31,21 +31,21 @@ public final class Parser {
     public static final String JSON_FALSE = "false";
 
     //Special keys to mark the value boundary or escaped sequences
-    final static char LEFT_BRACE = '{';
-    final static char RIGHT_BRACE = '}';
-    final static char LEFT_BRACKET = '[';
-    final static char RIGHT_BRACKET = ']';
-    final static char COMMA = ',';
-    final static char COLON = ':';
-    final static char QUOTE = '"';
-    final static char BACK_SLASH = '\\';
-    final static Set<Character> CONTROLS = SetHelper.asHashSet(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON);
+    static final char LEFT_BRACE = '{';
+    static final char RIGHT_BRACE = '}';
+    static final char LEFT_BRACKET = '[';
+    static final char RIGHT_BRACKET = ']';
+    static final char COMMA = ',';
+    static final char COLON = ':';
+    static final char QUOTE = '"';
+    static final char BACK_SLASH = '\\';
+    static final Set<Character> CONTROLS = SetHelper.asHashSet(LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON);
 
-    final static String SPACE = "  ";
-    final static String NEW_LINE = "\n";
-    final static String COMMA_NEWLINE = COMMA + NEW_LINE;
+    static final String SPACE = "  ";
+    static final String NEW_LINE = "\n";
+    static final String COMMA_NEWLINE = COMMA + NEW_LINE;
 
-    public static SupplierThrowable<Comparator<String>> defaultComparatorSupplier = () -> new OrdinalComparator<>();
+    public static SupplierThrowable<Comparator<String>> defaultComparatorSupplier = OrdinalComparator::new;
     //endregion
 
     //region Static methods
@@ -362,6 +362,7 @@ public final class Parser {
                         if (isObject) {
                             addNamedValue(lastStringValue);
                         }
+                        break;
                     default:
                         break;
                 }

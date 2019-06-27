@@ -14,7 +14,8 @@ import static io.github.cruisoring.Asserts.assertAllTrue;
  */
 public class Utilities {
 
-    //TODO: implemented as Repository once reflection method is ready
+    private Utilities(){}
+
     public static final Map<Class, Tuple2<FunctionThrowable<Object, IJSONValue>, FunctionThrowable<IJSONValue, Object>>> classConverters =
             new HashMap<>();
 
@@ -29,9 +30,9 @@ public class Utilities {
             return JSONValue.Null;
         } else if (object instanceof IJSONValue) {
             return (IJSONValue) object;
-        } else if (object.equals(true)) {
+        } else if (Objects.equals(object, true)) {
             return JSONValue.True;
-        } else if (object.equals(false)) {
+        } else if (Objects.equals(object, false)) {
             return JSONValue.False;
         } else if (object instanceof String) {
             return asJSONString(object);
@@ -62,7 +63,6 @@ public class Utilities {
      * @return JSONString to represent the String object to be converted.
      */
     protected static JSONString asJSONString(Object object) {
-//        checkWithoutNull(object);
         return new JSONString((String) object);
     }
 
@@ -73,7 +73,6 @@ public class Utilities {
      * @return JSONNumber to represent the Number object to be converted.
      */
     protected static JSONNumber asJSONNumber(Object object) {
-//        checkWithoutNull(object);
         return new JSONNumber((Number) object);
     }
 
@@ -84,8 +83,6 @@ public class Utilities {
      * @return JSONObject to represent the Map object to be converted.
      */
     protected static JSONObject asJSONObject(Object object) {
-//        checkWithoutNull(object);
-
         return asJSONObject(null, object);
     }
 
@@ -96,8 +93,6 @@ public class Utilities {
      * @return JSONObject to represent the Map object to be converted.
      */
     protected static JSONObject asJSONObject(Comparator<String> comparator, Object object) {
-//        checkWithoutNull(object);
-
         if (object instanceof JSONObject) {
             JSONObject other = (JSONObject) object;
             return other.getSorted(comparator);
@@ -124,7 +119,7 @@ public class Utilities {
 
         Object[] objects = TypeHelper.convert(array, Object[].class);
         IJSONValue[] values = Arrays.stream(objects)
-                .map(obj -> jsonify(obj))
+                .map(Utilities::jsonify)
                 .toArray(size -> new IJSONValue[size]);
         return new JSONArray(values);
     }

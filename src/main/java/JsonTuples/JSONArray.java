@@ -8,17 +8,16 @@ import io.github.cruisoring.utility.ReadOnlyList;
 import io.github.cruisoring.utility.SetHelper;
 import io.github.cruisoring.utility.SimpleTypedList;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.text.TextStringBuilder;
 
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static JsonTuples.Parser.*;
-import static io.github.cruisoring.Asserts.assertAllNotNull;
-import static io.github.cruisoring.Asserts.assertAllTrue;
+import static io.github.cruisoring.Asserts.*;
 
 /**
  * An ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]
@@ -32,9 +31,17 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     //Name of the index pair of the elements to show their deltas
     public static String defaultIndexName = "";
 
+    //region Constants
     //Predicate to evaluate the indexName of deltaWith()
-    public final static Predicate<String> includeDifferentIndexesPredicate = name -> name != null && name.contains("+");
+    public static final Predicate<String> includeDifferentIndexesPredicate = name -> name != null && name.contains("+");
 
+    public static final JSONArray EMPTY = new JSONArray();
+
+    //Pattern of string to represent a solid JSON Array
+    public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);
+    //endregion
+
+    //region Short-hand parse methods to get JSONArray from String
     /**
      * Assuming the concerned valueString is of array, parse it as a {@code JSONArray} with given nameComparator.
      *
@@ -54,12 +61,225 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
     public static JSONArray parse(String valueString) {
         return (JSONArray) Parser.parse(valueString);
     }
+    //endregion
 
-    public static final JSONArray EMPTY = new JSONArray();
+    //region static methods to assist comparing two JSONArrays
+    private static List<Tuple2<Integer, Integer>> matchElementWithIndexes(JSONArray leftArray, JSONArray rightArray) {
+        assertAllFalse(leftArray == null, rightArray == null);
 
-    //Pattern of string to represent a solid JSON Array
-    public static final Pattern JSON_ARRAY_PATTERN = Pattern.compile("^\\[[\\s\\S]*?\\]$", Pattern.MULTILINE);
+        final boolean leftBigger = leftArray.size() >= rightArray.size();
+        final JSONArray left = leftBigger ? leftArray : rightArray;
+        final JSONArray right = leftBigger ? rightArray : leftArray;
+        final int leftSize = left.size();
+        final int rightSize = right.size();
 
+        //Keep the signatures of all elements of both JSONArray and also used as flags of element maching status,
+        // nulls means the element at that position has been matched with element of the other JSONArray
+        Tuple3<Set<Integer>[], Set<Integer>[], SimpleTypedList<Tuple2<Integer, Integer>>> signatures = getPairsOfSameSignatures(left, right);
+        final Set<Integer>[] leftSignaturesAll = signatures.getFirst();
+        final Set<Integer>[] rightSignaturesAll = signatures.getSecond();
+        SimpleTypedList<Tuple2<Integer, Integer>> leftRightIndexPairs = signatures.getThird();
+
+        //leastDifferences, key=leftIndex, value=[distanceToRight, leftIndex, all rightIndexes with this distance]
+        final Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences = new HashMap<>();
+        //differencesToRights: key=rightIndex, value= leftIndexes has leastDifferences with this rightIndex
+        final Map<Integer, List<Integer>> differencesToRights = new LinkedHashMap<>();
+        Comparator<Tuple3<Integer, Integer, List<Integer>>> _comparator = Comparator.comparing(Tuple3::getFirst);
+        _comparator = _comparator.thenComparing(tuple -> tuple.getThird().size());
+        do {
+            int lastSize = leftRightIndexPairs.size();
+            Integer[] rightIndexes = findDifferences(leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights);
+
+            //Get the pairs whose element has only one matching element
+            for (Integer rightIndex : rightIndexes) {
+                List<Integer> leftIndexes = differencesToRights.get(rightIndex);
+                if(leftIndexes.size()==1 && leastDifferences.get(leftIndexes.get(0)).getThird().size()==1) {
+                    addIndexPair(leftIndexes.get(0), rightIndex,
+                            leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights);
+                }
+            }
+
+            Tuple3<Integer, Integer, List<Integer>>[] bestMatches = leastDifferences.values().stream()
+                    .sorted(_comparator)
+                    .toArray(size -> new Tuple3[size]);
+
+            for (int i = 0; i < bestMatches.length; i++) {
+                Tuple3<Integer, Integer, List<Integer>> match = bestMatches[i];
+                if(match.getThird().size() > 1 && addIndexPair(match.getSecond(), match.getThird().get(0),
+                        leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights)){
+                    bestMatches[i] = null;
+                }
+            }
+
+            boolean rightAllNull = Arrays.stream(rightSignaturesAll).allMatch(Objects::isNull);
+            boolean leftAllNull = Arrays.stream(leftSignaturesAll).allMatch(Objects::isNull);
+            if(leftAllNull && rightAllNull) {
+                //Stop matching attempts when there is no new pair unmatched
+                break;
+            } else if (rightAllNull) {
+                IntStream.range(0, leftSize).filter(i -> leftSignaturesAll[i] != null).forEach(
+                        i -> {
+                            leftRightIndexPairs.add(Tuple.create(i, -1));
+                            leftSignaturesAll[i] = null;
+                        }
+                );
+            } else if (leftAllNull) {   //Shall never happen?!
+                throw new IllegalStateException("Right side shall be all nulls first!");
+            } else if (lastSize == leftRightIndexPairs.size()){
+                List<Map.Entry<Integer, List<Integer>>> rightEntriesByUse = differencesToRights.entrySet().stream()
+                        .filter(entry -> !entry.getValue().isEmpty())
+                        .sorted(Comparator.comparing(entry -> entry.getValue().size()))
+                        .collect(Collectors.toList());
+
+                final int usedByLeft = rightEntriesByUse.get(0).getValue().size();
+                Set<Integer> leastUsedRightIndexes = rightEntriesByUse.stream()
+                        .filter(entry -> entry.getValue().size() == usedByLeft)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toSet());
+
+                List<Tuple3<Integer, Integer, List<Integer>>> bestMatchesSortedList = Arrays.stream(bestMatches)
+                        .filter(Objects::nonNull)
+                        .sorted(Comparator.comparing(Tuple3::getFirst))
+                        .collect(Collectors.toList());
+
+                for (int i = 0; i < bestMatchesSortedList.size(); i++) {
+                    Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatchesSortedList.get(i);
+                    Set<Integer> acceptableRightIndexes = SetHelper.intersection(leastUsedRightIndexes, SetHelper.asSet(tuple3.getThird()));
+                    if(!acceptableRightIndexes.isEmpty()) {
+                        Iterator<Integer> iterator = acceptableRightIndexes.iterator();
+                        Integer rightIndex = iterator.next();
+                        if(addIndexPair(tuple3.getSecond(), rightIndex, leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights)) {
+                            break;
+                        }
+                    }
+                }
+
+                assertFalse(lastSize == leftRightIndexPairs.size(), "No right Index would least references found in this round.");
+            }
+
+            leastDifferences.clear();
+            differencesToRights.clear();
+        } while(true);
+
+        assertAllTrue(leftRightIndexPairs.size() == leftSize,
+                Arrays.stream(rightSignaturesAll).allMatch(Objects::isNull),
+                Arrays.stream(leftSignaturesAll).allMatch(Objects::isNull));
+
+        if(leftBigger) {
+            leftRightIndexPairs.sort(Comparator.comparing(Tuple2::getFirst));
+            return leftRightIndexPairs;
+        }
+
+        Tuple2<Integer, Integer>[] reordered = leftRightIndexPairs.stream()
+                .sorted(Comparator.comparing(Tuple2::getFirst))
+                .map(tuple2 -> Tuple.create(tuple2.getSecond(), tuple2.getFirst()))
+                .sorted(Comparator.comparing(tuple2 -> (rightSize+leftSize+tuple2.getFirst()) % (rightSize+leftSize)))
+                .toArray(size -> new Tuple2[size]);
+        return new SimpleTypedList<>(reordered);
+    }
+
+    private static Tuple3<Set<Integer>[], Set<Integer>[], SimpleTypedList<Tuple2<Integer, Integer>>> getPairsOfSameSignatures(JSONArray left, JSONArray right) {
+        assertAllNotNull(left, right);
+
+        final int leftSize = left.size();
+        final int rightSize = right.size();
+        final Set<Integer>[] leftSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, leftSize, i -> left.values[i].getSignatures());
+        final Set<Integer>[] rightSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, rightSize, i -> right.values[i].getSignatures());
+
+        SimpleTypedList<Tuple2<Integer, Integer>> leftRightIndexPairs = new SimpleTypedList<>();
+
+        //Find the pairs with identical signatures
+        for (int i = 0; i < leftSize; i++) {
+            int leftHashcode = left.values[i].hashCode();
+            Set<Integer> leftSignatures = leftSignaturesAll[i];
+            for (int j = 0; j < rightSize; j++) {
+                if(leftHashcode == right.values[j].hashCode()){
+                    Set<Integer> rightSignatures = rightSignaturesAll[j];
+                    if( rightSignatures != null && SetHelper.isSameAs(leftSignatures, rightSignatures)) {
+                        leftSignaturesAll[i] = null;
+                        rightSignaturesAll[j] = null;
+                        leftRightIndexPairs.add(Tuple.create(i, j));
+                        break;
+                    }
+                }
+            }
+        }
+        return Tuple.create(leftSignaturesAll, rightSignaturesAll, leftRightIndexPairs);
+    }
+
+    private static Tuple3<Comparator<String>, JSONArray, JSONArray> getSortedWithSameComparotor(JSONArray array1, JSONArray array2){
+        assertAllNotNull(array1, array2);
+
+        //Sort both JSONArrays with the same Comparator
+        if(array1.nameComparator == null && array2.nameComparator == null){
+            Comparator<String> comparator = new OrdinalComparator<>();
+            return Tuple.create(comparator, array1.getSorted(comparator), array2.getSorted(comparator));
+        } else if (array1.nameComparator == null) {
+            Comparator<String> comparator = array2.nameComparator;
+            return Tuple.create(comparator, array1.getSorted(comparator), array2);
+        } else {
+            Comparator<String> comparator = array1.nameComparator;
+            return Tuple.create(comparator, array1, array2.getSorted(comparator));
+        }
+    }
+
+    private static boolean addIndexPair(Integer leftIndex, Integer rightIndex, List<Tuple2<Integer, Integer>> leftRightIndexPairs, Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, List<Integer>> differencesToRights) {
+        if(leftSignaturesAll[leftIndex]!=null && rightSignaturesAll[rightIndex]!=null){
+            leftRightIndexPairs.add(Tuple.create(leftIndex, rightIndex));
+            leftSignaturesAll[leftIndex] = null;
+            rightSignaturesAll[rightIndex] = null;
+            leastDifferences.remove(leftIndex);
+            differencesToRights.remove(rightIndex);
+            return true;
+        }
+        return false;
+    }
+
+    private static Integer[] findDifferences(Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll,
+                                             Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, List<Integer>> differencesToRights) {
+        int leftSize = leftSignaturesAll.length;
+        int rightSize = rightSignaturesAll.length;
+        for (int i = 0; i < leftSize; i++) {
+            Set<Integer> leftSignatures = leftSignaturesAll[i];
+            if(leftSignatures != null) {
+                for (int j = 0; j < rightSize; j++) {
+                    Set<Integer> rightSignatures = rightSignaturesAll[j];
+                    if (rightSignatures != null) {
+                        Set<Integer> differences = SetHelper.symmetricDifference(leftSignatures, rightSignatures);
+                        int differenceSize = differences.size();
+                        if (!leastDifferences.containsKey(i)) {
+                            leastDifferences.put(i, Tuple.create(differenceSize, i, new SimpleTypedList<>()));
+                        }
+
+                        Tuple3<Integer, Integer, List<Integer>> tuple3 = leastDifferences.get(i);
+                        Integer difSize = tuple3.getFirst();
+                        if (difSize < differenceSize) {
+                            continue;
+                        }
+
+                        List<Integer> list = tuple3.getThird();
+                        if (difSize > differenceSize) {
+                            for (Integer rIndex : list) {
+                                differencesToRights.get(rIndex).remove((Integer)i);
+                            }
+                            list.clear();
+                            leastDifferences.put(i, Tuple.create(differenceSize, i, list));
+                        }
+                        list.add(j);
+
+                        if (!differencesToRights.containsKey(j)) {
+                            differencesToRights.put(j, new SimpleTypedList<>());
+                        }
+                        differencesToRights.get(j).add(i);
+                    }
+                }
+            }
+        }
+        return differencesToRights.keySet().toArray(new Integer[0]);
+    }
+    //endregion
+
+    //region Instance fields and constructors
     // the Comparator<String> used by this {@code JSONArray} to sort its children JSONObjects.
     final Comparator<String> nameComparator;
 
@@ -79,6 +299,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         super(IJSONValue.class, values);
         nameComparator = comparator;
     }
+    //endregion
 
     /**
      * Get the JAVA array represented by this {@code IJSONValue}
@@ -190,8 +411,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         return new JSONArray(comparator, sorted);
     }
 
-    @Override
-    public IJSONValue deltaWith(IJSONValue other, String indexName) {
+    private IJSONValue deltaWithOtherType(IJSONValue other) {
         if (other == null) {
             return new JSONArray(this, JSONValue.MISSING);
         } else if (other == this) {
@@ -199,169 +419,36 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
         } else if (!(other instanceof JSONArray)) {
             return new JSONArray(this, other);
         }
+        return null;
+    }
 
-        indexName = indexName==null ? indexName : StringEscapeUtils.unescapeJson(indexName);
-        final JSONArray otherArray = (JSONArray) other;
-        //Sort both JSONArrays with the same Comparator
-        if(this.nameComparator == null && otherArray.nameComparator == null){
-            Comparator<String> comparator = new OrdinalComparator<>();
-            return getSorted(comparator).deltaWith(otherArray.getSorted(comparator), indexName);
-        } else if (this.nameComparator == null) {
-            return getSorted(otherArray.nameComparator).deltaWith(otherArray, indexName);
-        } else if (this.nameComparator != otherArray.nameComparator){
-            return deltaWith(otherArray.getSorted(this.nameComparator), indexName);
+    @Override
+    public IJSONValue deltaWith(IJSONValue other, String indexName) {
+        IJSONValue result = deltaWithOtherType(other);
+        if(result != null) {
+            return result;
         }
+
+        Tuple3<Comparator<String>, JSONArray, JSONArray> sortedArrays = getSortedWithSameComparotor(this, (JSONArray) other);
+        final Comparator<String> sharedNameComparator = sortedArrays.getFirst();
+        final JSONArray left = sortedArrays.getSecond();
+        final JSONArray right = sortedArrays.getThird();
 
         if (indexName == null) {
-            return asIndexedObject().deltaWith(otherArray.asIndexedObject(), indexName);
+            return left.asIndexedObject().deltaWith(right.asIndexedObject(), indexName);
         }
 
-        final int leftSize, rightSize;
-        final IJSONValue[] leftValues, rightValues;
-        final int thisSize = values.length;
-        final int otherSize = otherArray.size();
-        final boolean thisBigger = thisSize >= otherSize;
-
-        if(thisBigger){
-            leftSize = thisSize;
-            rightSize = otherSize;
-            leftValues = this.values;
-            rightValues = otherArray.values;
-        } else {
-            leftSize = otherSize;
-            rightSize = thisSize;
-            leftValues = otherArray.values;
-            rightValues = this.values;
-        }
-
-        final Set<Integer>[] leftSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, leftSize, i -> leftValues[i].getSignatures());
-        final Set<Integer>[] rightSignaturesAll = (Set<Integer>[]) ArrayHelper.create(Set.class, rightSize, i -> rightValues[i].getSignatures());
-
-        List<Tuple2<Integer, Integer>> leftRightIndexPairs = new SimpleTypedList<>();
-        Comparator<Tuple3<Integer, Integer, List<Integer>>> _comparator = Comparator.comparing(tuple -> tuple.getFirst());
-        _comparator = _comparator.thenComparing(tuple -> tuple.getThird().size());
-
-        //Find the pairs with identical signatures
-        for (int i = 0; i < leftSize; i++) {
-            int lHashcode = leftValues[i].hashCode();
-            for (int j = 0; j < rightSize; j++) {
-                if(rightSignaturesAll[j] != null && lHashcode == rightValues[j].hashCode()
-                        && SetHelper.symmetricDifference(leftSignaturesAll[i], rightSignaturesAll[j]).isEmpty()) {
-                    leftSignaturesAll[i] = null;
-                    rightSignaturesAll[j] = null;
-                    leftRightIndexPairs.add(Tuple.create(i, j));
-                    break;
-                }
-            }
-        }
-
-        final Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences = new HashMap<>();
-        final Map<Integer, Set<Integer>> differencesToRights = new LinkedHashMap<>();
-        do {
-            int lastSize = leftRightIndexPairs.size();
-            findDifferences(leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights);
-
-            Integer[] rightIndexes = differencesToRights.keySet().toArray(new Integer[0]);
-            for (Integer rightIndex : rightIndexes) {
-                Set<Integer> leftIndexes = differencesToRights.get(rightIndex);
-                if(leftIndexes.size()==1) {
-                    Integer leftIndex = leftIndexes.toArray(new Integer[1])[0];
-                    Tuple3<Integer, Integer, List<Integer>> tuple3 = leastDifferences.get(leftIndex);
-                    if(tuple3.getThird().size()==1) {
-                        getIndexPair(tuple3, leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights);
-                    }
-                }
-            }
-
-            Tuple3<Integer, Integer, List<Integer>>[] bestMatches = leastDifferences.values().stream()
-                    .sorted(_comparator)
-                    .toArray(size -> new Tuple3[size]);
-
-            for (int i = 0; i < bestMatches.length; i++) {
-                Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatches[i];
-                if(tuple3.getThird().size() > 1){
-                    break;
-                }
-                if(getIndexPair(tuple3, leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights)){
-                    bestMatches[i] = null;
-                }
-            }
-
-            boolean rightAllNull = Arrays.stream(rightSignaturesAll).allMatch(s -> s == null);
-            boolean leftAllNull = Arrays.stream(leftSignaturesAll).allMatch(s -> s == null);
-            if(leftAllNull && rightAllNull) {
-                //Stop matching attempts when there is no new pair unmatched
-                break;
-            } else if (rightAllNull) {
-                IntStream.range(0, leftSize).filter(i -> leftSignaturesAll[i] != null).forEach(
-                        i -> {
-                            leftRightIndexPairs.add(Tuple.create(i, -1));
-                            leftSignaturesAll[i] = null;
-                        }
-                );
-            } else if (leftAllNull) {   //Shall never happen?!
-                throw new IllegalStateException("Right side shall be all nulls first!");
-            } else if (lastSize == leftRightIndexPairs.size()){
-                Set<Integer> rightIndexesWithLeastUses = new HashSet<>();
-                int minUses = leftSize+1;
-                for (Map.Entry<Integer, Set<Integer>> entry : differencesToRights.entrySet()) {
-                    int entryUsed = entry.getValue().size();
-                    if(entryUsed > minUses){
-                        continue;
-                    } else if (entryUsed < minUses) {
-                        minUses = entryUsed;
-                        rightIndexesWithLeastUses.clear();
-                    }
-
-                    rightIndexesWithLeastUses.add(entry.getKey());
-                }
-
-                Integer rightIndexWithLeastUses = null;
-                for (int i = 0; i < bestMatches.length; i++) {
-                    Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatches[i];
-                    if(tuple3 == null) {
-                        continue;
-                    }
-                    rightIndexWithLeastUses = tuple3.getThird().stream().filter(n -> rightIndexesWithLeastUses.contains(n)).findFirst().orElse(null);
-                    if(rightIndexesWithLeastUses != null && getIndexPair(tuple3, leftRightIndexPairs, leftSignaturesAll, rightSignaturesAll, leastDifferences, differencesToRights)){
-                        bestMatches[i] = null;
-                        break;
-                    }
-                }
-
-                assertAllNotNull(rightIndexesWithLeastUses);
-            }
-
-            leastDifferences.clear();
-            differencesToRights.clear();
-        } while(true);
-
-        assertAllTrue(leftRightIndexPairs.size() == leftSize,
-                Arrays.stream(rightSignaturesAll).allMatch(s -> s == null),
-                Arrays.stream(leftSignaturesAll).allMatch(s -> s == null));
-
-        if(thisBigger) {
-            leftRightIndexPairs.sort(Comparator.comparing(tuple2 -> tuple2.getFirst()));
-        } else {
-            leftRightIndexPairs.sort(Comparator.comparing(tuple2 -> (leftSize+tuple2.getSecond()) % leftSize));
-        }
+        List<Tuple2<Integer, Integer>> leftRightIndexPairs = matchElementWithIndexes(left, right);
 
         List<IJSONValue> deltas = new SimpleTypedList<>();
         Integer thisIndex, otherIndex;
         IJSONValue thisValue, otherValue;
         for (Tuple2<Integer, Integer> indexPair : leftRightIndexPairs) {
-            if(thisBigger){
-                thisIndex = indexPair.getFirst();
-                thisValue = this.values[thisIndex];
-                otherIndex = indexPair.getSecond();
-                otherValue = otherIndex < 0 ? JSONValue.Null : otherArray.getValue(otherIndex);
-            } else {
-                thisIndex = indexPair.getSecond();
-                thisValue = thisIndex < 0 ? JSONValue.Null : this.values[thisIndex];
-                otherIndex = indexPair.getFirst();
-                otherValue = otherArray.getValue(otherIndex);
-            }
-            IJSONValue delta = thisValue.deltaWith(otherValue, indexName).getSorted(nameComparator);
+            thisIndex = indexPair.getFirst();
+            thisValue = thisIndex < 0 ? JSONValue.Null : left.values[thisIndex];
+            otherIndex = indexPair.getSecond();
+            otherValue = otherIndex < 0 ? JSONValue.Null : right.getValue(otherIndex);
+            IJSONValue delta = thisValue.deltaWith(otherValue, indexName).getSorted(sharedNameComparator);
             if(!delta.isEmpty()){
                 if(!StringUtils.isEmpty(indexName)) {
                     if(delta instanceof JSONArray){
@@ -380,7 +467,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
                 deltas.add(delta);
             } else if(includeDifferentIndexesPredicate.test(indexName) && thisIndex != otherIndex){
-                JSONObject indexObject = JSONObject.parse(String.format("{\"%s\":[%s, %s]}",
+                JSONObject indexObject = JSONObject.parse(sharedNameComparator, String.format("{\"%s\":[%s, %s]}",
                         indexName.trim(),
                         thisIndex.toString(),
                         otherIndex.toString()));
@@ -388,67 +475,8 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             }
         }
 
-        return deltas.isEmpty() ? EMPTY : new JSONArray(nameComparator, deltas.toArray(new IJSONValue[deltas.size()]));
-    }
-
-    private static boolean getIndexPair(Tuple3<Integer, Integer, List<Integer>> tuple3, List<Tuple2<Integer, Integer>> leftRightIndexPairs, Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
-        Integer leftIndex = tuple3.getSecond();
-        Integer rightIndex = tuple3.getThird().get(0);
-        if(leftSignaturesAll[leftIndex]!=null && rightSignaturesAll[rightIndex]!=null){
-            leftRightIndexPairs.add(Tuple.create(leftIndex, rightIndex));
-            leftSignaturesAll[leftIndex] = null;
-            rightSignaturesAll[rightIndex] = null;
-            leastDifferences.remove(leftIndex);
-            differencesToRights.remove(rightIndex);
-            return true;
-        }
-        return false;
-    }
-
-    private static void findDifferences(Set<Integer>[] leftSignaturesAll, Set<Integer>[] rightSignaturesAll, Map<Integer, Tuple3<Integer, Integer, List<Integer>>> leastDifferences, Map<Integer, Set<Integer>> differencesToRights) {
-        int leftSize = leftSignaturesAll.length;
-        int rightSize = rightSignaturesAll.length;
-        for (int i = 0; i < leftSize; i++) {
-            Set<Integer> leftSignatures = leftSignaturesAll[i];
-            if(leftSignatures == null){
-                continue;
-            }
-
-            for (int j = 0; j < rightSize; j++) {
-                Set<Integer> rightSignatures = rightSignaturesAll[j];
-                if(rightSignatures == null){
-                    continue;
-                }
-                Set<Integer> differences = SetHelper.symmetricDifference(leftSignatures, rightSignatures);
-                int differenceSize = differences.size();
-                if(!leastDifferences.containsKey(i)) {
-                    leastDifferences.put(i, Tuple.create(differenceSize, i, new SimpleTypedList<>()));
-                }
-
-                Tuple3<Integer, Integer, List<Integer>> tuple3 = leastDifferences.get(i);
-                Integer difSize = tuple3.getFirst();
-                if (difSize < differenceSize){
-                    continue;
-                }
-
-                List<Integer> list = tuple3.getThird();
-                if(difSize > differenceSize){
-                    for (Integer rIndex : list) {
-                        differencesToRights.get(rIndex).remove(i);
-                    }
-                    list.clear();
-                    list.add(j);
-                    leastDifferences.put(i, Tuple.create(differenceSize, i, list));
-                } else {
-                    list.add(j);
-                }
-
-                if(!differencesToRights.containsKey(j)){
-                    differencesToRights.put(j, new HashSet());
-                }
-                differencesToRights.get(j).add(i);
-            }
-        }
+        result = deltas.isEmpty() ? EMPTY : new JSONArray(left.nameComparator, deltas.toArray(new IJSONValue[deltas.size()]));
+        return result;
     }
 
     /**
