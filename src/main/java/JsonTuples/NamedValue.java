@@ -35,7 +35,7 @@ public class NamedValue extends Tuple2<JSONString, IJSONValue>
         }
 
         String name = matcher.group(1);
-        IJSONValue value = Parser.parse(matcher.group(2));
+        IJSONValue value = Parser.parse(false, matcher.group(2));
         return new NamedValue(name, value);
     }
 

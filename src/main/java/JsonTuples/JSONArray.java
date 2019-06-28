@@ -55,11 +55,23 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
 
     /**
      * Assuming the concerned valueString is of array, parse it as a {@code JSONArray} with default nameComparator.
+     *
      * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
      * @return      a {@code JSONArray} instance from the given text.
      */
     public static JSONArray parse(String valueString) {
         return (JSONArray) Parser.parse(valueString);
+    }
+
+    /**
+     * Assuming the concerned valueString is of array, parse it as a {@code JSONArray} with default nameComparator.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param valueString   text to be parsed that shall begins with [(left bracket) and ends with ](right bracket).
+     * @return      a {@code JSONArray} instance from the given text.
+     */
+    public static JSONArray parse(boolean isStrictly, String valueString) {
+        return (JSONArray) Parser.parse(isStrictly, valueString);
     }
     //endregion
 
@@ -126,24 +138,18 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
             } else if (leftAllNull) {   //Shall never happen?!
                 throw new IllegalStateException("Right side shall be all nulls first!");
             } else if (lastSize == leftRightIndexPairs.size()){
-                List<Map.Entry<Integer, List<Integer>>> rightEntriesByUse = differencesToRights.entrySet().stream()
-                        .filter(entry -> !entry.getValue().isEmpty())
-                        .sorted(Comparator.comparing(entry -> entry.getValue().size()))
-                        .collect(Collectors.toList());
+                Map<Integer, Set<Integer>> useOfRightIndexes = differencesToRights.entrySet().stream()
+                        .collect(Collectors.groupingBy(
+                                e -> e.getValue().size(),
+                                Collectors.mapping(e -> e.getKey(), Collectors.toSet())
+                        ));
 
-                final int usedByLeft = rightEntriesByUse.get(0).getValue().size();
-                Set<Integer> leastUsedRightIndexes = rightEntriesByUse.stream()
-                        .filter(entry -> entry.getValue().size() == usedByLeft)
-                        .map(Map.Entry::getKey)
-                        .collect(Collectors.toSet());
+                Integer[] useCounts = useOfRightIndexes.keySet().toArray(new Integer[0]);
+                Arrays.sort(useCounts, Comparator.naturalOrder());
+                Set<Integer> leastUsedRightIndexes = useOfRightIndexes.get(useCounts.length == 1 ? useCounts[0] : useCounts[1]);
 
-                List<Tuple3<Integer, Integer, List<Integer>>> bestMatchesSortedList = Arrays.stream(bestMatches)
-                        .filter(Objects::nonNull)
-                        .sorted(Comparator.comparing(Tuple3::getFirst))
-                        .collect(Collectors.toList());
-
-                for (int i = 0; i < bestMatchesSortedList.size(); i++) {
-                    Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatchesSortedList.get(i);
+                for (int i = 0; i < bestMatches.length; i++) {
+                    Tuple3<Integer, Integer, List<Integer>> tuple3 = bestMatches[i];
                     Set<Integer> acceptableRightIndexes = SetHelper.intersection(leastUsedRightIndexes, SetHelper.asSet(tuple3.getThird()));
                     if(!acceptableRightIndexes.isEmpty()) {
                         Iterator<Integer> iterator = acceptableRightIndexes.iterator();

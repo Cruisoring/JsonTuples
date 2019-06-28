@@ -49,6 +49,18 @@ public class JSONObject extends Tuple<NamedValue> implements IJSONValue<NamedVal
     /**
      * Assuming the concerned valueString is of an JSON Object, parse it as a {@code JSONObject} with given nameComparator.
      *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param comparator    the name comparator used to sort the {@code IJSONValue} with fixed orders.
+     * @param valueString   text to be parsed that shall begins with {(left brace) and ends with }(right brace).
+     * @return      a {@code JSONObject} instance from the given text.
+     */
+    public static JSONObject parse(boolean isStrictly, Comparator<String> comparator, String valueString) {
+        return (JSONObject) Parser.parse(isStrictly, comparator, valueString);
+    }
+
+    /**
+     * Assuming the concerned valueString is of an JSON Object, parse it as a {@code JSONObject} with given nameComparator.
+     *
      * @param comparator    the name comparator used to sort the {@code IJSONValue} with fixed orders.
      * @param valueString   text to be parsed that shall begins with {(left brace) and ends with }(right brace).
      * @return      a {@code JSONObject} instance from the given text.

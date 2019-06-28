@@ -19,13 +19,15 @@ import static io.github.cruisoring.Asserts.*;
  * Utility to parse JSON text of either JSONArray or JSONObject based on information disclosed on <a href="http://www.json.org/">json.org</a>
  */
 public final class Parser {
+    //Specify if the default mode to parse is strictly or lenient
+    public static boolean PARSE_STRICTLY = true;
 
     public static int JSON_TEXT_LENGTH_TO_LOG = 200;
     public static final int DEFAULT_CAPCITY = 128;
     public static final int MEGABYTE = 1024 * 1024;
 
     //region static variables
-    public static final char START_JSON_SIGN = '^';
+    public static final char PARSING_BOUNDARY = '^';
     public static final String JSON_NULL = "null";
     public static final String JSON_TRUE = "true";
     public static final String JSON_FALSE = "false";
@@ -50,35 +52,28 @@ public final class Parser {
 
     //region Static methods
     /**
-     * To parse the given qualified JSON text to an {@code IJSONValue}
+     * To parse the given qualified JSON text to an {@code IJSONValue} with default Strict mode.
      *
      * @param jsonText JSON text to be parsed that represent a JSONObject or JSONArray.
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(CharSequence jsonText) {
-        Parser parser = new Parser(null, jsonText);
-
-        return parser.parse();
+        return parse(PARSE_STRICTLY, jsonText);
     }
 
     /**
-     * To parse the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order.
+     * To parse the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order, with default Strict mode.
      *
      * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
      * @param jsonText the whole JSON text to be parsed.
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parse(Comparator<String> comparator, CharSequence jsonText) {
-        if(jsonText==null){
-            throw new NullPointerException("The jsonText cannot be null");
-        }
-
-        Parser parser = new Parser(comparator, jsonText, Range.ofLength(jsonText.length()));
-        return parser.parse();
+        return parse(PARSE_STRICTLY, comparator, jsonText);
     }
 
     /**
-     * To parse a part of the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order.
+     * To parse a part of the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order, with default Strict mode.
      *
      * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
      * @param jsonText the whole JSON text to be parsed.
@@ -86,18 +81,11 @@ public final class Parser {
      * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
      */
     public static IJSONValue parseRange(Comparator<String> comparator, CharSequence jsonText, Range range) {
-        if(jsonText==null || range == null){
-            throw new NullPointerException("The jsonText and range cannot be null");
-        } else if (range.getStartInclusive() < 0 || range.getEndExclusive() > jsonText.length()) {
-            throw new IndexOutOfBoundsException();
-        }
-
-        Parser parser = new Parser(comparator, jsonText, range);
-        return parser.parse();
+        return parseRange(PARSE_STRICTLY, comparator, jsonText, range);
     }
 
     /**
-     * To parse a part of the given JSON text to an {@code IJSONValue} with original order.
+     * To parse a part of the given JSON text to an {@code IJSONValue} with original order, with default Strict mode.
      *
      * @param jsonText the whole JSON text to be parsed.
      * @param range    the {@code Range} of the concerned portion to be parsed
@@ -108,7 +96,7 @@ public final class Parser {
     }
 
     /**
-     * To parse a part of the given JSON text to an {@code IJSONValue} with original order.
+     * To parse a part of the given JSON text to an {@code IJSONValue} with original order, with default Strict mode.
      *
      * @param jsonText      the whole JSON text to be parsed.
      * @param fromInclusive the start positon of the concerned portion to be parsed
@@ -117,6 +105,81 @@ public final class Parser {
      */
     public static IJSONValue parseRange(CharSequence jsonText, int fromInclusive, int toExclusive) {
         return parseRange(null, jsonText, Range.closedOpen(fromInclusive, toExclusive));
+    }
+
+    /**
+     * To parse the given qualified JSON text to an {@code IJSONValue} by choosing if in Strict or Lenient mode.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param jsonText JSON text to be parsed that represent a JSONObject or JSONArray.
+     * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
+     */
+    public static IJSONValue parse(boolean isStrictly, CharSequence jsonText) {
+        Parser parser = new Parser(null, jsonText);
+
+        return parser.parse(isStrictly);
+    }
+
+    /**
+     * To parse the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order by choosing if in Strict or Lenient mode.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
+     * @param jsonText the whole JSON text to be parsed.
+     * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
+     */
+    public static IJSONValue parse(boolean isStrictly, Comparator<String> comparator, CharSequence jsonText) {
+        if(jsonText==null){
+            throw new NullPointerException("The jsonText cannot be null");
+        }
+
+        Parser parser = new Parser(comparator, jsonText, Range.ofLength(jsonText.length()));
+        return parser.parse(isStrictly);
+    }
+
+    /**
+     * To parse a part of the given JSON text to an {@code IJSONValue} with elements of {@code JSONObject} in fixed order by choosing if in Strict or Lenient mode.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param comparator    the name comparator used to sort the {@code NamedValues} with fixed orders.
+     * @param jsonText the whole JSON text to be parsed.
+     * @param range the {@code Range} of the concerned portion to be parsed
+     * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
+     */
+    public static IJSONValue parseRange(boolean isStrictly, Comparator<String> comparator, CharSequence jsonText, Range range) {
+        if(jsonText==null || range == null){
+            throw new NullPointerException("The jsonText and range cannot be null");
+        } else if (range.getStartInclusive() < 0 || range.getEndExclusive() > jsonText.length()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        Parser parser = new Parser(comparator, jsonText, range);
+        return parser.parse(isStrictly);
+    }
+
+    /**
+     * To parse a part of the given JSON text to an {@code IJSONValue} with original order by choosing if in Strict or Lenient mode.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param jsonText the whole JSON text to be parsed.
+     * @param range    the {@code Range} of the concerned portion to be parsed
+     * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
+     */
+    public static IJSONValue parseRange(boolean isStrictly, CharSequence jsonText, Range range) {
+        return parseRange(isStrictly, null, jsonText, range);
+    }
+
+    /**
+     * To parse a part of the given JSON text to an {@code IJSONValue} with original order by choosing if in Strict or Lenient mode.
+     *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
+     * @param jsonText      the whole JSON text to be parsed.
+     * @param fromInclusive the start positon of the concerned portion to be parsed
+     * @param toExclusive   the end positon of the concerned portion to be parsed
+     * @return An {@code IJSONValue} that is usually either JSONObject or JSONArray.
+     */
+    public static IJSONValue parseRange(boolean isStrictly, CharSequence jsonText, int fromInclusive, int toExclusive) {
+        return parseRange(isStrictly, null, jsonText, Range.closedOpen(fromInclusive, toExclusive));
     }
     //endregion
 
@@ -146,7 +209,7 @@ public final class Parser {
     //isObject acts as triple-state flag to indicate if the context under parsing is in an Object (true), an Array (false) or None of them (null).
     Boolean isObject = null;
     //lastControl keeps the last control character, '^' means there is no last control character recorded
-    char lastControl = START_JSON_SIGN;
+    char lastControl = PARSING_BOUNDARY;
     //lastControlPosition keeps the position of the last control character, -1 means there is no last control character recorded
     int lastControlPosition = -1;
     //currentStringStart and currentStringEnd are used to record the start and end quotation marks of the current JSONString
@@ -213,11 +276,12 @@ public final class Parser {
     }
 
     /**
-     * With syntax tolerance, parse the concerned CharSequence as an IJSONValue that can be either a JSONObject, JSONArray or simply JSONValue.
+     * Parse the concerned CharSequence as an IJSONValue that can be either a JSONObject, JSONArray or simply JSONValue, and also ensure only WhiteSpaces eixist between controls.
      *
+     * @param isStrictly    indicate if strict rules shall be applied for parsing
      * @return The root node of either JSONObject or JSONArray.
      */
-    IJSONValue parse() {
+    IJSONValue parse(boolean isStrictly) {
         IJSONValue value = null;
 
         //Identify the JSONString elements, save all control characters
@@ -237,19 +301,30 @@ public final class Parser {
                         isEscaped = !isEscaped;
                     }
                     if (!isEscaped) {
+                        if(isStrictly && lastStringValue != null && lastName != null) {
+                            throw new IllegalStateException("Two JSONStrings must be sperated by another control char.");
+                        }
                         isInString = !isInString;
                         value = updateState(currentChar, position);
+                    } else if (lastControl != QUOTE) {
+                        assertAllWhiteSpaces(position, endExclusive);
                     }
-                } else if (!isInString && CONTROLS.contains(currentChar)) { //Check if the position is within the scope of the current JSONString
+                } else if (!isInString && CONTROLS.contains(currentChar)) {
+                    if(isStrictly) {
+                        validateLastControl(currentChar, position);
+                    }
                     value = updateState(currentChar, position);
                 }
             }
+
             if(isInString) {
                 throw new IllegalStateException("JSONString is not enclosed properly");
             } else if (lastName != null) {
                 throw new IllegalStateException("The NamedValue is not supported by Parser.parse() which returns IJSONValue only!");
             } else if (isObject != null && nextChildIndex != 0) {
                 fail("%s is not closed properly?", isObject?"JSONObject":"JSONArray");
+            } else if(isStrictly && position == endExclusive) {
+                assertAllWhiteSpaces(lastControlPosition, endExclusive);
             }
         } catch (Exception e) {
             printError(position, e);
@@ -261,6 +336,87 @@ public final class Parser {
             return asSimpleValue(jsonRange);
         } else {
             return value;
+        }
+    }
+
+    void validateLastControl(char currentControl, int position) {
+        switch (currentControl) {
+            case LEFT_BRACE:
+                if(lastControl == LEFT_BRACKET || lastControl == PARSING_BOUNDARY){
+                } else if (lastControl == COMMA) {
+                    assertFalse(isObject, "Missing name for the current Object");
+                } else if (lastControl == COLON) {
+                    assertTrue(isObject, "COLON(':') shall be presented only in JSONObject");
+                } else {
+                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '{'.");
+                }
+                break;
+            case RIGHT_BRACE:
+                if(lastControl == LEFT_BRACE) {
+                } else if (lastControl == RIGHT_BRACE || lastControl == RIGHT_BRACKET || lastControl == QUOTE) {
+                    assertTrue(isObject, "'}' is not expected here.");
+                } else if (lastControl == COLON) {
+                    assertNotAllWhiteSpaces(lastControlPosition, position);
+                    return;
+                } else if (lastControl == QUOTE) {
+                    assertAllNull(lastStringValue, lastName);
+                } else {
+                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '}'.");
+                }
+                break;
+            case LEFT_BRACKET:
+                if(lastControl == LEFT_BRACKET || lastControl == PARSING_BOUNDARY) {
+                } else if (lastControl == COMMA) {
+                    assertFalse(isObject, "Missing name for the current Array");
+                } else if (lastControl == COLON) {
+                    assertTrue(isObject, "COLON(':') shall be presented only in JSONObject");
+                } else {
+                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '['.");
+                }
+                break;
+            case RIGHT_BRACKET:
+                if(lastControl == LEFT_BRACKET || lastControl == RIGHT_BRACE || lastControl == RIGHT_BRACKET || lastControl == QUOTE) {
+                } else if (lastControl == COMMA) {
+                    assertNotAllWhiteSpaces(lastControlPosition, position);
+                } else if (lastControl == QUOTE) {
+                    assertAllNull(lastStringValue, lastName);
+                } else {
+                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before ']'.");
+                }
+                return;
+            case COMMA:
+                assertNotNull(isObject, "COMMA(',') can only be presented in JSONArray or JSONObject.");
+                if(lastControl == QUOTE || lastControl == RIGHT_BRACKET || lastControl == RIGHT_BRACE) {
+                    assertAllWhiteSpaces(lastControlPosition, position);
+                } else {
+                    assertNotAllWhiteSpaces(lastControlPosition, position);
+                }
+                return;
+            case COLON:
+                assertNotNull(isObject, "COLON(':') shall only present in JSONObject.");
+                assertTrue(isObject, "COLON(':') shall only present in JSONObject.");
+                if(lastName != null || lastStringValue == null) {
+                    fail("Wrong state before COLON(':'): lastName=%s, lastStringValue=%s", lastName, lastStringValue);
+                }
+                break;
+        }
+        assertAllWhiteSpaces(lastControlPosition, position);
+    }
+
+    void assertNotAllWhiteSpaces(int fromExclusive, int toExclusive){
+        for (int i = fromExclusive+1; i < toExclusive; i++) {
+            if(!Character.isWhitespace(jsonContext.charAt(i))){
+                return;
+            }
+        }
+        throw new IllegalStateException("Missing value string");
+    }
+
+    void assertAllWhiteSpaces(int fromExclusive, int toExclusive){
+        for (int i = fromExclusive+1; i < toExclusive; i++) {
+            if(!Character.isWhitespace(jsonContext.charAt(i))){
+                throw new IllegalStateException("Only white spaces are expected");
+            }
         }
     }
 

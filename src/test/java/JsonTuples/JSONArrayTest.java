@@ -31,7 +31,7 @@ public class JSONArrayTest {
 
     @Test
     public void testToString() {
-        JSONArray array = JSONArray.parse("[123, \"abc\", null, {\"id\": 32, \"note\": \"none\"}, [false, \"x\"]]");
+        JSONArray array = JSONArray.parse(false, "[123, \"abc\", null, {\"id\": 32, \"note\": \"none\"}, [false, \"x\"]]");
         assertEquals("[\n" +
                 "  123,\n" +
                 "  \"abc\",\n" +
@@ -50,16 +50,16 @@ public class JSONArrayTest {
     @Test
     public void testGetLeafCount(){
         assertEquals(0, JSONArray.EMPTY.getLeafCount());
-        assertEquals(2, JSONArray.parse("[null, null]").getLeafCount());
-        assertEquals(2, JSONArray.parse("[1, null]").getLeafCount());
+        assertEquals(2, JSONArray.parse(false, "[null, null]").getLeafCount());
+        assertEquals(2, JSONArray.parse(false, "[1, null]").getLeafCount());
 
-        assertEquals(4, JSONArray.parse("[[-1, null, \"none\"], null]").getLeafCount());
-        assertEquals(10, JSONArray.parse("[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
+        assertEquals(4, JSONArray.parse(false, "[[-1, null, \"none\"], null]").getLeafCount());
+        assertEquals(10, JSONArray.parse(false, "[[-1, null, \"none\"], null, {\"a\":-1, \"b\":null, \"c\":\"none\"}]").getLeafCount());
     }
 
     @Test
     public void toJSONString() {
-        JSONArray array = JSONArray.parse("[123, \"abc\"]");
+        JSONArray array = JSONArray.parse(false, "[123, \"abc\"]");
         assertEquals("[\n  123,\n  \"abc\"\n]", array.toString());
         assertEquals("[123,\"abc\"]", array.toJSONString(null));
         assertEquals("[\n    123,\n    \"abc\"\n  ]", array.toJSONString("  "));
@@ -69,7 +69,7 @@ public class JSONArrayTest {
     String steps = ResourceHelper.getTextFromResourceFile("steps.json");
     @Test
     public void parseArray() {
-        JSONArray array = JSONArray.parse(steps);
+        JSONArray array = JSONArray.parse(false, steps);
         assertEquals(10, array.getLength());
         Logger.D(array.toString());
 
@@ -82,7 +82,7 @@ public class JSONArrayTest {
 
     @Test
     public void testMutability_tryUpdate_throwException(){
-        JSONArray array = JSONArray.parse("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        JSONArray array = JSONArray.parse(false, "[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
         assertException(() -> array.remove(null), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
         assertException(() -> array.removeAll(Arrays.asList(true, 3456)), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
         assertException(() -> array.clear(), UnsupportedOperationException.class, JSONArray.JSONArray_UNMODIFIABLE);
@@ -93,7 +93,7 @@ public class JSONArrayTest {
 
     @Test
     public void testGetObject() {
-        JSONArray array = JSONArray.parse("[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
+        JSONArray array = JSONArray.parse(false, "[33., null, false, [null, \"ok\", 123], {\"result\":\"good\"}]");
         Object[] objArray = (Object[])array.getObject();
         assertEquals(5, objArray.length);
         assertEquals(null, objArray[1]);
@@ -112,7 +112,7 @@ public class JSONArrayTest {
 
     @Test
     public void testAsMutableObject() {
-        JSONArray array = JSONArray.parse("[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
+        JSONArray array = JSONArray.parse(false, "[1, null, true, [\"abc\", {\"id\":111, \"notes\":null}], {}, 3456]");
         List list = (List)array.asMutableObject();
         assertEquals(6, list.size());
         //Update the List
@@ -170,46 +170,46 @@ public class JSONArrayTest {
     public void testDeltaWith_differentJSONValues(){
         //Compare with other types
         assertEquals("[[1,2,3],null]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(Parser.parse("null"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(Parser.parse(false, "null"), "").toJSONString(null));
         assertEquals("[1,[1,2,3]]",
-                Parser.parse("1").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                Parser.parse(false, "1").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
         assertEquals("[[1,2,3],{}]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(Parser.parse("{}"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(Parser.parse("{}"), "").toJSONString(null));
 
         //Compare with empty array
         assertEquals("[]",
-                JSONArray.EMPTY.deltaWith(JSONArray.parse("[]"), "").toJSONString(null));
+                JSONArray.EMPTY.deltaWith(JSONArray.parse(false, "[]"), "").toJSONString(null));
         assertEquals("[[1,null],[2,null],[3,null]]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(JSONArray.parse(false, "[]"), "").toJSONString(null));
         assertEquals("[[null,1],[null,2],[null,3]]",
-                JSONArray.parse("[]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                JSONArray.parse(false, "[]").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
 
         //Compare with array of same length and no similarities
         assertEquals("[[1,4],[2,5],[3,6]]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(JSONArray.parse(false, "[4, 5, 6]"), "").toJSONString(null));
         assertEquals("[[4,1],[5,2],[6,3]]",
-                JSONArray.parse("[4, 5, 6]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                JSONArray.parse(false, "[4, 5, 6]").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
 
         //Compare with array of same length and similarities
         assertEquals("[[1,4],[3,5]]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 2]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(JSONArray.parse(false, "[4, 5, 2]"), "").toJSONString(null));
         assertEquals("[]",
-                JSONArray.parse("[3,1,2]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                JSONArray.parse(false, "[3,1,2]").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
         assertEquals("[[1,2],[1,2]]",
-                JSONArray.parse("[1, 1, 1]").deltaWith(JSONArray.parse("[1, 2, 2]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 1, 1]").deltaWith(JSONArray.parse(false, "[1, 2, 2]"), "").toJSONString(null));
         assertEquals("[]",
-                JSONArray.parse("[1, 1, 1]").deltaWith(JSONArray.parse("[1, 1, 1]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 1, 1]").deltaWith(JSONArray.parse(false, "[1, 1, 1]"), "").toJSONString(null));
 
         //Compare with array of different length and no similarities
         assertEquals("[[1,4],[2,5],[3,6],[null,7]]",
-                JSONArray.parse("[1, 2, 3]").deltaWith(JSONArray.parse("[4, 5, 6, 7]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3]").deltaWith(JSONArray.parse(false, "[4, 5, 6, 7]"), "").toJSONString(null));
         assertEquals("[[4,1],[5,2],[6,3],[7,null]]",
-                JSONArray.parse("[4, 5, 6, 7]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                JSONArray.parse(false, "[4, 5, 6, 7]").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
 
         assertEquals("[[1,5],[2,6],[3,null]]",
-                JSONArray.parse("[1, 2, 3, 4]").deltaWith(JSONArray.parse("[4, 5, 6]"), "").toJSONString(null));
+                JSONArray.parse(false, "[1, 2, 3, 4]").deltaWith(JSONArray.parse(false, "[4, 5, 6]"), "").toJSONString(null));
         assertEquals("[[4,1],[5,2],[6,null]]",
-                JSONArray.parse("[3, 4, 5, 6]").deltaWith(JSONArray.parse("[1, 2, 3]"), "").toJSONString(null));
+                JSONArray.parse(false, "[3, 4, 5, 6]").deltaWith(JSONArray.parse(false, "[1, 2, 3]"), "").toJSONString(null));
     }
 
     @Test
@@ -391,7 +391,7 @@ public class JSONArrayTest {
     public void testSorting() {
         String text = "[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"}," +
                 "{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]";
-        JSONArray array1 = JSONArray.parse(null, text);
+        JSONArray array1 = JSONArray.parse(false, text);
         Logger.V("array1: %s", array1.toJSONString());
         assertEquals("[{\"name\":\"Alice\",\"id\":111,\"level\":\"dolphin\"},{\"level\":\"dolphin\",\"name\":\"Bob\",\"id\":222},{\"name\":\"Charlie\",\"level\":\"shark\",\"id\":333}]",
                 array1.toJSONString(null));
