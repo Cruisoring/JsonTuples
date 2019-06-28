@@ -346,6 +346,7 @@ public final class Parser {
         switch (currentControl) {
             case LEFT_BRACE:
                 if(lastControl == LEFT_BRACKET || lastControl == PARSING_BOUNDARY){
+                    break;
                 } else if (lastControl == COMMA) {
                     assertFalse(isObject, "Missing name for the current Object");
                 } else if (lastControl == COLON) {
@@ -356,6 +357,7 @@ public final class Parser {
                 break;
             case RIGHT_BRACE:
                 if(lastControl == LEFT_BRACE) {
+                    break;
                 } else if (lastControl == RIGHT_BRACE || lastControl == RIGHT_BRACKET || lastControl == QUOTE) {
                     assertTrue(isObject, "'}' is not expected here.");
                 } else if (lastControl == COLON) {
@@ -369,6 +371,7 @@ public final class Parser {
                 break;
             case LEFT_BRACKET:
                 if(lastControl == LEFT_BRACKET || lastControl == PARSING_BOUNDARY) {
+                    break;
                 } else if (lastControl == COMMA) {
                     assertFalse(isObject, "Missing name for the current Array");
                 } else if (lastControl == COLON) {
@@ -379,6 +382,7 @@ public final class Parser {
                 break;
             case RIGHT_BRACKET:
                 if(lastControl == LEFT_BRACKET || lastControl == RIGHT_BRACE || lastControl == RIGHT_BRACKET || lastControl == QUOTE) {
+                    break;
                 } else if (lastControl == COMMA) {
                     assertNotAllWhiteSpaces(lastControlPosition, position);
                 } else if (lastControl == QUOTE) {
@@ -510,7 +514,6 @@ public final class Parser {
                 break;
 
             case COMMA:
-                //assertNotNull(isObject, "No parent JSONObject/JSONArray?");
                 switch (lastControl) {
                     case LEFT_BRACKET:
                     case COMMA:

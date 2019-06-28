@@ -141,7 +141,7 @@ public class JSONArray extends Tuple<IJSONValue> implements IJSONValue<IJSONValu
                 Map<Integer, Set<Integer>> useOfRightIndexes = differencesToRights.entrySet().stream()
                         .collect(Collectors.groupingBy(
                                 e -> e.getValue().size(),
-                                Collectors.mapping(e -> e.getKey(), Collectors.toSet())
+                                Collectors.mapping(Map.Entry::getKey, Collectors.toSet())
                         ));
 
                 Integer[] useCounts = useOfRightIndexes.keySet().toArray(new Integer[0]);
