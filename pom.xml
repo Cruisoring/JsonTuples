@@ -4,14 +4,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>JsonTuples</groupId>
+  <groupId>jsonTuples</groupId>
   <artifactId>io.github.cruisoring</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
   <description>A Java serialization/deserialization library to convert Java Objects into JSON and back, and can be used to manipulate or compare big JAVA Array, Collection or Map efficiently.</description>
-  <url>https://github.com/Cruisoring/JsonTuples</url>
+  <url>https://github.com/Cruisoring/jsonTuples</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -66,9 +66,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/Cruisoring/JsonTuples.git</connection>
-    <developerConnection>scm:git:git@github.com:Cruisoring/JsonTuples.git</developerConnection>
-    <url>https://github.com/Cruisoring/JsonTuples.git</url>
+    <connection>scm:git:git://github.com/Cruisoring/jsonTuples.git</connection>
+    <developerConnection>scm:git:git@github.com:Cruisoring/jsonTuples.git</developerConnection>
+    <url>https://github.com/Cruisoring/jsonTuples.git</url>
     <tag>HEAD</tag>
   </scm>
 

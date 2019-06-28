@@ -1,9 +1,9 @@
-#JsonTuples
+#jsonTuples
 ===================
 
-Driven by [Functional Programming paradigm](https://en.wikipedia.org/wiki/Functional_programming) and using uses immutable Tuples of [functionExtensions 2.0.0](http://repo1.maven.org/maven2/io/github/cruisoring/functionExtensions/2.0.0/) to keep data, the JsonTuples can not only be used to parse/format huge JSON files to get immutable Map or Array, but also b used as a media to compare generic JAVA data structures to get their differences effortlessly.
+Driven by [Functional Programming paradigm](https://en.wikipedia.org/wiki/Functional_programming) and using uses immutable Tuples of [functionExtensions 2.0.0](http://repo1.maven.org/maven2/io/github/cruisoring/functionExtensions/2.0.0/) to keep data, the jsonTuples can not only be used to parse/format huge JSON files to get immutable Map or Array, but also b used as a media to compare generic JAVA data structures to get their differences effortlessly.
 
-The original intention of this project is to use given set of JSON texts as templates to compose requests and match responses automatically for REST API testing, that means a fast parser to convert sample REST payloads into common JAVA data structures of Maps or Collections, then part of them could be modified/removed/added easily before converting the updated data back to JSON texts as HTTP GET/POST/PUT/DELETE payloads. By studying available open-source projects to convert JAVA Objects to/from JSON, I realized that there could be steep learning curves, and might not get desirable performance and functions. This library means to expose simple APIs to parse JSON text as Maps, Arrays or combination of them that can be accessed conveniently. Further more, with the embdedded features of Tuple, the JsonTuples can compare huge datasets composed by Collections and Maps to get their deltas effectively.
+The original intention of this project is to use given set of JSON texts as templates to compose requests and match responses automatically for REST API testing, that means a fast parser to convert sample REST payloads into common JAVA data structures of Maps or Collections, then part of them could be modified/removed/added easily before converting the updated data back to JSON texts as HTTP GET/POST/PUT/DELETE payloads. By studying available open-source projects to convert JAVA Objects to/from JSON, I realized that there could be steep learning curves, and might not get desirable performance and functions. This library means to expose simple APIs to parse JSON text as Maps, Arrays or combination of them that can be accessed conveniently. Further more, with the embdedded features of Tuple, the jsonTuples can compare huge datasets composed by Collections and Maps to get their deltas effectively.
 
 ## Goals
 
@@ -26,18 +26,18 @@ Add the following dependency to your pom.xml:
 ```xml
 <dependency>
     <groupId>io.github.cruisoring</groupId>
-    <artifactId>JsonTuples</artifactId>
+    <artifactId>jsonTuples</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
 
-Alternatively, get the packages directly from [Maven Central](http://repo1.maven.org/maven2/io/github/cruisoring/JsonTuples/1.0.0/)
+Alternatively, get the packages directly from [Maven Central](http://repo1.maven.org/maven2/io/github/cruisoring/jsonTuples/1.0.0/)
 
 ## Mapping between JSON Objects and JAVA Objects
 
-The JSON objects refer to classes/interfaces defined in JsonTuples project, JAVA Objects means common JAVA types like primitive objects, as well as generic Map, Collection and Arrays. For the JSON texts to be processed, it is assumed they have followed the correct JSON syntax.
+The JSON objects refer to classes/interfaces defined in jsonTuples project, JAVA Objects means common JAVA types like primitive objects, as well as generic Map, Collection and Arrays. For the JSON texts to be processed, it is assumed they have followed the correct JSON syntax.
 
-The JsonTuples is implemented based on the information from [json.org](http://www.json.org/) with straight mappings between JsonTuples interfaces/classes and JAVA Objects below:
+The jsonTuples is implemented based on the information from [json.org](http://www.json.org/) with straight mappings between jsonTuples interfaces/classes and JAVA Objects below:
 
 | Interfaces | Classes | | JAVA Object embedded | JSON sample | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -65,7 +65,7 @@ Constructors of all above JSON objects in bold (**Null, True, False, JSONString,
     * __*JSONValue.parse(CharSequence, Range)*__: expect and parse a part of the given JSON context as one of **Null, True, False, JSONString, JSONNumber**.
     * __*JSONObject.parse(String valueString)*__: expect the *valueString* is enclosed by '{' and '}', and cast the result of __*Parser.parse()*__ to be **JSONObject**.
     * __*JSONArray.parse(String valueString)*__: expect the *valueString* is enclosed by '[' and ']', and cast the result of __*Parser.parse()*__ to be **JSONArray**.
-  * Static method __*IJSONValue jsonify(Object object)*__ of _Utilities.java_ is the only API used to convert JAVA Objects to JSON Objects defined in JsonTuples, it would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
+  * Static method __*IJSONValue jsonify(Object object)*__ of _Utilities.java_ is the only API used to convert JAVA Objects to JSON Objects defined in jsonTuples, it would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
     
 Usually, the above methods shall be enough to get most JSON to/from JAVA conversions done.
 
@@ -122,7 +122,7 @@ Since JSON texts representing Map or Array are used most, __*JSONObject.parse(St
 
 The above codes also show how to **JSONObject** can be referred as a **Map<String, Object>**, and **JSONArray** can be referred as a **List<Object>** to read the element values embedded directly. However, all WRITE operations on them would get __*UnsupportedOperationException*__ due to the immutable nature inherited from **Tuple**. 
 
-With layered filtering and simplified state machine to enable the parsing process, and avoid JSON syntax validation whenever possible, the JsonTuples achieves a quite good performance. For example:
+With layered filtering and simplified state machine to enable the parsing process, and avoid JSON syntax validation whenever possible, the jsonTuples achieves a quite good performance. For example:
 ```java
     @Test
     public void test6257KJson() {
@@ -142,7 +142,7 @@ With layered filtering and simplified state machine to enable the parsing proces
     }
 ``` 
 
-The above unit test loads text from [catalog.json](https://github.com/Cruisoring/JsonTuples/blob/master/src/test/resources/catalog.json) that is 6.11M, then:
+The above unit test loads text from [catalog.json](https://github.com/Cruisoring/jsonTuples/blob/master/src/test/resources/catalog.json) that is 6.11M, then:
 *  parse the text to get the JSONObject **result** instance;
 *  get that JSONObject **result** instance sorted to get another JSONObject **sortedValue** instance;
 *  get the compact String form as String **sortedString**;
@@ -159,7 +159,7 @@ To display the content held by JSONObject with a ordered manner, a **Comparator<
   * Supplied as argument of __*Parser.parse(Comparator<String> comparator, CharSequence jsonText)*__ or __*parse(Comparator<String> comparator, CharSequence jsonText, Range range)*__, then the parsed *JSONObject* and all its children would be saved with orders specified by the given **comparator**.
   * the __*JSONObject.getSorted(Comparator<String> comparator)*__ or __*JSONArray.getSorted(Comparator<String> comparator)*__ would return a new JSONObject or JSONArray with their children elements sorted by names following rules specified by the given **comparator**.
   
-As a special case, the [OrdinalComparator](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/OrdinalComparator.java) would register all names of JSON Object in order and sort all names accordingly.
+As a special case, the [OrdinalComparator](https://github.com/Cruisoring/jsonTuples/blob/master/src/main/java/jsonTuples/OrdinalComparator.java) would register all names of JSON Object in order and sort all names accordingly.
 
 The TAB of indent has been hard-coded as ```"  "``` in **JSONValue.SPACE**, the **toJSONString(String indent)** defined in **IJSONable** interface accepts a blank String that can be either _null_ or all white-spaces to get JSON text based on value of the given **indent**:
   *  If the JSONObject is empty, then it would always return ```{}```;
@@ -173,7 +173,7 @@ The toString() would show same String as if the **indent** is ```""```. Just as 
 
 ## Basic Examples
 
-This section shows how JsonTuples can be used to parse JSON text or convert common JAVA objects to JSON objects.
+This section shows how jsonTuples can be used to parse JSON text or convert common JAVA objects to JSON objects.
 
 ### Sorting and Printing
 
@@ -274,9 +274,9 @@ The JAVA objects can be converted are basic value types and composite types (Arr
 
 The generic JAVA Object Mapping like [Jackson ObjectMapper](https://fasterxml.github.io/jackson-databind/javadoc/2.7/com/fasterxml/jackson/databind/ObjectMapper.html) is not included in current version, though there are two alternatives:
 *  Use external library like [GSON](https://github.com/google/gson) or [Jackson](https://github.com/FasterXML/jackson) to convert complex JAVA objects to / from JSON text that denote only simple values or composite entities of Map or Collection.
-*  Inject __*FunctionThrowable<Object, IJSONValue>*__ and __*FunctionThrowable<IJSONValue, Object>*__ pairs into [**Utilities.classConverters**](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/Utilities.java) to support converting concerned class instances to / from JSON text.
+*  Inject __*FunctionThrowable<Object, IJSONValue>*__ and __*FunctionThrowable<IJSONValue, Object>*__ pairs into [**Utilities.classConverters**](https://github.com/Cruisoring/jsonTuples/blob/master/src/main/java/jsonTuples/Utilities.java) to support converting concerned class instances to / from JSON text.
 
-The static method __*IJSONValue jsonify(Object object)*__ of [Utilities.java](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/JsonTuples/Utilities.java) is the only API used to convert JAVA Objects to JSON Objects and following internal methods are implemented to enable such conversion:
+The static method __*IJSONValue jsonify(Object object)*__ of [Utilities.java](https://github.com/Cruisoring/jsonTuples/blob/master/src/main/java/jsonTuples/Utilities.java) is the only API used to convert JAVA Objects to JSON Objects and following internal methods are implemented to enable such conversion:
     * __*asJSONArrayFromArray(Object array)*__: convert a JAVA Array, of primitive or object elements, to a **JSONArray**.
     * __*asJSONArrayFromCollection(Object collection)*__: convert a JAVA Collection (such as _List_, _Set_ or _Queue_) to a **JSONArray**.
     * __*asJSONObject(Object object)*__: the given object must be a Map<Object, Object>
@@ -310,7 +310,7 @@ Exemple below shows how this __*IJSONValue jsonify(Object object)*__ can be used
     }
 ```
 
-Basically, it means the JsonTuples bridges JAVA and JSON seamlessly to some extents. However, the **Map<String, Object>** or **List<Object>** exposed by **JSONObject** or **JSONArray** are immutable, so as to the JAVA object returned by **IJSONValue.getObject()** as proved with the WRITE operations with JSONArray.getObject():
+Basically, it means the jsonTuples bridges JAVA and JSON seamlessly to some extents. However, the **Map<String, Object>** or **List<Object>** exposed by **JSONObject** or **JSONArray** are immutable, so as to the JAVA object returned by **IJSONValue.getObject()** as proved with the WRITE operations with JSONArray.getObject():
 ```java
     @Test
     public void getObject() {
