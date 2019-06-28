@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.TypeHelper;
 import io.github.cruisoring.logger.Logger;

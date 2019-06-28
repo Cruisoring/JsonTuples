@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.tuple.Tuple2;
@@ -16,8 +16,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static JsonTuples.Parser.*;
 import static io.github.cruisoring.Asserts.*;
+import static jsonTuples.Parser.*;
 
 /**
  * An ordered collection of {@code IJSONValue}. An array begins with [ (left bracket) and ends with ]

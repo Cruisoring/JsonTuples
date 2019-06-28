@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import org.junit.Test;
 

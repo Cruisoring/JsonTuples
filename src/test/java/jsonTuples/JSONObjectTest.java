@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.Revokable;
 import io.github.cruisoring.TypeHelper;
@@ -330,6 +330,7 @@ public class JSONObjectTest {
             count++;
         }
 
+        assertTrue(count>0, "There shall be 1000 differences?");
         Logger.W("There are %d differences", count);
     }
 

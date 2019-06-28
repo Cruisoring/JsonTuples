@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.Range;
 import io.github.cruisoring.logger.Logger;
@@ -11,7 +11,9 @@ import io.github.cruisoring.utility.StringHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Set;
 
 import static io.github.cruisoring.Asserts.*;
 
@@ -20,7 +22,7 @@ import static io.github.cruisoring.Asserts.*;
  */
 public final class Parser {
     //Specify if the default mode to parse is strictly or lenient
-    public static boolean PARSE_STRICTLY = true;
+    public static boolean PARSE_STRICTLY = false;
 
     public static int JSON_TEXT_LENGTH_TO_LOG = 200;
     public static final int DEFAULT_CAPCITY = 128;
@@ -46,6 +48,7 @@ public final class Parser {
     static final String SPACE = "  ";
     static final String NEW_LINE = "\n";
     static final String COMMA_NEWLINE = COMMA + NEW_LINE;
+    static final String ILLEGAL_CONTROL_CHAR = "Illegal control char:'";
 
     public static SupplierThrowable<Comparator<String>> defaultComparatorSupplier = OrdinalComparator::new;
     //endregion
@@ -348,7 +351,7 @@ public final class Parser {
                 } else if (lastControl == COLON) {
                     assertTrue(isObject, "COLON(':') shall be presented only in JSONObject");
                 } else {
-                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '{'.");
+                    throw new IllegalStateException(ILLEGAL_CONTROL_CHAR + lastControl + "' shall never be presented before '{'.");
                 }
                 break;
             case RIGHT_BRACE:
@@ -361,7 +364,7 @@ public final class Parser {
                 } else if (lastControl == QUOTE) {
                     assertAllNull(lastStringValue, lastName);
                 } else {
-                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '}'.");
+                    throw new IllegalStateException(ILLEGAL_CONTROL_CHAR + lastControl + "' shall never be presented before '}'.");
                 }
                 break;
             case LEFT_BRACKET:
@@ -371,7 +374,7 @@ public final class Parser {
                 } else if (lastControl == COLON) {
                     assertTrue(isObject, "COLON(':') shall be presented only in JSONObject");
                 } else {
-                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before '['.");
+                    throw new IllegalStateException(ILLEGAL_CONTROL_CHAR + lastControl + "' shall never be presented before '['.");
                 }
                 break;
             case RIGHT_BRACKET:
@@ -381,7 +384,7 @@ public final class Parser {
                 } else if (lastControl == QUOTE) {
                     assertAllNull(lastStringValue, lastName);
                 } else {
-                    throw new IllegalStateException("Illegal control char:'" + lastControl + "' shall never be presented before ']'.");
+                    throw new IllegalStateException(ILLEGAL_CONTROL_CHAR + lastControl + "' shall never be presented before ']'.");
                 }
                 return;
             case COMMA:
@@ -398,6 +401,8 @@ public final class Parser {
                 if(lastName != null || lastStringValue == null) {
                     fail("Wrong state before COLON(':'): lastName=%s, lastStringValue=%s", lastName, lastStringValue);
                 }
+                break;
+            default:
                 break;
         }
         assertAllWhiteSpaces(lastControlPosition, position);

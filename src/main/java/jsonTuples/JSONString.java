@@ -1,11 +1,11 @@
-package JsonTuples;
+package jsonTuples;
 
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.regex.Pattern;
 
-import static JsonTuples.Parser.QUOTE;
 import static io.github.cruisoring.Asserts.fail;
+import static jsonTuples.Parser.QUOTE;
 
 /**
  * A string is a sequence of zero or more Unicode characters, wrapped in double quotes, using backslash escapes.

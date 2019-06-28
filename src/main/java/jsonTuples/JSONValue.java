@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple1;
@@ -9,8 +9,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import static JsonTuples.Parser.QUOTE;
 import static io.github.cruisoring.Asserts.assertAllNotNull;
+import static jsonTuples.Parser.QUOTE;
 
 /**
  * Represent the value of JSON strings of following types:

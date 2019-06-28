@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.Range;
 import io.github.cruisoring.tuple.Tuple;

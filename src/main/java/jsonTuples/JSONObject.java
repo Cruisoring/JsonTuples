@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.ArrayHelper;
@@ -11,9 +11,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static JsonTuples.Parser.*;
 import static io.github.cruisoring.Asserts.assertAllNotNull;
 import static io.github.cruisoring.Asserts.assertAllTrue;
+import static jsonTuples.Parser.*;
 
 /**
  * An object is an unordered set of name/value pairs. An object begins with { (left brace) and ends with } (right brace). Each name is followed by : (colon) and the name/value pairs are separated by , (comma).

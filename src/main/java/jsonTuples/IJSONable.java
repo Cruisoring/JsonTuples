@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 /**
  * Something that can be represented as JSON text.

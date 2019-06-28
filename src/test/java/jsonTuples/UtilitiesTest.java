@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.utility.ResourceHelper;
@@ -9,9 +9,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
-import static JsonTuples.Parser.JSON_NULL;
 import static io.github.cruisoring.Asserts.assertAllTrue;
 import static io.github.cruisoring.Asserts.assertEquals;
+import static jsonTuples.Parser.JSON_NULL;
 
 public class UtilitiesTest {
 

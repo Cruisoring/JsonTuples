@@ -1,4 +1,4 @@
-package JsonTuples;
+package jsonTuples;
 
 import io.github.cruisoring.Range;
 import io.github.cruisoring.Revokable;
@@ -154,7 +154,7 @@ public class ParserTest {
         for (int i = 0; i < 10; i++) {
             JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength/1024),
                     () -> (JSONObject) Parser.parse(false, jsonText));
-            int leafCount = result.getLeafCount();
+            int leafCount = checkNotNull(result, "Failed to parse the JOSN text.").getLeafCount();
             IJSONValue sortedValue = Logger.M(Measurement.start("Sorting JSONObject with %d leaf nodes", leafCount),
                     () -> result.getSorted(Comparator.naturalOrder()));
             sortedString = Logger.M(Measurement.start("ToJSONString(null)"), () -> sortedValue.toJSONString(null));
@@ -170,6 +170,7 @@ public class ParserTest {
         String sortedString = null;
         JSONObject result = Logger.M(Measurement.start("Parsing JSON text of %dk", jsonTextLength / 1024),
                 () -> (JSONObject)Parser.parse(true, jsonText));
+        assertNotNull(result, "Failed to parse the JSON text.");
         Measurement.purge(LogLevel.warning);
     }
 
@@ -243,16 +244,16 @@ public class ParserTest {
 
     @Test
     public void parseJSON_withSyntaxErrors_throwExceptions() throws Exception{
-//        //Parsing in lenient mode
-//        assertLogging(() -> Parser.parse(false, "null}"), "Missing '{' to pair '}'");
-//        assertLogging(() -> Parser.parse(false, "[  , null]"), "IllegalStateException", "\"  \"", '[', ',');
-//        assertLogging(() -> Parser.parse(false, "}"), "Missing '{' to pair '}'");
-//        assertLogging(() -> Parser.parse(false, "]"), "Missing '[' to pair ']'");
-//        assertLogging(() -> Parser.parse(false, "[123, null]]"), "Missing '[' to pair ']'");
-//        assertLogging(() -> Parser.parse(false, "[123, null"), "JSONArray is not closed");
-//        assertLogging(() -> Parser.parse(false, "{ abc: 123}"), "Fail to enclose", "\" abc\"");
-//        assertLogging(() -> Parser.parse(false, "{\"abc\": 123ab}"), "IllegalStateException", "123ab");
-//        assertLogging(() -> Parser.parse(false, "{\"abc\": \"xxx}"), "JSONString is not enclosed properly");
+        //Parsing in lenient mode
+        assertLogging(() -> Parser.parse(false, "null}"), "Missing '{' to pair '}'");
+        assertLogging(() -> Parser.parse(false, "[  , null]"), "IllegalStateException", "\"  \"", '[', ',');
+        assertLogging(() -> Parser.parse(false, "}"), "Missing '{' to pair '}'");
+        assertLogging(() -> Parser.parse(false, "]"), "Missing '[' to pair ']'");
+        assertLogging(() -> Parser.parse(false, "[123, null]]"), "Missing '[' to pair ']'");
+        assertLogging(() -> Parser.parse(false, "[123, null"), "JSONArray is not closed");
+        assertLogging(() -> Parser.parse(false, "{ abc: 123}"), "Fail to enclose", "\" abc\"");
+        assertLogging(() -> Parser.parse(false, "{\"abc\": 123ab}"), "IllegalStateException", "123ab");
+        assertLogging(() -> Parser.parse(false, "{\"abc\": \"xxx}"), "JSONString is not enclosed properly");
 
         //Parsing in strict mode
         assertException(() -> Parser.parse(true, "{\"abc\": \"xxx}"), IllegalStateException.class, "JSONString is not enclosed properly");
