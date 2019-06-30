@@ -2,6 +2,7 @@ package jsonTuples;
 
 import io.github.cruisoring.logger.Logger;
 import io.github.cruisoring.utility.ResourceHelper;
+import io.github.cruisoring.utility.SimpleTypedList;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -190,4 +191,21 @@ public class UtilitiesTest {
         assertEquals("{\"purpose\":\"test\",\"array\":[[\"a\",\"b\"],true,[1,2],[[-1.2,0.0],[3.3]],[\"OK\",null]],\"other\":null}",
                 jsonObject.toJSONString(null));
     }
+
+    @Test
+    public void deltaWith(){
+        Object obj1 = Parser.parse(
+                "[null, 123, true, [false, \"string\", null, {}], {\"id\":001, \"name\":\"abc\"}]").getObject();
+        Object obj2 = Parser.parse(
+                "[null, 123, [false, \"string\", null, {}], {\"id\":001, \"name\":\"xyz\"}, false]").asMutableObject();
+
+        assertEquals(
+                "{\"2\":[true,[false,\"string\",null,{}]],\"3\":[[false,\"string\",null,{}],{\"id\":1,\"name\":\"xyz\"}],\"4\":[{\"id\":1,\"name\":\"abc\"},false]}",
+                Utilities.deltaWith(obj1, obj2, null).toJSONString(null));
+        assertEquals("[[true,false],{\"name\":[\"abc\",\"xyz\"]}]",
+                Utilities.deltaWith(obj1, obj2, "").toJSONString(null));
+        assertEquals("[{\"2\":true,\"4\":false},{\"index\":[4,3],\"name\":[\"abc\",\"xyz\"]}]",
+                Utilities.deltaWith(obj1, obj2, "index").toJSONString(null));
+        assertEquals("[{\"2\":true,\"4\":false},{\"index+\":[3,2]},{\"index+\":[4,3],\"name\":[\"abc\",\"xyz\"]}]",
+                Utilities.deltaWith(obj1, obj2, "index+").toJSONString(null));    }
 }
