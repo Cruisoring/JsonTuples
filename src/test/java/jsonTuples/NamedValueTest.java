@@ -55,6 +55,8 @@ public class NamedValueTest {
     @Test
     public void testGetSignatures() {
         NamedValue namedValue = NamedValue.parse("\"name\": 12345");
+        Logger.D("HashCodes: \"name\": %d, 12345: %d, namedValue: %d", "\"name\"".hashCode(), "12345".hashCode(),
+                namedValue.hashCode());
         assertEquals(SetHelper.asSet(TypeHelper.deepHashCode(new String[]{"\"name\"", "12345"}), "\"name\"".hashCode(), "12345".hashCode()),
                 namedValue.getSignatures());
 

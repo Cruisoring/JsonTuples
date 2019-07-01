@@ -244,6 +244,7 @@ public class ParserTest {
 
     @Test
     public void parseJSON_withSyntaxErrors_throwExceptions() throws Exception{
+
         //Parsing in lenient mode
         assertLogging(() -> Parser.parse(false, "null}"), "Missing '{' to pair '}'");
         assertLogging(() -> Parser.parse(false, "[  , null]"), "IllegalStateException", "\"  \"", '[', ',');

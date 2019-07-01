@@ -278,18 +278,7 @@ public class JSONObjectTest {
 
     @Test
     public void testGetSignatures() {
-        String text = "{\n" +
-                "  \"address\": null,\n" +
-                "  \"scores\": {\n" +
-                "    \"English\": 80,\n" +
-                "    \"Science\": 88,\n" +
-                "    \"Math\": 90\n" +
-                "  },\n" +
-                "  \"name\": \"test name\",\n" +
-                "  \"id\": 123456,\n" +
-                "  \"isActive\": true,\n" +
-                "  \"class\": \"7A\"\n" +
-                "}";
+        String text = "{\"address\": null, \"scores\": {\"English\":80,\"Science\":88,\"Math\":90}, \"name\": \"test name\" ,\"id\" :123456, \"isActive\": true, \"class\": \"7A\"}";
         JSONObject object1 = JSONObject.parse(text);
         NamedValue address = object1.getValue(0);
         NamedValue scores = object1.getValue(1);
@@ -299,16 +288,18 @@ public class JSONObjectTest {
         NamedValue classNamedValue = object1.getValue(5);
 
         Set<Integer> signature1 = object1.getSignatures();
-        Logger.D("object1: %s\n\taddress: %s\n\tscores: %s\n\tname: %s\n\tid: %s\n\tisActive: %s\n\tclass: %s",
-                deepToString(signature1), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode());
-//                deepToString(address.getSignatures()), deepToString(scores.getSignatures()), deepToString(name.getSignatures()),
-//                deepToString(id.getSignatures()), deepToString(isActive.getSignatures()), deepToString(classNamedValue.getSignatures()));
+        Logger.I(object1.toJSONString(null));
+        Logger.D("address: %s\tscores: %s\tname: %s\tid: %s\tisActive: %s\tclass: %s\n\tobject1: %s\n",
+                address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode(), deepToString(signature1));
         assertAllTrue(signature1.size() == 7,
                 signature1.containsAll(Arrays.asList(object1.hashCode(), address.hashCode(), scores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())));
 
         JSONObject object2 = object1.getSorted(Comparator.naturalOrder());
+        Logger.I(object2.toJSONString(null));
         Set<Integer> signature2 = object2.getSignatures();
         NamedValue sortedScores = NamedValue.parse("\"scores\": {\"English\":80,\"Math\": 90,\"Science\": 88}");
+        Logger.D("address: %s\tsortedScores: %s\tname: %s\tid: %s\tisActive: %s\tclass: %s\n\tobject2: %s\n",
+                address.hashCode(), sortedScores.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode(), deepToString(signature2));
         assertAllTrue(signature2.size() == 7,
                 signature2.containsAll(Arrays.asList(object2.hashCode(), address.hashCode(), name.hashCode(), id.hashCode(), isActive.hashCode(), classNamedValue.hashCode())),
                 signature2.contains(sortedScores.hashCode()));
@@ -334,7 +325,7 @@ public class JSONObjectTest {
         Logger.W("There are %d differences", count);
     }
 
-    @Test @Ignore
+    @Test
     public void testDeltaWith_ofLargeObjects() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int changes = 1000;
@@ -356,7 +347,7 @@ public class JSONObjectTest {
                 Logger.D("Save modified JSONObject with %d leaves to %s", modifiedLeafCount,
                         Logger.M(Measurement.start("save modified JSON"), () ->ResourceHelper.saveTextToTargetFile(modifiedObject.toString(), "modified.json")));
 
-                IJSONValue delta = Logger.M(Measurement.start("deltaWith() between Object with %d leafs and another with %d leafs", originalLeafCount, modifiedLeafCount),
+                IJSONValue delta = Logger.M(Measurement.start("deltaWith() between two JSONObjects", originalLeafCount, modifiedLeafCount),
                         () -> original.deltaWith(modifiedObject, "pos"));
                 assertNotNull(delta, "Failed to get result.");
                 String deltaString = delta.toString();
