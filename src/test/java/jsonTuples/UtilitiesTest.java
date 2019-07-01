@@ -1,8 +1,9 @@
 package jsonTuples;
 
 import io.github.cruisoring.logger.Logger;
+import io.github.cruisoring.throwables.FunctionThrowable;
+import io.github.cruisoring.tuple.Tuple;
 import io.github.cruisoring.utility.ResourceHelper;
-import io.github.cruisoring.utility.SimpleTypedList;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -190,6 +191,36 @@ public class UtilitiesTest {
         JSONObject jsonObject = (JSONObject)Utilities.jsonify(map);
         assertEquals("{\"purpose\":\"test\",\"array\":[[\"a\",\"b\"],true,[1,2],[[-1.2,0.0],[3.3]],[\"OK\",null]],\"other\":null}",
                 jsonObject.toJSONString(null));
+    }
+
+    public class Student{
+        public String name;
+        public int age;
+
+        public Student(String name, int age){
+            this.name = name;
+            this.age = age;
+        }
+
+        public String toJSON() {
+            return String.format("{\"name\":\"%s\", \"age\":%d}", name, age);
+        }
+    }
+
+    @Test
+    public void testJsonify_withStudentInstances(){
+        FunctionThrowable<Object, IJSONValue> studentToJSON = student -> Parser.parse(((Student)student).toJSON());
+        Utilities.classConverters.put(Student.class, Tuple.create(studentToJSON, null));
+        Map studentInClass = new HashMap(){{
+            put("year", "Year7");
+            put("active", true);
+            put("students", Arrays.asList(
+                    new Student("Alice", 12),
+                    new Student("Bob", 13)
+            ));
+        }};
+        assertEquals("{\"year\":\"Year7\",\"active\":true,\"students\":[{\"name\":\"Alice\",\"age\":12},{\"name\":\"Bob\",\"age\":13}]}",
+                Utilities.jsonify(studentInClass).toJSONString(null));
     }
 
     @Test
