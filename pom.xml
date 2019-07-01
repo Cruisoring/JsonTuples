@@ -6,11 +6,11 @@
 
   <groupId>jsonTuples</groupId>
   <artifactId>io.github.cruisoring</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
-  <description>A Java serialization/deserialization library to convert Java Objects into JSON and back, and can be used to manipulate or compare big JAVA Array, Collection or Map efficiently.</description>
+  <description>A Java library to convert JSON text to/from Java Objects composed of either Map and List, compare any two JSON or JAVA objects to get their differences.</description>
   <url>https://github.com/Cruisoring/jsonTuples</url>
 
   <properties>
