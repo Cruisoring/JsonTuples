@@ -1,7 +1,7 @@
-# jsonTuples: JSON Parser and Comparator
+# jsonTuples: JSON Parser and Comparator in JAVA
 
 
-The jsonTuples library parses JSON text to immutable JSON values, which can then be converted to List or Map for CRUD operations then back to JSON values. As an unique feature, jsonTuples can compare two JSON texts, or compare ANY two JAVA Objects to get their minimum deltas in seconds.
+The *jsonTuples* library parses JSON text to immutable JSON values, which can then be converted to List or Map for CRUD operations then back to JSON values. As an unique feature, *jsonTuples* can compare two JSON texts, or compare ANY two JAVA Objects to get their minimum deltas in seconds.
 
 ## Background
 
@@ -24,9 +24,9 @@ Alternatively, you can get the package from [Maven Central](http://repo1.maven.o
 
 ## Mapping between JSON values and JAVA Objects
 
-The **JSON values** here refer to classes/interfaces defined in jsonTuples project, JAVA Objects means common JAVA types like **primitive values or objects, as well as generic Map, Collection and Arrays**.
+The **JSON values** here refer to classes/interfaces defined in *jsonTuples* project, JAVA Objects means common JAVA types like **primitive values or objects, as well as generic Map, Collection and Arrays**.
 
-The jsonTuples is implemented based on the information from [json.org](http://www.json.org/) with direct mappings between JSON values (or interfaces/classes defined in jsonTuples) and JAVA Objects below:
+The *jsonTuples* is implemented based on the information from [json.org](http://www.json.org/) with direct mappings between JSON values (or interfaces/classes defined in *jsonTuples*) and JAVA Objects below:
 
 | Interfaces | Classes | | JAVA Object embedded | JSON sample | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ Constructors of all above JSON values in bold (**Null, True, False, JSONString, 
     * __*JSONValue.parse(CharSequence, Range)*__: expect and parse a part of the given JSON context as one of **Null, True, False, JSONString, JSONNumber**.
     * __*JSONObject.parse(String valueString)*__: expect the *valueString* is enclosed by '{' and '}', and cast the result of __*Parser.parse()*__ to be **JSONObject**.
     * __*JSONArray.parse(String valueString)*__: expect the *valueString* is enclosed by '[' and ']', and cast the result of __*Parser.parse()*__ to be **JSONArray**.
-  * Static method __*IJSONValue jsonify(Object object)*__ of _Utilities.java_ is the only API used to convert JAVA Objects to JSON values defined in jsonTuples, it would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
+  * Static method __*IJSONValue jsonify(Object object)*__ of _Utilities.java_ is the only API used to convert JAVA Objects to JSON values defined in *jsonTuples*, it would check the type of the given object to call a method above. For types not covered above, by default the  __*asJSONStringFromOthers(Object object)*__ would be called to generate a JSONString, but it is possible to inject serialization/de-serialization methods into __*Utilities.classConverters*__ that is a Map<Class, Tuple2> where the value of a given class includes both serialization and de-serialization for a concerned type of object, then the serialization method would be called to convert the matched instance to its text equivalent.  
     
 The above methods have multiple variations to accept optional arguments.
 
@@ -254,11 +254,11 @@ You might have noticed that converting unknown JAVA objects to their toString()s
     }
 ```
 
-Though not in the scope of jsonTuples, if there is a AutoMapper alike library to parse the POJOs in your working projects, then it shall be quite convenient to handle literately any JAVA objects to and from JSON texts.
+Though not in the scope of *jsonTuples*, if there is a AutoMapper alike library to parse the POJOs in your working projects, then it shall be quite convenient to handle literately any JAVA objects to and from JSON texts.
 
 ### Performance of jsonTuples
 
-Unlike other JSON parsers, the jsonTuples applies a simplified high-level state-machine to process the characters of JSON text under parsing in three steps:
+Unlike other JSON parsers, the *jsonTuples* applies a simplified high-level state-machine to process the characters of JSON text under parsing in three steps:
 1)  Delimit the scopes of Strings enclosed by QUOTEs(**"**), and neglect any chars inside including the escaped QUOTEs that are behind of an opening (**"**) with BACK-SLASH(**\\**) ahead, extract any **JSONString**s directly.
 2)  Neglect all chars except control chars used in JSON (that is LEFT_BRACE('**{**'), RIGHT_BRACE('**}**'), LEFT_BRACKET('**\[**'), RIGHT_BRACKET('**]**'), COMMA('**,**'), COLON('**:**')), perform strict syntax checking if needed.
 3)  Only the above control chars would be fed into a state-machine to harvest the parsed results recursively with only the previous control char considered.
@@ -304,7 +304,7 @@ It is not so ideal when parsing huge JSON file. For the [181M JSON file](https:/
     }
 ```
 
-The logging shows it might take 2-4 seconds to process 1 Megabyte payload intermittently that might happen because of JAVA Garbage collections. Though running the same test from a slow PC with 8G memory only would crash the JVM when it took exponentially longer time to process 1 Megabytes after 100M, as shown in the [log](images/Parse 181M JSON from PC with 8G Mem.txt), the jsonTuples shall be responsive enough to handle JSON of normal sizes.
+The logging shows it might take 2-4 seconds to process 1 Megabyte payload intermittently that might happen because of JAVA Garbage collections. Though running the same test from a slow PC with 8G memory only would crash the JVM when it took exponentially longer time to process 1 Megabytes after 100M, as shown in the [log](images/Parse 181M JSON from PC with 8G Mem.txt), the *jsonTuples* shall be responsive enough to handle JSON of normal sizes.
 
 ![Parsing 181M Json outcome](images/parse181M.png "Parsing 181M JSON text")
 
@@ -487,7 +487,7 @@ There are many unit tests created and one example is below:
 
 ### Comparing two JAVA Objects with jsonTuples
 
-Since JAVA Objects can be converted to JSON values by jsonTuples, and these JSON values can be compared to get their differences, there are two static methods defined in the [Utilities.java](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/jsonTuples/Utilities.java) to compare two JAVA objects directly:
+Since JAVA Objects can be converted to JSON values by *jsonTuples*, and these JSON values can be compared to get their differences, there are two static methods defined in the [Utilities.java](https://github.com/Cruisoring/JsonTuples/blob/master/src/main/java/jsonTuples/Utilities.java) to compare two JAVA objects directly:
  *  _*IJSONValue deltaWith(Object obj1, Object obj2, String indexKey)*_: convert both Objects to **IJSONValue**s, then get the delta with strategy identified by the *indexKey*. 
  *  IJSONValue deltaWith(Object obj1, Object obj2): just a simplified version using default **JSONArray.defaultIndexName**.
 
@@ -538,7 +538,10 @@ For me, working out this library is a really challenging and rewarding experienc
 I hope this freeware can help you to solve some real problems associated with JSON or even data analysis.
 
 If it does help you and you are happy, any support to the development of my church [SIC](https://www.sic.org.au/) would be really appreciated:
+
 **A/C Name:** SIC Develmt Fund
+
 **BSB:** 484 799
+
 **A/C No:** 200 198 196
 
