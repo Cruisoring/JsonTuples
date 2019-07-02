@@ -285,7 +285,7 @@ When running the unit test below from my 4-cores i7-7700HQ @ 2.8G laptop to pars
     }
 ```
 
-The screenshot below shows the average and max time to parse the 6.1M file are __*279ms and 306ms*__ respectively: almost 20M/s throughput for such middle-sized JSON texts.
+The screenshot below shows the average and max time to parse the 6.1M file are __*279ms and 306ms*__ respectively.
 
 ![test6104KJson performance](images/parse6M.png "Parsing 6M JSON text for 10 times")
 
