@@ -21,7 +21,7 @@ public interface ISortable {
     /**
      * Used the given collection of JSON names to sort this {@code ISortable} deeply.
      * @param orderedNames  Array of Strings used to sort this {@code ISortable} deeply.
-     * @returnthis  a {@code ISortable} instance sorted accordingly.
+     * @return  a {@code ISortable} instance sorted accordingly.
      */
     default ISortable getSorted(String... orderedNames) {
         assertAllNotNull(orderedNames);

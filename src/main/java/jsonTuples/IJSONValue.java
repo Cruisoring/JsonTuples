@@ -60,7 +60,7 @@ public interface IJSONValue<T extends Object> extends IJSONable, ISortable, With
     /**
      * Used the given collection of JSON names to sort this {@code IJSONValue} deeply.
      * @param orderedNames  Collection of Strings used to sort this {@code IJSONValue} deeply.
-     * @returnthis  a {@code IJSONValue} instance sorted accordingly.
+     * @return   a {@code IJSONValue} instance sorted accordingly.
      */
     @Override
     default IJSONValue<T> getSorted(String... orderedNames) {

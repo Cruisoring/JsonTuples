@@ -89,6 +89,7 @@ public class Utilities {
     /**
      * Convert a Map object to JSONObject with a given nameComparator.
      *
+     * @param comparator    the {@code Comparator<String>} used to determine the orders of the sorted NamedValues.
      * @param object Map instance that usually shall not be null.
      * @return JSONObject to represent the Map object to be converted.
      */
@@ -153,8 +154,14 @@ public class Utilities {
 
     /**
      * Compare any two JAVA objects and return their differences as an {@code IJSONValue}.
+     *
      * @param obj1      the first Object to be compared.
      * @param obj2      the second Object to be compared.
+     * @param indexKey      indicating how delta shall be composed:
+     *                      <tt>null</tt> means elements indexes shall always be considered;
+     *                      <tt>String.Empty</tt> means orders matter but no index pair included;
+     *                      names including special character '+' like "+index" would always include index pairs of two matched elements if they are different with only their positions;
+     *                      otherwise the index pair of two elements would be displayed if they have different values.
      * @return  the differences of the above two Objects.
      */
     public static IJSONValue deltaWith(Object obj1, Object obj2, String indexKey){
