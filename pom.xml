@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>jsonTuples</groupId>
@@ -69,7 +68,7 @@
     <connection>scm:git:git://github.com/Cruisoring/jsonTuples.git</connection>
     <developerConnection>scm:git:git@github.com:Cruisoring/jsonTuples.git</developerConnection>
     <url>https://github.com/Cruisoring/jsonTuples.git</url>
-    <tag>HEAD</tag>
+    <tag>io.github.cruisoring-1.0.0</tag>
   </scm>
 
   <distributionManagement>
@@ -158,6 +157,24 @@
               </goals>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.5.3</version>
+          <configuration>
+            <localCheckout>true</localCheckout>
+            <pushChanges>false</pushChanges>
+            <mavenExecutorId>forked-path</mavenExecutorId>
+            <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.scm</groupId>
+              <artifactId>maven-scm-provider-gitexe</artifactId>
+              <version>1.9.5</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
