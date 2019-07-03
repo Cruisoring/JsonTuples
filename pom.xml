@@ -5,7 +5,7 @@
 
   <groupId>jsonTuples</groupId>
   <artifactId>io.github.cruisoring</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -68,7 +68,7 @@
     <connection>scm:git:git://github.com/Cruisoring/jsonTuples.git</connection>
     <developerConnection>scm:git:git@github.com:Cruisoring/jsonTuples.git</developerConnection>
     <url>https://github.com/Cruisoring/jsonTuples.git</url>
-    <tag>io.github.cruisoring-1.0.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
