@@ -325,7 +325,7 @@ public class JSONObjectTest {
         Logger.W("There are %d differences", count);
     }
 
-    @Test
+    @Test @Ignore
     public void testDeltaWith_ofLargeObjects() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int changes = 1000;

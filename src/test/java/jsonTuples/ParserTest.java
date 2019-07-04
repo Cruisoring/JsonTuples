@@ -145,7 +145,7 @@ public class ParserTest {
         testPerformance("people.json");
     }
 
-    @Test
+    @Test @Ignore
     public void test6104KJson() {
         String jsonText = ResourceHelper.getTextFromResourceFile("catalog.json");
         int jsonTextLength = jsonText.length();
